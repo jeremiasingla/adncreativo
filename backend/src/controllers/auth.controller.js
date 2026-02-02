@@ -10,14 +10,16 @@ import {
   ACCESS_COOKIE_MAX_AGE,
   REFRESH_COOKIE_MAX_AGE,
 } from "../config/auth.config.js";
-import { isValidEmail, normalizeEmail, validatePassword } from "../utils/validateAuth.js";
+import {
+  isValidEmail,
+  normalizeEmail,
+  validatePassword,
+} from "../utils/validateAuth.js";
 
 function setTokens(res, user) {
-  const accessToken = jwt.sign(
-    { id: user.id, email: user.email },
-    JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_TTL }
-  );
+  const accessToken = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
+    expiresIn: ACCESS_TOKEN_TTL,
+  });
   const refreshToken = jwt.sign(
     { id: user.id, email: user.email, type: "refresh" },
     REFRESH_SECRET,
@@ -46,12 +48,18 @@ export async function register(req, res) {
     const pw = validatePassword(password);
     if (!pw.ok)
       return res.status(400).json({
-        error: pw.error === "password_too_short" ? "password_too_short" : "password_required",
+        error:
+          pw.error === "password_too_short"
+            ? "password_too_short"
+            : "password_required",
         min: pw.min,
       });
 
-    const existsRes = await query("SELECT id FROM users WHERE email = $1", [normalizedEmail]);
-    if (existsRes.rowCount > 0) return res.status(409).json({ error: "User already exists" });
+    const existsRes = await query("SELECT id FROM users WHERE email = $1", [
+      normalizedEmail,
+    ]);
+    if (existsRes.rowCount > 0)
+      return res.status(409).json({ error: "User already exists" });
 
     const hashed = await bcrypt.hash(password, 10);
     const createdAt = Date.now();
@@ -108,12 +116,13 @@ export async function login(req, res) {
   }
 }
 
-export function refresh(req, res) {
+export async function refresh(req, res) {
   try {
     const token = req.cookies?.refreshToken;
     if (!token) return res.status(401).json({ error: "unauthorized" });
     const payload = jwt.verify(token, REFRESH_SECRET);
-    if (payload.type !== "refresh") return res.status(401).json({ error: "unauthorized" });
+    if (payload.type !== "refresh")
+      return res.status(401).json({ error: "unauthorized" });
 
     const refreshRes = await query(
       "SELECT id, email, name, role FROM users WHERE id = $1",

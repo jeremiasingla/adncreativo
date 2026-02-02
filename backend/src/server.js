@@ -69,5 +69,4 @@ app.get("*", (_, res) => {
   res.sendFile(path.join(frontendDist, "index.html"));
 });
 
-
 export default app;
