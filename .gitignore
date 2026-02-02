@@ -1,3 +1,16 @@
+
+
+# Node
+node_modules/
+.env
+.env.local
+.env.*.local
+storage/
+frontend/dist/
+.DS_Store
+*.sqlite
+*.db
+
 # Logs
 logs
 *.log
@@ -37,8 +50,9 @@ bower_components
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
 
+jspm_packages/
+
 # Dependency directories
-node_modules/
 jspm_packages/
 
 # Snowpack dependency directory (https://snowpack.dev/)
@@ -137,3 +151,17 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Vercel
+.vercel/
+
+# Build
+**/dist/
+**/.next/
+**/out/
+
+# Misc
+*.swp
+*.swo
+.idea/
+.vscode/
