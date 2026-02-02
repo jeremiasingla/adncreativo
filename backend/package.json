@@ -8,6 +8,7 @@
     "build": "echo 'no-backend-build'"
   },
   "dependencies": {
+    "@vercel/postgres": "^0.10.0",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.4.0",
