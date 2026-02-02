@@ -2,7 +2,8 @@ import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 
-const dbPath = process.env.DB_PATH || "./storage/app.db";
+// En Vercel el filesystem es read-only; usar /tmp para que mkdir no falle
+const dbPath = process.env.DB_PATH || (process.env.VERCEL ? "/tmp/storage/app.db" : "./storage/app.db");
 const dbDir = path.dirname(dbPath);
 
 if (!fs.existsSync(dbDir)) {

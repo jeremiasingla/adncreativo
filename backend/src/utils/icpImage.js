@@ -1,32 +1,38 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { uploadToBlob, useBlob } from "./blobStorage.js";
 
 const ICP_AVATARS_DIR = process.env.ICP_AVATARS_DIR || path.join(process.cwd(), "storage", "icp-avatars");
 const ICP_HEROES_DIR = process.env.ICP_HEROES_DIR || path.join(process.cwd(), "storage", "icp-heroes");
 
 /**
  * Guarda una imagen ICP (avatar o banner) desde data URL base64.
+ * En Vercel (BLOB_READ_WRITE_TOKEN) sube a Blob y devuelve la URL; si no, guarda en disco.
  * @param {string} dataUrl - data:image/png;base64,...
  * @param {string} workspaceSlug - slug del workspace (para subcarpeta opcional)
  * @param {"avatar"|"hero"} type - tipo de imagen
- * @returns {string|null} - path absoluto del archivo guardado o null
+ * @returns {Promise<string|null>} - URL (blob) o path del archivo o null
  */
-export function saveIcpImage(dataUrl, workspaceSlug, type) {
+export async function saveIcpImage(dataUrl, workspaceSlug, type) {
   if (!dataUrl || typeof dataUrl !== "string") return null;
+
+  const match = dataUrl.match(/^data:(.+);base64,(.*)$/);
+  if (!match) return null;
+  const buffer = Buffer.from(match[2], "base64");
+  const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+  const filename = workspaceSlug ? `${workspaceSlug}-${id}.png` : `${id}.png`;
+
+  if (useBlob) {
+    const blobPath = type === "avatar" ? `icp-avatars/${filename}` : `icp-heroes/${filename}`;
+    const url = await uploadToBlob(buffer, blobPath, "image/png");
+    return url;
+  }
 
   const dir = type === "avatar" ? ICP_AVATARS_DIR : ICP_HEROES_DIR;
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
-
-  const match = dataUrl.match(/^data:(.+);base64,(.*)$/);
-  if (!match) return null;
-  const base64Data = match[2];
-  const buffer = Buffer.from(base64Data, "base64");
-
-  const id = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
-  const filename = workspaceSlug ? `${workspaceSlug}-${id}.png` : `${id}.png`;
   const filepath = path.join(dir, filename);
   fs.writeFileSync(filepath, buffer);
   return filepath;

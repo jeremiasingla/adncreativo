@@ -284,7 +284,7 @@ export function listWorkspaces(req, res) {
         branding = JSON.parse(row.branding || "{}");
       } catch (_) {}
       const screenshotUrl = row.screenshot_path
-        ? `/screenshots/${path.basename(row.screenshot_path)}`
+        ? (row.screenshot_path.startsWith("http") ? row.screenshot_path : `/screenshots/${path.basename(row.screenshot_path)}`)
         : null;
       const name =
         branding.companyName ||
@@ -344,7 +344,7 @@ export function getWorkspaceBySlug(req, res) {
       branding = JSON.parse(row.branding || "{}");
     } catch (_) {}
     const screenshotUrl = row.screenshot_path
-      ? `/screenshots/${path.basename(row.screenshot_path)}`
+      ? (row.screenshot_path.startsWith("http") ? row.screenshot_path : `/screenshots/${path.basename(row.screenshot_path)}`)
       : null;
     const name =
       branding.companyName ||
@@ -508,12 +508,12 @@ export async function generateCustomerProfileImages(req, res) {
     try {
       const avatarDataUrl = await generateProfileImage(avatarPrompt, "1:1");
       if (avatarDataUrl) {
-        const avatarPath = saveIcpImage(
+        const avatarPath = await saveIcpImage(
           avatarDataUrl,
           `${slug}-${profileId.slice(0, 8)}`,
           "avatar",
         );
-        if (avatarPath) avatarUrl = `/icp-avatars/${path.basename(avatarPath)}`;
+        if (avatarPath) avatarUrl = avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`;
       }
     } catch (avatarErr) {
       console.warn("⚠️ Avatar generation failed:", avatarErr.message);
@@ -529,12 +529,12 @@ export async function generateCustomerProfileImages(req, res) {
     try {
       const heroDataUrl = await generateProfileImage(heroPrompt, "21:9");
       if (heroDataUrl) {
-        const heroPath = saveIcpImage(
+        const heroPath = await saveIcpImage(
           heroDataUrl,
           `${slug}-${profileId.slice(0, 8)}`,
           "hero",
         );
-        if (heroPath) heroImageUrl = `/icp-heroes/${path.basename(heroPath)}`;
+        if (heroPath) heroImageUrl = heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`;
       }
     } catch (heroErr) {
       console.warn("⚠️ Hero/banner generation failed:", heroErr.message);
@@ -610,20 +610,20 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
       let avatarUrl = null;
       let heroImageUrl = null;
       if (avatarDataUrl) {
-        const avatarPath = saveIcpImage(
+        const avatarPath = await saveIcpImage(
           avatarDataUrl,
           `${slug}-${profileId.slice(0, 8)}`,
           "avatar",
         );
-        if (avatarPath) avatarUrl = `/icp-avatars/${path.basename(avatarPath)}`;
+        if (avatarPath) avatarUrl = avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`;
       }
       if (heroDataUrl) {
-        const heroPath = saveIcpImage(
+        const heroPath = await saveIcpImage(
           heroDataUrl,
           `${slug}-${profileId.slice(0, 8)}`,
           "hero",
         );
-        if (heroPath) heroImageUrl = `/icp-heroes/${path.basename(heroPath)}`;
+        if (heroPath) heroImageUrl = heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`;
       }
       return {
         ...profile,
@@ -686,7 +686,7 @@ export function deleteWorkspaceBySlug(slug) {
 
   deleteIcpImagesForWorkspace(slug);
 
-  if (row.screenshot_path) {
+  if (row.screenshot_path && !row.screenshot_path.startsWith("http")) {
     const screenshotPath = path.isAbsolute(row.screenshot_path)
       ? row.screenshot_path
       : path.join(SCREENSHOT_DIR, path.basename(row.screenshot_path));
@@ -733,7 +733,7 @@ export function deleteWorkspace(req, res) {
 
     deleteIcpImagesForWorkspace(slug);
 
-    if (row.screenshot_path) {
+    if (row.screenshot_path && !row.screenshot_path.startsWith("http")) {
       const screenshotPath = path.isAbsolute(row.screenshot_path)
         ? row.screenshot_path
         : path.join(SCREENSHOT_DIR, path.basename(row.screenshot_path));
@@ -917,7 +917,7 @@ export async function generateCreatives(req, res) {
           imagesForThisCreative,
         );
         if (imageDataUrl) {
-          const saved = saveCreativeImage(imageDataUrl, slug, "creativo");
+          const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
           if (saved?.urlPath) {
             creativesList.push({
               id: crypto.randomUUID(),
@@ -1206,7 +1206,7 @@ export async function captureWorkspaceScreenshot(req, res) {
     const screenshot = screenshotData.screenshot || null;
     const screenshotPath = await saveScreenshot(screenshot, slug);
     const screenshotUrl = screenshotPath
-      ? `/screenshots/${path.basename(screenshotPath)}`
+      ? (screenshotPath.startsWith("http") ? screenshotPath : `/screenshots/${path.basename(screenshotPath)}`)
       : null;
     return res.status(200).json({ success: true, screenshotUrl, slug });
   } catch (error) {
@@ -1290,21 +1290,21 @@ async function continueWorkspaceCreationInBackground(params) {
         let avatarUrl = null;
         let heroImageUrl = null;
         if (avatarDataUrl) {
-          const avatarPath = saveIcpImage(
+          const avatarPath = await saveIcpImage(
             avatarDataUrl,
             `${slug}-${profileId.slice(0, 8)}`,
             "avatar",
           );
           if (avatarPath)
-            avatarUrl = `/icp-avatars/${path.basename(avatarPath)}`;
+            avatarUrl = avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`;
         }
         if (heroDataUrl) {
-          const heroPath = saveIcpImage(
+          const heroPath = await saveIcpImage(
             heroDataUrl,
             `${slug}-${profileId.slice(0, 8)}`,
             "hero",
           );
-          if (heroPath) heroImageUrl = `/icp-heroes/${path.basename(heroPath)}`;
+          if (heroPath) heroImageUrl = heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`;
         }
         return {
           id: profileId,
@@ -1464,7 +1464,7 @@ async function continueWorkspaceCreationInBackground(params) {
               { source: "welcome" },
             );
             if (imageDataUrl) {
-              const saved = saveCreativeImage(imageDataUrl, slug, "creativo");
+              const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
               if (saved?.urlPath) {
                 creativesList.push({
                   id: crypto.randomUUID(),
@@ -1838,7 +1838,7 @@ export async function createWorkspace(req, res) {
     );
 
     const screenshotUrl = screenshotPath
-      ? `/screenshots/${path.basename(screenshotPath)}`
+      ? (screenshotPath.startsWith("http") ? screenshotPath : `/screenshots/${path.basename(screenshotPath)}`)
       : null;
 
     // Respuesta temprana: el frontend muestra el branding en "Generando tu ADN de negocio".
