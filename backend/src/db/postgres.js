@@ -1,8 +1,12 @@
-import { Pool } from '@vercel/postgres';
+import pg from "pg";
+const { Pool } = pg;
 
 export const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
 export async function query(sql, params) {

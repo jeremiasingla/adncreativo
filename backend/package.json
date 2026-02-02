@@ -8,9 +8,9 @@
     "build": "echo 'no-backend-build'"
   },
   "dependencies": {
-    "@vercel/postgres": "^0.10.0",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
+    "pg": "^8.13.0",
     "better-sqlite3": "^11.4.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
