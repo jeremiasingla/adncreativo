@@ -1637,6 +1637,7 @@ export async function createWorkspace(req, res) {
       )
     );
 
+    // Guardar URLs de Firecrawl tal cual; el front las carga/lee directamente
     if (branding.images) {
       delete branding.images;
     }

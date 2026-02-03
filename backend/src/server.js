@@ -26,41 +26,12 @@ const FRONTEND_ORIGIN = "https://adncreativo-frontend.vercel.app";
 const FRONTEND_ORIGIN_REGEX =
   /^https:\/\/adncreativo-frontend(\-[a-z0-9]+)*\.vercel\.app$/;
 function getAllowedOrigin(origin) {
-  if (!origin) return null;
+  if (!origin) return FRONTEND_ORIGIN; // Sin Origin (ej. servidor/proxy): permitir front principal
   if (origin === FRONTEND_ORIGIN || FRONTEND_ORIGIN_REGEX.test(origin))
     return origin;
   return null;
 }
-const corsOptions = {
-  origin: (origin, cb) => {
-    const allowed = getAllowedOrigin(origin);
-    cb(null, allowed !== null);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  optionsSuccessStatus: 204,
-};
-app.use(cors(corsOptions));
-// Asegurar que las respuestas siempre tengan el origen permitido (p. ej. en 500 o errores)
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  const allow = getAllowedOrigin(origin);
-  if (allow) {
-    res.setHeader("Access-Control-Allow-Origin", allow);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD"
-    );
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
-    );
-  }
-  next();
-});
-app.options("*", (req, res) => {
+function setCorsHeaders(req, res) {
   const allow = getAllowedOrigin(req.headers.origin);
   if (allow) {
     res.setHeader("Access-Control-Allow-Origin", allow);
@@ -74,7 +45,27 @@ app.options("*", (req, res) => {
       "Content-Type, Authorization"
     );
   }
+}
+// OPTIONS primero para que el preflight siempre reciba cabeceras CORS
+app.options("*", (req, res) => {
+  setCorsHeaders(req, res);
   res.status(204).end();
+});
+const corsOptions = {
+  origin: (origin, cb) => {
+    const allowed = getAllowedOrigin(origin);
+    cb(null, allowed !== null);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
+app.use(cors(corsOptions));
+// Asegurar que todas las respuestas tengan cabeceras CORS (incl. errores 4xx/5xx)
+app.use((req, res, next) => {
+  setCorsHeaders(req, res);
+  next();
 });
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
