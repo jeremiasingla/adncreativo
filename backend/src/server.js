@@ -9,11 +9,12 @@ import authRouter from "./routes/auth.route.js";
 import adminRouter from "./routes/admin.route.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
 import { getCreativeVersionsByOrgId } from "./controllers/workspace.controller.js";
+import fs from "fs";
 import { initPostgresWorkspaces } from "./db/postgres.js";
 
 dotenv.config();
 
-// Inicializar tabla workspaces en Postgres (Neon)
+// Inicializar tablas users y workspaces en Postgres (Neon)
 initPostgresWorkspaces().catch((err) =>
   console.warn("⚠️ initPostgresWorkspaces:", err?.message)
 );
@@ -52,27 +53,36 @@ app.use("/", workspaceRouter);
 app.use("/", authRouter);
 app.use("/", adminRouter);
 
-// Serve frontend if built (debe ir al final, después de los archivos estáticos de imágenes)
+// Serve frontend solo si existe (en Vercel el backend se despliega sin frontend/dist)
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");
+const frontendExists =
+  fs.existsSync(frontendDist) &&
+  fs.existsSync(path.join(frontendDist, "index.html"));
 
-app.use(express.static(frontendDist));
-// SPA fallback: sirve index.html para rutas de la app (incl. /:workspaceSlug)
-app.get(
-  [
-    "/",
-    "/app",
-    "/app/*",
-    "/login",
-    "/register",
-    "/onboarding",
-    "/onboarding/*",
-  ],
-  (_, res) => {
-    res.sendFile(path.join(frontendDist, "index.html"));
-  }
-);
-app.get("*", (_, res) => {
-  res.sendFile(path.join(frontendDist, "index.html"));
-});
+if (frontendExists) {
+  app.use(express.static(frontendDist));
+  app.get(
+    [
+      "/",
+      "/app",
+      "/app/*",
+      "/login",
+      "/register",
+      "/onboarding",
+      "/onboarding/*",
+    ],
+    (_, res) => res.sendFile(path.join(frontendDist, "index.html"))
+  );
+  app.get("*", (_, res) => res.sendFile(path.join(frontendDist, "index.html")));
+} else {
+  app.get("/", (_, res) =>
+    res
+      .status(404)
+      .json({
+        error: "Not found",
+        message: "Usa la URL del frontend (adncreativo-frontend.vercel.app).",
+      })
+  );
+}
 
 export default app;

@@ -129,13 +129,13 @@ export default function Home() {
     const ctx = gsap.context(() => {
       const sections = pageRef.current.querySelectorAll("section");
       const heroTitle = pageRef.current.querySelector(
-        "[data-gsap='hero-title']",
+        "[data-gsap='hero-title']"
       );
       const heroSubtitle = pageRef.current.querySelector(
-        "[data-gsap='hero-subtitle']",
+        "[data-gsap='hero-subtitle']"
       );
       const heroInput = pageRef.current.querySelector(
-        "[data-gsap='hero-input']",
+        "[data-gsap='hero-input']"
       );
       if (heroTitle && heroSubtitle && heroInput) {
         gsap.from([heroTitle, heroSubtitle, heroInput], {
@@ -1099,7 +1099,7 @@ export default function Home() {
                 loading="lazy"
                 decoding="async"
                 className="object-cover object-center w-full h-full"
-                src="/images/div-computer.jpg"
+                src="/images/linkedin-example.webp"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
             </div>
