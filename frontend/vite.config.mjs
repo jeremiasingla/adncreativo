@@ -15,4 +15,7 @@ export default defineConfig({
       "/admin": "http://localhost:3000",
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+  },
 });
