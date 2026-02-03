@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import { db } from "../db/index.js";
+import { get, all, run } from "../db/workspaceDb.js";
 import { scrapeWithFirecrawl } from "../services/firecrawl.service.js";
 import { generateWorkspaceSlug } from "../utils/slug.js";
 import { saveScreenshot } from "../utils/screenshot.js";
@@ -204,7 +204,7 @@ function buildCampaignsFromCreatives(creativesList, branding, orgId, baseUrl) {
 }
 
 /** Devuelve solo las campañas del workspace en formato { success, orgId, campaigns }. */
-export function getWorkspaceCampaigns(req, res) {
+export async function getWorkspaceCampaigns(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -216,11 +216,10 @@ export function getWorkspaceCampaigns(req, res) {
         .status(400)
         .json({ success: false, error: "Slug is required" });
     }
-    const row = db
-      .prepare(
-        `SELECT slug, url, branding, creatives, campaigns FROM workspaces WHERE user_id = ? AND slug = ?`,
-      )
-      .get(userId, slug);
+    const row = await get(
+      `SELECT slug, url, branding, creatives, campaigns FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
     if (!row) {
       return res
         .status(404)
@@ -265,18 +264,17 @@ export function getWorkspaceCampaigns(req, res) {
 }
 
 /** Lista workspaces del usuario autenticado. */
-export function listWorkspaces(req, res) {
+export async function listWorkspaces(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ success: false, error: "Unauthorized" });
     }
-    const rows = db
-      .prepare(
-        `SELECT id, slug, url, branding, screenshot_path, created_at
+    const rows = await all(
+      `SELECT id, slug, url, branding, screenshot_path, created_at
          FROM workspaces WHERE user_id = ? ORDER BY created_at DESC`,
-      )
-      .all(userId);
+      [userId],
+    );
 
     const workspaces = rows.map((row) => {
       let branding = {};
@@ -316,7 +314,7 @@ export function listWorkspaces(req, res) {
 }
 
 /** Devuelve un workspace por slug con branding completo (solo del usuario actual). */
-export function getWorkspaceBySlug(req, res) {
+export async function getWorkspaceBySlug(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -328,12 +326,11 @@ export function getWorkspaceBySlug(req, res) {
         .status(400)
         .json({ success: false, error: "Slug is required" });
     }
-    const row = db
-      .prepare(
-        `SELECT id, slug, url, branding, screenshot_path, knowledge_base, customer_profiles, headlines, creatives, campaigns, created_at
+    const row = await get(
+      `SELECT id, slug, url, branding, screenshot_path, knowledge_base, customer_profiles, headlines, creatives, campaigns, created_at
          FROM workspaces WHERE user_id = ? AND slug = ?`,
-      )
-      .get(userId, slug);
+      [userId, slug],
+    );
     if (!row) {
       return res
         .status(404)
@@ -420,7 +417,7 @@ export function getWorkspaceBySlug(req, res) {
 }
 
 /** Devuelve todos los hooks/headlines generados para un workspace. GET /workspaces/:slug/headlines */
-export function getWorkspaceHeadlines(req, res) {
+export async function getWorkspaceHeadlines(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -432,11 +429,10 @@ export function getWorkspaceHeadlines(req, res) {
         .status(400)
         .json({ success: false, error: "Slug is required" });
     }
-    const row = db
-      .prepare(
-        `SELECT id, headlines FROM workspaces WHERE user_id = ? AND slug = ?`,
-      )
-      .get(userId, slug);
+    const row = await get(
+      `SELECT id, headlines FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
     if (!row) {
       return res
         .status(404)
@@ -478,11 +474,10 @@ export async function generateCustomerProfileImages(req, res) {
         .status(400)
         .json({ success: false, error: "slug and profileId are required" });
     }
-    const row = db
-      .prepare(
-        `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
-      )
-      .get(userId, slug);
+    const row = await get(
+      `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
     if (!row) {
       return res
         .status(404)
@@ -552,9 +547,10 @@ export async function generateCustomerProfileImages(req, res) {
       avatarUrl: toAbsoluteImageUrl(avatarUrl),
       heroImageUrl: toAbsoluteImageUrl(heroImageUrl),
     };
-    db.prepare(
+    await run(
       `UPDATE workspaces SET customer_profiles = ? WHERE user_id = ? AND slug = ?`,
-    ).run(JSON.stringify(profiles), userId, slug);
+      [JSON.stringify(profiles), userId, slug],
+    );
 
     return res.status(200).json({
       success: true,
@@ -570,11 +566,10 @@ export async function generateCustomerProfileImages(req, res) {
 
 /** Lógica compartida: elimina imágenes ICP del workspace y las regenera con Seedream 4.5. */
 export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
-  const row = db
-    .prepare(
-      `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
-    )
-    .get(userId, slug);
+  const row = await get(
+    `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
+    [userId, slug],
+  );
   if (!row) return null;
   let profiles = [];
   try {
@@ -637,9 +632,10 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
     profiles[i] = updatedProfiles[i];
   }
 
-  db.prepare(
+  await run(
     `UPDATE workspaces SET customer_profiles = ? WHERE user_id = ? AND slug = ?`,
-  ).run(JSON.stringify(profiles), userId, slug);
+    [JSON.stringify(profiles), userId, slug],
+  );
 
   return { profiles, deleted };
 }
@@ -676,12 +672,10 @@ export async function regenerateAllCustomerProfileImages(req, res) {
 }
 
 /** Lógica compartida: elimina workspace por slug y sus archivos (screenshot, ICP). */
-export function deleteWorkspaceBySlug(slug) {
+export async function deleteWorkspaceBySlug(slug) {
   if (!slug || typeof slug !== "string")
     return { deleted: false, error: "slug required" };
-  const row = db
-    .prepare("SELECT id, screenshot_path FROM workspaces WHERE slug = ?")
-    .get(slug);
+  const row = await get("SELECT id, screenshot_path FROM workspaces WHERE slug = ?", [slug]);
   if (!row) return { deleted: false, error: "Workspace not found" };
 
   deleteIcpImagesForWorkspace(slug);
@@ -703,12 +697,12 @@ export function deleteWorkspaceBySlug(slug) {
     }
   }
 
-  const result = db.prepare("DELETE FROM workspaces WHERE slug = ?").run(slug);
+  const result = await run("DELETE FROM workspaces WHERE slug = ?", [slug]);
   return { deleted: result.changes > 0 };
 }
 
 /** Elimina un workspace y todos los archivos asociados (screenshot, avatares y banners ICP). */
-export function deleteWorkspace(req, res) {
+export async function deleteWorkspace(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -720,11 +714,10 @@ export function deleteWorkspace(req, res) {
         .status(400)
         .json({ success: false, error: "slug is required" });
     }
-    const row = db
-      .prepare(
-        `SELECT id, screenshot_path FROM workspaces WHERE user_id = ? AND slug = ?`,
-      )
-      .get(userId, slug);
+    const row = await get(
+      `SELECT id, screenshot_path FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
     if (!row) {
       return res
         .status(404)
@@ -750,9 +743,7 @@ export function deleteWorkspace(req, res) {
       }
     }
 
-    const result = db
-      .prepare("DELETE FROM workspaces WHERE user_id = ? AND slug = ?")
-      .run(userId, slug);
+    const result = await run("DELETE FROM workspaces WHERE user_id = ? AND slug = ?", [userId, slug]);
     if (result.changes === 0) {
       return res
         .status(404)
@@ -781,11 +772,10 @@ export async function generateCreatives(req, res) {
     const { slug } = req.params;
     let count = Math.min(Math.max(Number(req.body?.count) || 1, 1), 10);
 
-    const row = db
-      .prepare(
-        `SELECT id, branding, headlines, customer_profiles, creatives FROM workspaces WHERE user_id = ? AND slug = ?`,
-      )
-      .get(userId, slug);
+    const row = await get(
+      `SELECT id, branding, headlines, customer_profiles, creatives FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
 
     if (!row) {
       return res
@@ -951,12 +941,9 @@ export async function generateCreatives(req, res) {
       slug,
       baseUrl,
     );
-    db.prepare(
+    await run(
       "UPDATE workspaces SET creatives = ?, campaigns = ? WHERE slug = ?",
-    ).run(
-      JSON.stringify(creativesList),
-      JSON.stringify(campaignsPayload),
-      slug,
+      [JSON.stringify(creativesList), JSON.stringify(campaignsPayload), slug],
     );
 
     return res.status(200).json({
@@ -980,7 +967,7 @@ export async function generateCreatives(req, res) {
  * Devuelve los creativos del workspace en formato "versions" (compatible con ADNCreativo).
  * GET /workspaces/:slug/creatives/versions?adId=...&orgId=... (adId y orgId opcionales).
  */
-export function getCreativeVersions(req, res) {
+export async function getCreativeVersions(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -990,11 +977,10 @@ export function getCreativeVersions(req, res) {
     const adId = req.query?.adId ?? null;
     const orgIdQuery = req.query?.orgId ?? null;
 
-    const row = db
-      .prepare(
-        `SELECT id, creatives, campaigns FROM workspaces WHERE user_id = ? AND slug = ?`,
-      )
-      .get(userId, slug);
+    const row = await get(
+      `SELECT id, creatives, campaigns FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
 
     if (!row) {
       return res
@@ -1153,7 +1139,7 @@ export function getCreativeVersionsByOrgId(req, res) {
 }
 
 /** Actualiza la base de conocimiento de un workspace (PATCH). */
-export function updateWorkspaceKnowledgeBase(req, res) {
+export async function updateWorkspaceKnowledgeBase(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -1167,11 +1153,10 @@ export function updateWorkspaceKnowledgeBase(req, res) {
         .json({ success: false, error: "Slug is required" });
     }
     const text = typeof knowledgeBase === "string" ? knowledgeBase : "";
-    const result = db
-      .prepare(
-        `UPDATE workspaces SET knowledge_base = ? WHERE user_id = ? AND slug = ?`,
-      )
-      .run(text, userId, slug);
+    const result = await run(
+      `UPDATE workspaces SET knowledge_base = ? WHERE user_id = ? AND slug = ?`,
+      [text, userId, slug],
+    );
     if (result.changes === 0) {
       return res
         .status(404)
@@ -1242,10 +1227,10 @@ async function continueWorkspaceCreationInBackground(params) {
     return;
   }
 
-  db.prepare("UPDATE workspaces SET knowledge_base = ? WHERE slug = ?").run(
+  await run("UPDATE workspaces SET knowledge_base = ? WHERE slug = ?", [
     knowledgeBaseText,
     slug,
-  );
+  ]);
 
   let rawProfiles = [];
   try {
@@ -1332,9 +1317,10 @@ async function continueWorkspaceCreationInBackground(params) {
       }),
     );
     const customerProfilesJson = JSON.stringify(profileResults);
-    db.prepare(
-      "UPDATE workspaces SET customer_profiles = ? WHERE slug = ?",
-    ).run(customerProfilesJson, slug);
+    await run("UPDATE workspaces SET customer_profiles = ? WHERE slug = ?", [
+      customerProfilesJson,
+      slug,
+    ]);
 
     // Generar 100 titulares/headlines para creativos (4U's de Mark Ford, 7-15 palabras).
     let headlinesList = [];
@@ -1368,10 +1354,10 @@ async function continueWorkspaceCreationInBackground(params) {
         useVoseo,
       });
       if (headlinesList.length > 0) {
-        db.prepare("UPDATE workspaces SET headlines = ? WHERE slug = ?").run(
+        await run("UPDATE workspaces SET headlines = ? WHERE slug = ?", [
           JSON.stringify(headlinesList),
           slug,
-        );
+        ]);
         console.log(
           "[Headlines] Saved",
           headlinesList.length,
@@ -1393,9 +1379,7 @@ async function continueWorkspaceCreationInBackground(params) {
         let hasLogoOrImages = false;
         let brandingForCampaigns = {};
         try {
-          const brandingRow = db
-            .prepare("SELECT branding FROM workspaces WHERE slug = ?")
-            .get(slug);
+          const brandingRow = await get("SELECT branding FROM workspaces WHERE slug = ?", [slug]);
           if (brandingRow?.branding) {
             const b = JSON.parse(brandingRow.branding);
             brandingForCampaigns = b;
@@ -1422,9 +1406,7 @@ async function continueWorkspaceCreationInBackground(params) {
         const WELCOME_CAMPAIGN_COUNT = 3;
         let creativesList = [];
         try {
-          const row = db
-            .prepare("SELECT creatives FROM workspaces WHERE slug = ?")
-            .get(slug);
+          const row = await get("SELECT creatives FROM workspaces WHERE slug = ?", [slug]);
           if (row?.creatives != null && row.creatives !== "")
             creativesList = JSON.parse(row.creatives);
         } catch (_) {}
@@ -1477,18 +1459,20 @@ async function continueWorkspaceCreationInBackground(params) {
                   aspectRatio,
                 });
                 welcomeGenerated++;
-                db.prepare(
-                  "UPDATE workspaces SET creatives = ? WHERE slug = ?",
-                ).run(JSON.stringify(creativesList), slug);
+                await run("UPDATE workspaces SET creatives = ? WHERE slug = ?", [
+                  JSON.stringify(creativesList),
+                  slug,
+                ]);
                 const campaignsPayload = buildCampaignsFromCreatives(
                   creativesList,
                   brandingForCampaigns,
                   slug,
                   baseUrl,
                 );
-                db.prepare(
-                  "UPDATE workspaces SET campaigns = ? WHERE slug = ?",
-                ).run(JSON.stringify(campaignsPayload), slug);
+                await run("UPDATE workspaces SET campaigns = ? WHERE slug = ?", [
+                  JSON.stringify(campaignsPayload),
+                  slug,
+                ]);
                 console.log(
                   "[Welcome campaign] Creative",
                   welcomeGenerated,
@@ -1533,10 +1517,8 @@ export async function createWorkspace(req, res) {
     }
 
     if (!isAdmin && userId) {
-      const count = db
-        .prepare("SELECT COUNT(*) as n FROM workspaces WHERE user_id = ?")
-        .get(userId);
-      if (count && count.n >= MAX_WORKSPACES_FREE) {
+      const count = await get("SELECT COUNT(*) as n FROM workspaces WHERE user_id = ?", [userId]);
+      if (count && Number(count.n) >= MAX_WORKSPACES_FREE) {
         return res.status(403).json({
           success: false,
           error: `Los usuarios gratuitos pueden tener como máximo ${MAX_WORKSPACES_FREE} espacios de trabajo. Eliminá uno para crear otro.`,
@@ -1823,18 +1805,18 @@ export async function createWorkspace(req, res) {
     const createdAt = Math.floor(Date.now() / 1000);
 
     // Insertar workspace con branding y responder de inmediato; el resto se hace en segundo plano.
-    const stmt = db.prepare(
+    await run(
       `INSERT INTO workspaces (user_id, slug, url, branding, screenshot_path, knowledge_base, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    );
-    stmt.run(
-      userId,
-      slug,
-      parsedUrl.href,
-      JSON.stringify(normalizedBranding),
-      screenshotPath,
-      "",
-      createdAt,
+      [
+        userId,
+        slug,
+        parsedUrl.href,
+        JSON.stringify(normalizedBranding),
+        screenshotPath,
+        "",
+        createdAt,
+      ],
     );
 
     const screenshotUrl = screenshotPath

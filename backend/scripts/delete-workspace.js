@@ -15,8 +15,10 @@ if (!slug) {
   process.exit(1);
 }
 
-const { deleteWorkspaceBySlug } = await import("../src/controllers/workspace.controller.js");
-const result = deleteWorkspaceBySlug(slug);
+const { deleteWorkspaceBySlug } = await import(
+  "../src/controllers/workspace.controller.js"
+);
+const result = await deleteWorkspaceBySlug(slug);
 if (!result.deleted) {
   console.error(result.error || "No se pudo eliminar el workspace.");
   process.exit(1);

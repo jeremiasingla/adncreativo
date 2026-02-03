@@ -9,10 +9,12 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
-const { db } = await import("../src/db/index.js");
-const { deleteWorkspaceBySlug } = await import("../src/controllers/workspace.controller.js");
+const { all } = await import("../src/db/workspaceDb.js");
+const { deleteWorkspaceBySlug } = await import(
+  "../src/controllers/workspace.controller.js"
+);
 
-const rows = db.prepare("SELECT slug FROM workspaces").all();
+const rows = await all("SELECT slug FROM workspaces", []);
 if (rows.length === 0) {
   console.log("No hay workspaces para eliminar.");
   process.exit(0);
@@ -21,7 +23,7 @@ if (rows.length === 0) {
 let deleted = 0;
 let failed = 0;
 for (const row of rows) {
-  const result = deleteWorkspaceBySlug(row.slug);
+  const result = await deleteWorkspaceBySlug(row.slug);
   if (result.deleted) {
     console.log("Eliminado:", row.slug);
     deleted++;

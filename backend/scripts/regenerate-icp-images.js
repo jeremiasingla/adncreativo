@@ -15,14 +15,18 @@ dotenv.config({ path: path.join(__dirname, "..", ".env") });
 const slug = process.argv[2];
 if (!slug) {
   console.error("Uso: node scripts/regenerate-icp-images.js <workspace-slug>");
-  console.error("Ejemplo: node scripts/regenerate-icp-images.js comidasenvueltas-s-workspace-1770049665");
+  console.error(
+    "Ejemplo: node scripts/regenerate-icp-images.js comidasenvueltas-s-workspace-1770049665"
+  );
   process.exit(1);
 }
 
-const { db } = await import("../src/db/index.js");
-const { regenerateAllCustomerProfileImagesCore } = await import("../src/controllers/workspace.controller.js");
+const { get } = await import("../src/db/workspaceDb.js");
+const { regenerateAllCustomerProfileImagesCore } = await import(
+  "../src/controllers/workspace.controller.js"
+);
 
-const row = db.prepare("SELECT user_id FROM workspaces WHERE slug = ?").get(slug);
+const row = await get("SELECT user_id FROM workspaces WHERE slug = ?", [slug]);
 if (!row) {
   console.error("Workspace no encontrado:", slug);
   process.exit(1);
@@ -34,4 +38,9 @@ if (result === null) {
   console.error("Workspace no encontrado o sin perfiles.");
   process.exit(1);
 }
-console.log("Listo. Perfiles actualizados:", result.profiles.length, "| Imágenes eliminadas:", result.deleted);
+console.log(
+  "Listo. Perfiles actualizados:",
+  result.profiles.length,
+  "| Imágenes eliminadas:",
+  result.deleted
+);

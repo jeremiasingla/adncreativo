@@ -9,8 +9,14 @@ import authRouter from "./routes/auth.route.js";
 import adminRouter from "./routes/admin.route.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
 import { getCreativeVersionsByOrgId } from "./controllers/workspace.controller.js";
+import { initPostgresWorkspaces } from "./db/postgres.js";
 
 dotenv.config();
+
+// Inicializar tabla workspaces en Postgres (Neon)
+initPostgresWorkspaces().catch((err) =>
+  console.warn("⚠️ initPostgresWorkspaces:", err?.message)
+);
 
 const app = express();
 
@@ -63,7 +69,7 @@ app.get(
   ],
   (_, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
-  },
+  }
 );
 app.get("*", (_, res) => {
   res.sendFile(path.join(frontendDist, "index.html"));
