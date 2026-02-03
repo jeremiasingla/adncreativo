@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npx vite build",
-    "preview": "vite preview --port 4173",
-    "postinstall": "node -e \"const fs=require('fs'); const path=require('path'); const dir=path.join(__dirname,'node_modules'); const reactHere=path.join(dir,'react','index.js'); const rootReact=path.join(__dirname,'..','node_modules','react','index.js'); if(!fs.existsSync(reactHere) && fs.existsSync(rootReact)) { try { const s=fs.lstatSync(dir); if(s.isSymbolicLink()) fs.unlinkSync(dir); else fs.rmSync(dir, { recursive: true }); } catch(e) {} fs.symlinkSync(path.join('..','node_modules'), dir, 'dir'); console.log('frontend/node_modules -> root (symlink creado)'); }\""
+    "preview": "vite preview --port 4173"
   },
   "dependencies": {
     "framer-motion": "^12.29.2",
