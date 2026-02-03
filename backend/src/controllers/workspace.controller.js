@@ -89,7 +89,7 @@ function normalizeHex(hex) {
   return null;
 }
 
-/** True si primary, secondary y accent son demasiado parecidos (mismos o casi iguales). */
+/** True si primary secondary y accent son demasiado parecidos o iguales. */
 function areColorsTooSimilar(colors) {
   if (!colors) return false;
   const p = normalizeHex(colors.primary);
