@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { apiUrl } from "../api/config.js";
 
 const AuthContext = createContext(null);
 
@@ -10,9 +11,9 @@ export function AuthProvider({ children }) {
     const ac = new AbortController();
     (async () => {
       try {
-        let res = await fetch("/auth/me", { credentials: "include", signal: ac.signal });
+        let res = await fetch(apiUrl("/auth/me"), { credentials: "include", signal: ac.signal });
         if (res.status === 401) {
-          const refreshRes = await fetch("/auth/refresh", {
+          const refreshRes = await fetch(apiUrl("/auth/refresh"), {
             method: "POST",
             credentials: "include",
             signal: ac.signal,
@@ -37,7 +38,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function logout() {
-    await fetch("/auth/logout", { method: "POST", credentials: "include" });
+    await fetch(apiUrl("/auth/logout"), { method: "POST", credentials: "include" });
     setUser(null);
   }
 

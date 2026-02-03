@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npx vite build",
     "preview": "vite preview --port 4173",
     "postinstall": "node -e \"const fs=require('fs'); const path=require('path'); const dir=path.join(__dirname,'node_modules'); const reactHere=path.join(dir,'react','index.js'); const rootReact=path.join(__dirname,'..','node_modules','react','index.js'); if(!fs.existsSync(reactHere) && fs.existsSync(rootReact)) { try { const s=fs.lstatSync(dir); if(s.isSymbolicLink()) fs.unlinkSync(dir); else fs.rmSync(dir, { recursive: true }); } catch(e) {} fs.symlinkSync(path.join('..','node_modules'), dir, 'dir'); console.log('frontend/node_modules -> root (symlink creado)'); }\""
   },
@@ -22,5 +22,8 @@
     "postcss": "^8.4.0",
     "tailwindcss": "^3.0.0",
     "vite": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

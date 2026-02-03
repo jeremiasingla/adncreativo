@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { apiUrl } from "../api/config.js";
 
 const heroBackground = (
   <>
@@ -38,7 +39,7 @@ export default function Register() {
     e.preventDefault();
     setError(null);
     try {
-      const res = await fetch("/auth/register", {
+      const res = await fetch(apiUrl("/auth/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

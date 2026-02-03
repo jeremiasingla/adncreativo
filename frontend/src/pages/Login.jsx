@@ -6,6 +6,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { apiUrl } from "../api/config.js";
 
 const heroBackground = (
   <>
@@ -54,7 +55,7 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     try {
-      const res = await fetch("/auth/login", {
+      const res = await fetch(apiUrl("/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
