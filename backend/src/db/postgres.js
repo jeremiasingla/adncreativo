@@ -6,20 +6,25 @@ const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (!connectionString) {
-  throw new Error(
-    "DATABASE_URL o POSTGRES_URL es obligatorio (Neon Postgres). Configuralo en el entorno."
+  console.warn(
+    "⚠️ DATABASE_URL no configurado. Postgres está deshabilitado. Algunas funciones no estarán disponibles."
   );
 }
 
-export const pool = new Pool({
-  connectionString,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
-});
+export const pool = connectionString
+  ? new Pool({
+      connectionString,
+      ssl:
+        process.env.NODE_ENV === "production"
+          ? { rejectUnauthorized: false }
+          : false,
+    })
+  : null;
 
 export async function query(sql, params) {
+  if (!pool) {
+    throw new Error("Postgres no está configurado (DATABASE_URL faltante)");
+  }
   const client = await pool.connect();
   try {
     const res = await client.query(sql, params);
@@ -34,7 +39,7 @@ let workspacesTableInitialized = false;
 
 /** Crea la tabla users en Postgres si no existe (Neon/Vercel). Debe ejecutarse antes de initPostgresWorkspaces. */
 export async function initPostgresUsers() {
-  if (usersTableInitialized) return;
+  if (!pool || usersTableInitialized) return;
   try {
     await query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -54,7 +59,7 @@ export async function initPostgresUsers() {
 
 /** Crea la tabla workspaces en Postgres si no existe (Neon/Vercel). */
 export async function initPostgresWorkspaces() {
-  if (workspacesTableInitialized) return;
+  if (!pool || workspacesTableInitialized) return;
   try {
     await initPostgresUsers();
     await query(`
