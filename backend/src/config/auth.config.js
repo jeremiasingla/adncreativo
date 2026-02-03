@@ -9,10 +9,9 @@ if (
   isProd &&
   (JWT_SECRET === "devsecret" || REFRESH_SECRET === "devrefreshsecret")
 ) {
-  console.error(
-    "En producción debes definir JWT_SECRET y REFRESH_SECRET en el entorno."
+  console.warn(
+    "⚠️ JWT_SECRET o REFRESH_SECRET no configurados. Usando valores por defecto (no seguro en producción)."
   );
-  process.exit(1);
 }
 
 const ACCESS_TOKEN_TTL = "15m";

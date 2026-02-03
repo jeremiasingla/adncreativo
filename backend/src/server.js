@@ -12,6 +12,7 @@ import { getCreativeVersionsByOrgId } from "./controllers/workspace.controller.j
 import fs from "fs";
 import { initPostgresWorkspaces } from "./db/postgres.js";
 
+// ADNCreativo Backend v2.0.0 - Vercel deployment fix
 dotenv.config();
 
 // Inicializar tablas users y workspaces en Postgres (Neon)
