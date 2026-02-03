@@ -21,7 +21,61 @@ initPostgresWorkspaces().catch((err) =>
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+// CORS: permitir frontend en Vercel (y previews). Sin esto el navegador bloquea peticiones cross-origin.
+const FRONTEND_ORIGIN = "https://adncreativo-frontend.vercel.app";
+const FRONTEND_ORIGIN_REGEX =
+  /^https:\/\/adncreativo-frontend(\-[a-z0-9]+)*\.vercel\.app$/;
+function getAllowedOrigin(origin) {
+  if (!origin) return null;
+  if (origin === FRONTEND_ORIGIN || FRONTEND_ORIGIN_REGEX.test(origin))
+    return origin;
+  return null;
+}
+const corsOptions = {
+  origin: (origin, cb) => {
+    const allowed = getAllowedOrigin(origin);
+    cb(null, allowed !== null);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
+};
+app.use(cors(corsOptions));
+// Asegurar que las respuestas siempre tengan el origen permitido (p. ej. en 500 o errores)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allow = getAllowedOrigin(origin);
+  if (allow) {
+    res.setHeader("Access-Control-Allow-Origin", allow);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD"
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+  }
+  next();
+});
+app.options("*", (req, res) => {
+  const allow = getAllowedOrigin(req.headers.origin);
+  if (allow) {
+    res.setHeader("Access-Control-Allow-Origin", allow);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD"
+    );
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization"
+    );
+  }
+  res.status(204).end();
+});
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
@@ -76,12 +130,10 @@ if (frontendExists) {
   app.get("*", (_, res) => res.sendFile(path.join(frontendDist, "index.html")));
 } else {
   app.get("/", (_, res) =>
-    res
-      .status(404)
-      .json({
-        error: "Not found",
-        message: "Usa la URL del frontend (adncreativo-frontend.vercel.app).",
-      })
+    res.status(404).json({
+      error: "Not found",
+      message: "Usa la URL del frontend (adncreativo-frontend.vercel.app).",
+    })
   );
 }
 

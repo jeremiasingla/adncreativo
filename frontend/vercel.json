@@ -3,5 +3,7 @@
   "buildCommand": "npm run build",
   "framework": null,
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
