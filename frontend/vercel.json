@@ -2,9 +2,5 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "framework": null,
-  "outputDirectory": "dist",
-  "rewrites": [
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/((?!images/|assets/|fonts/).*)", "destination": "/index.html" }
-  ]
+  "outputDirectory": "dist"
 }
