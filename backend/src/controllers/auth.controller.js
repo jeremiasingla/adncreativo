@@ -1,4 +1,4 @@
-import { query } from "../db/postgres.js";
+import { query, initPostgresUsers } from "../db/postgres.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {
@@ -37,6 +37,7 @@ function setTokens(res, user) {
 
 export async function register(req, res) {
   try {
+    await initPostgresUsers();
     const { email, password, name } = req.body;
     if (!email || !password)
       return res.status(400).json({ error: "email and password required" });
@@ -84,6 +85,7 @@ export async function register(req, res) {
 
 export async function login(req, res) {
   try {
+    await initPostgresUsers();
     const { email, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ error: "email and password required" });
@@ -118,6 +120,7 @@ export async function login(req, res) {
 
 export async function refresh(req, res) {
   try {
+    await initPostgresUsers();
     const token = req.cookies?.refreshToken;
     if (!token) return res.status(401).json({ error: "unauthorized" });
     const payload = jwt.verify(token, REFRESH_SECRET);

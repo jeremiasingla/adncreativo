@@ -22,7 +22,7 @@ import { saveCreativeImage } from "../utils/creativeImage.js";
 
 const SCREENSHOT_DIR = path.resolve(
   process.env.SCREENSHOT_DIR ||
-    path.join(process.cwd(), "storage", "screenshots"),
+    path.join(process.cwd(), "storage", "screenshots")
 );
 
 /** Convierte URL de logo/imagen relativa a absoluta para que OpenRouter pueda cargarla. */
@@ -184,7 +184,7 @@ function buildCampaignsFromCreatives(creativesList, branding, orgId, baseUrl) {
   const campaignId = crypto.randomUUID();
   const adSetId = crypto.randomUUID();
   const ads = creativesList.map((c, i) =>
-    creativeToAd(c, branding, i, baseUrl),
+    creativeToAd(c, branding, i, baseUrl)
   );
   return {
     campaigns: [
@@ -218,7 +218,7 @@ export async function getWorkspaceCampaigns(req, res) {
     }
     const row = await get(
       `SELECT slug, url, branding, creatives, campaigns FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug],
+      [userId, slug]
     );
     if (!row) {
       return res
@@ -247,7 +247,7 @@ export async function getWorkspaceCampaigns(req, res) {
         creativesList,
         brandingWithUrl,
         row.slug,
-        baseUrl,
+        baseUrl
       );
     }
     return res.status(200).json({
@@ -273,7 +273,7 @@ export async function listWorkspaces(req, res) {
     const rows = await all(
       `SELECT id, slug, url, branding, screenshot_path, created_at
          FROM workspaces WHERE user_id = ? ORDER BY created_at DESC`,
-      [userId],
+      [userId]
     );
 
     const workspaces = rows.map((row) => {
@@ -282,7 +282,9 @@ export async function listWorkspaces(req, res) {
         branding = JSON.parse(row.branding || "{}");
       } catch (_) {}
       const screenshotUrl = row.screenshot_path
-        ? (row.screenshot_path.startsWith("http") ? row.screenshot_path : `/screenshots/${path.basename(row.screenshot_path)}`)
+        ? row.screenshot_path.startsWith("http")
+          ? row.screenshot_path
+          : `/screenshots/${path.basename(row.screenshot_path)}`
         : null;
       const name =
         branding.companyName ||
@@ -329,7 +331,7 @@ export async function getWorkspaceBySlug(req, res) {
     const row = await get(
       `SELECT id, slug, url, branding, screenshot_path, knowledge_base, customer_profiles, headlines, creatives, campaigns, created_at
          FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug],
+      [userId, slug]
     );
     if (!row) {
       return res
@@ -341,7 +343,9 @@ export async function getWorkspaceBySlug(req, res) {
       branding = JSON.parse(row.branding || "{}");
     } catch (_) {}
     const screenshotUrl = row.screenshot_path
-      ? (row.screenshot_path.startsWith("http") ? row.screenshot_path : `/screenshots/${path.basename(row.screenshot_path)}`)
+      ? row.screenshot_path.startsWith("http")
+        ? row.screenshot_path
+        : `/screenshots/${path.basename(row.screenshot_path)}`
       : null;
     const name =
       branding.companyName ||
@@ -371,7 +375,7 @@ export async function getWorkspaceBySlug(req, res) {
         creativesList,
         brandingWithUrl,
         row.slug,
-        baseUrl,
+        baseUrl
       );
     }
     return res.status(200).json({
@@ -431,7 +435,7 @@ export async function getWorkspaceHeadlines(req, res) {
     }
     const row = await get(
       `SELECT id, headlines FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug],
+      [userId, slug]
     );
     if (!row) {
       return res
@@ -476,7 +480,7 @@ export async function generateCustomerProfileImages(req, res) {
     }
     const row = await get(
       `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug],
+      [userId, slug]
     );
     if (!row) {
       return res
@@ -506,19 +510,20 @@ export async function generateCustomerProfileImages(req, res) {
         const avatarPath = await saveIcpImage(
           avatarDataUrl,
           `${slug}-${profileId.slice(0, 8)}`,
-          "avatar",
+          "avatar"
         );
-        if (avatarPath) avatarUrl = avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`;
+        if (avatarPath)
+          avatarUrl = avatarPath.startsWith("http")
+            ? avatarPath
+            : `/icp-avatars/${path.basename(avatarPath)}`;
       }
     } catch (avatarErr) {
       console.warn("⚠️ Avatar generation failed:", avatarErr.message);
-      return res
-        .status(502)
-        .json({
-          success: false,
-          error: "Avatar generation failed",
-          details: avatarErr.message,
-        });
+      return res.status(502).json({
+        success: false,
+        error: "Avatar generation failed",
+        details: avatarErr.message,
+      });
     }
 
     try {
@@ -527,19 +532,20 @@ export async function generateCustomerProfileImages(req, res) {
         const heroPath = await saveIcpImage(
           heroDataUrl,
           `${slug}-${profileId.slice(0, 8)}`,
-          "hero",
+          "hero"
         );
-        if (heroPath) heroImageUrl = heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`;
+        if (heroPath)
+          heroImageUrl = heroPath.startsWith("http")
+            ? heroPath
+            : `/icp-heroes/${path.basename(heroPath)}`;
       }
     } catch (heroErr) {
       console.warn("⚠️ Hero/banner generation failed:", heroErr.message);
-      return res
-        .status(502)
-        .json({
-          success: false,
-          error: "Hero generation failed",
-          details: heroErr.message,
-        });
+      return res.status(502).json({
+        success: false,
+        error: "Hero generation failed",
+        details: heroErr.message,
+      });
     }
 
     profiles[index] = {
@@ -549,7 +555,7 @@ export async function generateCustomerProfileImages(req, res) {
     };
     await run(
       `UPDATE workspaces SET customer_profiles = ? WHERE user_id = ? AND slug = ?`,
-      [JSON.stringify(profiles), userId, slug],
+      [JSON.stringify(profiles), userId, slug]
     );
 
     return res.status(200).json({
@@ -568,7 +574,7 @@ export async function generateCustomerProfileImages(req, res) {
 export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
   const row = await get(
     `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
-    [userId, slug],
+    [userId, slug]
   );
   if (!row) return null;
   let profiles = [];
@@ -589,7 +595,7 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
           console.warn(
             "⚠️ Avatar generation failed for profile:",
             profile.name,
-            err.message,
+            err.message
           );
           return null;
         }),
@@ -597,35 +603,28 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
           console.warn(
             "⚠️ Hero/banner generation failed for profile:",
             profile.name,
-            err.message,
+            err.message
           );
           return null;
         }),
       ]);
-      let avatarUrl = null;
-      let heroImageUrl = null;
-      if (avatarDataUrl) {
-        const avatarPath = await saveIcpImage(
-          avatarDataUrl,
-          `${slug}-${profileId.slice(0, 8)}`,
-          "avatar",
-        );
-        if (avatarPath) avatarUrl = avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`;
-      }
-      if (heroDataUrl) {
-        const heroPath = await saveIcpImage(
-          heroDataUrl,
-          `${slug}-${profileId.slice(0, 8)}`,
-          "hero",
-        );
-        if (heroPath) heroImageUrl = heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`;
-      }
+      const prefix = `${slug}-${profileId.slice(0, 8)}`;
+      const [avatarPath, heroPath] = await Promise.all([
+        avatarDataUrl ? saveIcpImage(avatarDataUrl, prefix, "avatar") : Promise.resolve(null),
+        heroDataUrl ? saveIcpImage(heroDataUrl, prefix, "hero") : Promise.resolve(null),
+      ]);
+      const avatarUrl = avatarPath
+        ? (avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`)
+        : null;
+      const heroImageUrl = heroPath
+        ? (heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`)
+        : null;
       return {
         ...profile,
         avatarUrl: toAbsoluteImageUrl(avatarUrl),
         heroImageUrl: toAbsoluteImageUrl(heroImageUrl),
       };
-    }),
+    })
   );
 
   for (let i = 0; i < updatedProfiles.length; i++) {
@@ -634,7 +633,7 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
 
   await run(
     `UPDATE workspaces SET customer_profiles = ? WHERE user_id = ? AND slug = ?`,
-    [JSON.stringify(profiles), userId, slug],
+    [JSON.stringify(profiles), userId, slug]
   );
 
   return { profiles, deleted };
@@ -675,7 +674,10 @@ export async function regenerateAllCustomerProfileImages(req, res) {
 export async function deleteWorkspaceBySlug(slug) {
   if (!slug || typeof slug !== "string")
     return { deleted: false, error: "slug required" };
-  const row = await get("SELECT id, screenshot_path FROM workspaces WHERE slug = ?", [slug]);
+  const row = await get(
+    "SELECT id, screenshot_path FROM workspaces WHERE slug = ?",
+    [slug]
+  );
   if (!row) return { deleted: false, error: "Workspace not found" };
 
   deleteIcpImagesForWorkspace(slug);
@@ -692,7 +694,7 @@ export async function deleteWorkspaceBySlug(slug) {
       console.warn(
         "⚠️ Could not delete screenshot file:",
         screenshotPath,
-        err.message,
+        err.message
       );
     }
   }
@@ -716,7 +718,7 @@ export async function deleteWorkspace(req, res) {
     }
     const row = await get(
       `SELECT id, screenshot_path FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug],
+      [userId, slug]
     );
     if (!row) {
       return res
@@ -738,12 +740,15 @@ export async function deleteWorkspace(req, res) {
         console.warn(
           "⚠️ Could not delete screenshot file:",
           screenshotPath,
-          err.message,
+          err.message
         );
       }
     }
 
-    const result = await run("DELETE FROM workspaces WHERE user_id = ? AND slug = ?", [userId, slug]);
+    const result = await run(
+      "DELETE FROM workspaces WHERE user_id = ? AND slug = ?",
+      [userId, slug]
+    );
     if (result.changes === 0) {
       return res
         .status(404)
@@ -774,7 +779,7 @@ export async function generateCreatives(req, res) {
 
     const row = await get(
       `SELECT id, branding, headlines, customer_profiles, creatives FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug],
+      [userId, slug]
     );
 
     if (!row) {
@@ -849,7 +854,7 @@ export async function generateCreatives(req, res) {
     if (!isAdmin) {
       count = Math.min(
         count,
-        MAX_CREATIVES_PER_WORKSPACE_FREE - creativesList.length,
+        MAX_CREATIVES_PER_WORKSPACE_FREE - creativesList.length
       );
       if (count <= 0) {
         return res.status(403).json({
@@ -861,36 +866,35 @@ export async function generateCreatives(req, res) {
 
     const modelUsed = "dall-e-3";
     let generated = 0;
+    const CREATIVE_CONCURRENCY = 3;
 
-    for (let i = 0; i < count; i++) {
-      const headlineIndex = (creativesList.length + i) % headlinesList.length;
+    const generateOneCreative = async (offsetIndex, baseLength) => {
+      const headlineIndex = (baseLength + offsetIndex) % headlinesList.length;
       const chosenHeadline = headlinesList[headlineIndex];
-
       const profileIndex =
         Array.isArray(profiles) && profiles.length > 0
-          ? (creativesList.length + i) % profiles.length
+          ? (baseLength + offsetIndex) % profiles.length
           : 0;
       const profile =
         Array.isArray(profiles) && profiles[profileIndex]
           ? profiles[profileIndex]
           : null;
       const clientIdealSummary = profile
-        ? `${profile.name ?? ""}, ${profile.title ?? ""}. ${profile.description ?? ""}. Objetivos: ${(profile.goals || []).slice(0, 2).join("; ")}. Dificultades: ${(profile.painPoints || []).slice(0, 2).join("; ")}`.slice(
-            0,
-            800,
-          )
+        ? `${profile.name ?? ""}, ${profile.title ?? ""}. ${
+            profile.description ?? ""
+          }. Objetivos: ${(profile.goals || [])
+            .slice(0, 2)
+            .join("; ")}. Dificultades: ${(profile.painPoints || [])
+            .slice(0, 2)
+            .join("; ")}`.slice(0, 800)
         : "";
-
       const aspectRatio =
         CREATIVE_ASPECT_RATIOS[
-          (creativesList.length + i) % CREATIVE_ASPECT_RATIOS.length
+          (baseLength + offsetIndex) % CREATIVE_ASPECT_RATIOS.length
         ];
-
-      // Rotar uso del logo: algunos creativos con logo, otros sin (para variar)
       const useLogoThisTime =
-        hasLogoOrImages && (creativesList.length + i) % 2 === 0;
+        hasLogoOrImages && (baseLength + offsetIndex) % 2 === 0;
       const imagesForThisCreative = useLogoThisTime ? referenceImages : [];
-
       try {
         const imagePrompt = await generateCreativeImagePrompt({
           headline: chosenHeadline,
@@ -904,12 +908,12 @@ export async function generateCreatives(req, res) {
         const imageDataUrl = await generateCreativeImageSeedream(
           imagePrompt,
           aspectRatio,
-          imagesForThisCreative,
+          imagesForThisCreative
         );
         if (imageDataUrl) {
           const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
           if (saved?.urlPath) {
-            creativesList.push({
+            return {
               id: crypto.randomUUID(),
               headline: chosenHeadline,
               imagePrompt,
@@ -918,19 +922,33 @@ export async function generateCreatives(req, res) {
               createdAt: new Date().toISOString(),
               model: modelUsed,
               aspectRatio,
-            });
-            generated++;
-            console.log(
-              "[Creative] Generated creative",
-              generated,
-              "for workspace",
-              slug,
-            );
+            };
           }
         }
       } catch (err) {
         console.error("[Creative] Error generating creative:", err.message);
-        // Continuar con el siguiente
+      }
+      return null;
+    };
+
+    for (let start = 0; start < count; start += CREATIVE_CONCURRENCY) {
+      const chunkSize = Math.min(CREATIVE_CONCURRENCY, count - start);
+      const baseLength = creativesList.length;
+      const results = await Promise.all(
+        Array.from({ length: chunkSize }, (_, j) =>
+          generateOneCreative(start + j, baseLength)
+        );
+      for (const creative of results) {
+        if (creative) {
+          creativesList.push(creative);
+          generated++;
+          console.log(
+            "[Creative] Generated creative",
+            generated,
+            "for workspace",
+            slug
+          );
+        }
       }
     }
 
@@ -939,11 +957,11 @@ export async function generateCreatives(req, res) {
       creativesList,
       branding,
       slug,
-      baseUrl,
+      baseUrl
     );
     await run(
       "UPDATE workspaces SET creatives = ?, campaigns = ? WHERE slug = ?",
-      [JSON.stringify(creativesList), JSON.stringify(campaignsPayload), slug],
+      [JSON.stringify(creativesList), JSON.stringify(campaignsPayload), slug]
     );
 
     return res.status(200).json({
@@ -979,7 +997,7 @@ export async function getCreativeVersions(req, res) {
 
     const row = await get(
       `SELECT id, creatives, campaigns FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug],
+      [userId, slug]
     );
 
     if (!row) {
@@ -1155,7 +1173,7 @@ export async function updateWorkspaceKnowledgeBase(req, res) {
     const text = typeof knowledgeBase === "string" ? knowledgeBase : "";
     const result = await run(
       `UPDATE workspaces SET knowledge_base = ? WHERE user_id = ? AND slug = ?`,
-      [text, userId, slug],
+      [text, userId, slug]
     );
     if (result.changes === 0) {
       return res
@@ -1191,11 +1209,23 @@ export async function captureWorkspaceScreenshot(req, res) {
     const screenshot = screenshotData.screenshot || null;
     const screenshotPath = await saveScreenshot(screenshot, slug);
     const screenshotUrl = screenshotPath
-      ? (screenshotPath.startsWith("http") ? screenshotPath : `/screenshots/${path.basename(screenshotPath)}`)
+      ? screenshotPath.startsWith("http")
+        ? screenshotPath
+        : `/screenshots/${path.basename(screenshotPath)}`
       : null;
     return res.status(200).json({ success: true, screenshotUrl, slug });
   } catch (error) {
     console.error("❌ Error capturing screenshot:", error.message);
+    const status = error.response?.status;
+    const isAuthError = status === 401 || status === 403;
+    if (isAuthError) {
+      return res.status(503).json({
+        success: false,
+        error: "screenshot_service_unavailable",
+        message:
+          "Servicio de captura no configurado. Configura FIRECRAWL_API_KEY en el backend.",
+      });
+    }
     return res
       .status(500)
       .json({ success: false, error: "Internal server error" });
@@ -1259,7 +1289,7 @@ async function continueWorkspaceCreationInBackground(params) {
             console.warn(
               "⚠️ Avatar generation failed for profile:",
               p.name,
-              err.message,
+              err.message
             );
             return null;
           }),
@@ -1267,30 +1297,22 @@ async function continueWorkspaceCreationInBackground(params) {
             console.warn(
               "⚠️ Hero/banner generation failed for profile:",
               p.name,
-              err.message,
+              err.message
             );
             return null;
           }),
         ]);
-        let avatarUrl = null;
-        let heroImageUrl = null;
-        if (avatarDataUrl) {
-          const avatarPath = await saveIcpImage(
-            avatarDataUrl,
-            `${slug}-${profileId.slice(0, 8)}`,
-            "avatar",
-          );
-          if (avatarPath)
-            avatarUrl = avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`;
-        }
-        if (heroDataUrl) {
-          const heroPath = await saveIcpImage(
-            heroDataUrl,
-            `${slug}-${profileId.slice(0, 8)}`,
-            "hero",
-          );
-          if (heroPath) heroImageUrl = heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`;
-        }
+        const prefix = `${slug}-${profileId.slice(0, 8)}`;
+        const [avatarPath, heroPath] = await Promise.all([
+          avatarDataUrl ? saveIcpImage(avatarDataUrl, prefix, "avatar") : Promise.resolve(null),
+          heroDataUrl ? saveIcpImage(heroDataUrl, prefix, "hero") : Promise.resolve(null),
+        ]);
+        const avatarUrl = avatarPath
+          ? (avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`)
+          : null;
+        const heroImageUrl = heroPath
+          ? (heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`)
+          : null;
         return {
           id: profileId,
           workspaceOrgId,
@@ -1314,7 +1336,7 @@ async function continueWorkspaceCreationInBackground(params) {
           createdAt: now,
           updatedAt: now,
         };
-      }),
+      })
     );
     const customerProfilesJson = JSON.stringify(profileResults);
     await run("UPDATE workspaces SET customer_profiles = ? WHERE slug = ?", [
@@ -1327,10 +1349,13 @@ async function continueWorkspaceCreationInBackground(params) {
     try {
       const firstProfile = profileResults[0];
       const clientIdealSummary = firstProfile
-        ? `${firstProfile.name}, ${firstProfile.title}. ${firstProfile.description || ""}. Objetivos: ${(firstProfile.goals || []).slice(0, 2).join("; ")}. Dificultades: ${(firstProfile.painPoints || []).slice(0, 2).join("; ")}`.slice(
-            0,
-            800,
-          )
+        ? `${firstProfile.name}, ${firstProfile.title}. ${
+            firstProfile.description || ""
+          }. Objetivos: ${(firstProfile.goals || [])
+            .slice(0, 2)
+            .join("; ")}. Dificultades: ${(firstProfile.painPoints || [])
+            .slice(0, 2)
+            .join("; ")}`.slice(0, 800)
         : "";
       const nicheOrSubniche = [params.companyName, params.headline]
         .filter(Boolean)
@@ -1339,11 +1364,11 @@ async function continueWorkspaceCreationInBackground(params) {
       const useVoseo =
         profileResults.some((p) =>
           /argentina|uruguay|buenos aires|córdoba|rosario|mendoza|montevideo/i.test(
-            String(p.demographics?.location ?? ""),
-          ),
+            String(p.demographics?.location ?? "")
+          )
         ) ||
         /argentina|uruguay|buenos aires|córdoba|rosario|mendoza|montevideo/i.test(
-          knowledgeBaseText.slice(0, 2000),
+          knowledgeBaseText.slice(0, 2000)
         );
       headlinesList = await generateHeadlines({
         companyName: params.companyName,
@@ -1362,7 +1387,7 @@ async function continueWorkspaceCreationInBackground(params) {
           "[Headlines] Saved",
           headlinesList.length,
           "headlines for workspace",
-          slug,
+          slug
         );
 
         // Campaña de bienvenida: generar 3 creativos automáticamente.
@@ -1379,7 +1404,10 @@ async function continueWorkspaceCreationInBackground(params) {
         let hasLogoOrImages = false;
         let brandingForCampaigns = {};
         try {
-          const brandingRow = await get("SELECT branding FROM workspaces WHERE slug = ?", [slug]);
+          const brandingRow = await get(
+            "SELECT branding FROM workspaces WHERE slug = ?",
+            [slug]
+          );
           if (brandingRow?.branding) {
             const b = JSON.parse(brandingRow.branding);
             brandingForCampaigns = b;
@@ -1395,7 +1423,7 @@ async function continueWorkspaceCreationInBackground(params) {
             if (Array.isArray(b?.images) && referenceImages.length < 2) {
               for (const img of b.images.slice(0, 2 - referenceImages.length)) {
                 const u = toAbsoluteImageUrl(
-                  typeof img === "string" ? img : img?.url,
+                  typeof img === "string" ? img : img?.url
                 );
                 if (u) referenceImages.push({ url: u });
               }
@@ -1406,24 +1434,29 @@ async function continueWorkspaceCreationInBackground(params) {
         const WELCOME_CAMPAIGN_COUNT = 3;
         let creativesList = [];
         try {
-          const row = await get("SELECT creatives FROM workspaces WHERE slug = ?", [slug]);
+          const row = await get(
+            "SELECT creatives FROM workspaces WHERE slug = ?",
+            [slug]
+          );
           if (row?.creatives != null && row.creatives !== "")
             creativesList = JSON.parse(row.creatives);
         } catch (_) {}
         const modelUsed = "dall-e-3";
         const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
-        let welcomeGenerated = 0;
-        for (let i = 0; i < WELCOME_CAMPAIGN_COUNT; i++) {
+        const welcomeCreativePromises = [0, 1, 2].map(async (i) => {
           const headlineIndex = i % headlinesList.length;
           const chosenHeadline = headlinesList[headlineIndex];
           const profileIndex =
             profileResults.length > 0 ? i % profileResults.length : 0;
           const profile = profileResults[profileIndex] || null;
           const clientIdealSummary = profile
-            ? `${profile.name}, ${profile.title}. ${profile.description || ""}. Objetivos: ${(profile.goals || []).slice(0, 2).join("; ")}. Dificultades: ${(profile.painPoints || []).slice(0, 2).join("; ")}`.slice(
-                0,
-                800,
-              )
+            ? `${profile.name}, ${profile.title}. ${
+                profile.description || ""
+              }. Objetivos: ${(profile.goals || [])
+                .slice(0, 2)
+                .join("; ")}. Dificultades: ${(profile.painPoints || [])
+                .slice(0, 2)
+                .join("; ")}`.slice(0, 800)
             : "";
           const aspectRatio =
             CREATIVE_ASPECT_RATIOS[i % CREATIVE_ASPECT_RATIOS.length];
@@ -1443,12 +1476,16 @@ async function continueWorkspaceCreationInBackground(params) {
               imagePrompt,
               aspectRatio,
               imagesForThisCreative,
-              { source: "welcome" },
+              { source: "welcome" }
             );
             if (imageDataUrl) {
-              const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
+              const saved = await saveCreativeImage(
+                imageDataUrl,
+                slug,
+                "creativo"
+              );
               if (saved?.urlPath) {
-                creativesList.push({
+                return {
                   id: crypto.randomUUID(),
                   headline: chosenHeadline,
                   imagePrompt,
@@ -1457,30 +1494,7 @@ async function continueWorkspaceCreationInBackground(params) {
                   createdAt: new Date().toISOString(),
                   model: modelUsed,
                   aspectRatio,
-                });
-                welcomeGenerated++;
-                await run("UPDATE workspaces SET creatives = ? WHERE slug = ?", [
-                  JSON.stringify(creativesList),
-                  slug,
-                ]);
-                const campaignsPayload = buildCampaignsFromCreatives(
-                  creativesList,
-                  brandingForCampaigns,
-                  slug,
-                  baseUrl,
-                );
-                await run("UPDATE workspaces SET campaigns = ? WHERE slug = ?", [
-                  JSON.stringify(campaignsPayload),
-                  slug,
-                ]);
-                console.log(
-                  "[Welcome campaign] Creative",
-                  welcomeGenerated,
-                  "of",
-                  WELCOME_CAMPAIGN_COUNT,
-                  "saved for workspace",
-                  slug,
-                );
+                };
               }
             }
           } catch (creativeErr) {
@@ -1488,9 +1502,36 @@ async function continueWorkspaceCreationInBackground(params) {
               "⚠️ Welcome creative",
               i + 1,
               "failed:",
-              creativeErr.message,
+              creativeErr.message
             );
           }
+          return null;
+        });
+        const welcomeCreatives = (await Promise.all(welcomeCreativePromises)).filter(Boolean);
+        for (const c of welcomeCreatives) {
+          creativesList.push(c);
+        }
+        if (welcomeCreatives.length > 0) {
+          await run(
+            "UPDATE workspaces SET creatives = ? WHERE slug = ?",
+            [JSON.stringify(creativesList), slug]
+          );
+          const campaignsPayload = buildCampaignsFromCreatives(
+            creativesList,
+            brandingForCampaigns,
+            slug,
+            baseUrl
+          );
+          await run(
+            "UPDATE workspaces SET campaigns = ? WHERE slug = ?",
+            [JSON.stringify(campaignsPayload), slug]
+          );
+          console.log(
+            "[Welcome campaign]",
+            welcomeCreatives.length,
+            "creatives saved for workspace",
+            slug
+          );
         }
       }
     } catch (hlErr) {
@@ -1517,7 +1558,10 @@ export async function createWorkspace(req, res) {
     }
 
     if (!isAdmin && userId) {
-      const count = await get("SELECT COUNT(*) as n FROM workspaces WHERE user_id = ?", [userId]);
+      const count = await get(
+        "SELECT COUNT(*) as n FROM workspaces WHERE user_id = ?",
+        [userId]
+      );
       if (count && Number(count.n) >= MAX_WORKSPACES_FREE) {
         return res.status(403).json({
           success: false,
@@ -1588,9 +1632,9 @@ export async function createWorkspace(req, res) {
             !img.startsWith("data:") &&
             img !== logo &&
             img !== favicon &&
-            img !== ogImage,
-        ),
-      ),
+            img !== ogImage
+        )
+      )
     );
 
     if (branding.images) {
@@ -1718,31 +1762,31 @@ export async function createWorkspace(req, res) {
       rawColors.primary,
       branding?.components?.buttonPrimary?.background,
       rawColors.accent,
-      rawColors.textPrimary,
+      rawColors.textPrimary
     );
 
     const fallbackAccent = pickColor(
       rawColors.accent,
       branding?.components?.buttonSecondary?.background,
-      rawColors.primary,
+      rawColors.primary
     );
 
     const fallbackSecondary = pickColor(
       rawColors.secondary,
       branding?.components?.buttonSecondary?.background,
-      rawColors.accent,
+      rawColors.accent
     );
 
     const fallbackBackground = pickColor(
       rawColors.background,
       branding?.components?.input?.background,
-      "#FFFFFF",
+      "#FFFFFF"
     );
 
     const fallbackTextPrimary = pickColor(
       rawColors.textPrimary,
       branding?.components?.buttonPrimary?.textColor,
-      "#000000",
+      "#000000"
     );
 
     const fallbackTextSecondary = rawColors.textSecondary ?? null;
@@ -1816,11 +1860,13 @@ export async function createWorkspace(req, res) {
         screenshotPath,
         "",
         createdAt,
-      ],
+      ]
     );
 
     const screenshotUrl = screenshotPath
-      ? (screenshotPath.startsWith("http") ? screenshotPath : `/screenshots/${path.basename(screenshotPath)}`)
+      ? screenshotPath.startsWith("http")
+        ? screenshotPath
+        : `/screenshots/${path.basename(screenshotPath)}`
       : null;
 
     // Respuesta temprana: el frontend muestra el branding en "Generando tu ADN de negocio".
@@ -1851,7 +1897,7 @@ export async function createWorkspace(req, res) {
       }).catch((err) => {
         console.error(
           "❌ Error in workspace background creation:",
-          err.message,
+          err.message
         );
       });
     });

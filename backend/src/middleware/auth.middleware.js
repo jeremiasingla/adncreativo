@@ -1,8 +1,9 @@
 import jwt from "jsonwebtoken";
-import { query } from "../db/postgres.js";
+import { query, initPostgresUsers } from "../db/postgres.js";
 import { JWT_SECRET } from "../config/auth.config.js";
 
 export async function authMiddleware(req, res, next) {
+  await initPostgresUsers();
   const token =
     req.cookies?.accessToken ||
     (req.headers.authorization?.startsWith("Bearer ")
