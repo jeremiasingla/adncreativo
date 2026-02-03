@@ -13,8 +13,9 @@ import authRouter from "./routes/auth.route.js";
 import adminRouter from "./routes/admin.route.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
 console.log("[DEBUG] Routers and middleware imported");
-import { getCreativeVersionsByOrgId } from "./controllers/workspace.controller.js";
-console.log("[DEBUG] workspace.controller imported");
+// TEMPORALMENTE COMENTADO PARA DEBUG:
+// import { getCreativeVersionsByOrgId } from "./controllers/workspace.controller.js";
+console.log("[DEBUG] workspace.controller SKIPPED (commented for debug)");
 import fs from "fs";
 import { initPostgresWorkspaces } from "./db/postgres.js";
 console.log("[DEBUG] All imports complete");
@@ -97,7 +98,8 @@ app.use("/icp-avatars", express.static(icpAvatarsDir));
 app.use("/icp-heroes", express.static(icpHeroesDir));
 
 // Versiones de creativos (compatible ADNCreativo) – antes del static para que no capture /creatives/versions
-app.get("/creatives/versions", authMiddleware, getCreativeVersionsByOrgId);
+// TEMPORALMENTE COMENTADO PARA DEBUG:
+// app.get("/creatives/versions", authMiddleware, getCreativeVersionsByOrgId);
 
 // Imágenes de creativos (headlines generados)
 const creativesDir = path.resolve(__dirname, "../storage/creatives");
