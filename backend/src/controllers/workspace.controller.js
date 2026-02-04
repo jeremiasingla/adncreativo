@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import { clerkClient } from "@clerk/express";
 import { get, all, run } from "../db/workspaceDb.js";
 import { scrapeWithFirecrawl } from "../services/firecrawl.service.js";
 import { generateWorkspaceSlug } from "../utils/slug.js";
@@ -2067,6 +2068,29 @@ export async function createWorkspace(req, res) {
         createdAt,
       ],
     );
+
+    // Crear organización de Clerk para este workspace
+    try {
+      const organization = await clerkClient.organizations.createOrganization({
+        name: companyName,
+        createdBy: userId,
+        publicMetadata: {
+          workspaceSlug: slug,
+          websiteUrl: parsedUrl.href,
+        },
+      });
+
+      // Actualizar workspace con el organization_id de Clerk
+      await run(
+        `UPDATE workspaces SET clerk_org_id = ? WHERE slug = ?`,
+        [organization.id, slug]
+      );
+
+      console.log(`[createWorkspace] Created Clerk organization: ${organization.id} for workspace: ${slug}`);
+    } catch (orgError) {
+      console.error("[createWorkspace] Failed to create Clerk organization:", orgError);
+      // No fallamos la creación del workspace si falla la org
+    }
 
     const screenshotUrl = screenshotPath
       ? screenshotPath.startsWith("http")

@@ -83,7 +83,8 @@ export async function initPostgresWorkspaces() {
         customer_profiles TEXT,
         headlines TEXT,
         creatives TEXT,
-        campaigns TEXT
+        campaigns TEXT,
+        clerk_org_id TEXT
       )
     `);
     workspacesTableInitialized = true;
