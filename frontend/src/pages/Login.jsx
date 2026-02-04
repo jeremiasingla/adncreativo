@@ -18,7 +18,7 @@ export default function Login({ onClose }) {
             mode="modal"
             routing="virtual"
             afterSignUpUrl="/"
-            forceRedirectUrl="/"
+            signInUrl="#"
             appearance={{
               elements: {
                 modalBackdrop: "hidden",
@@ -26,16 +26,16 @@ export default function Login({ onClose }) {
                 card: "shadow-2xl rounded-2xl bg-white",
                 formButtonPrimary:
                   "bg-black hover:bg-gray-800 text-white rounded-lg",
-                footerActionLink: "hidden",
               },
             }}
+            onSignUpUrl={() => setIsSignUp(false)}
           />
         ) : (
           <SignIn
             mode="modal"
             routing="virtual"
             afterSignInUrl="/"
-            forceRedirectUrl="/"
+            signUpUrl="#"
             appearance={{
               elements: {
                 modalBackdrop: "hidden",
@@ -43,9 +43,9 @@ export default function Login({ onClose }) {
                 card: "shadow-2xl rounded-2xl bg-white",
                 formButtonPrimary:
                   "bg-black hover:bg-gray-800 text-white rounded-lg",
-                footerActionLink: "hidden",
               },
             }}
+            onSignUpUrl={() => setIsSignUp(true)}
           />
         )}
 
