@@ -1532,16 +1532,6 @@ export default function Workspace() {
                                   </li>
                                 </ol>
                               </nav>
-                              <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex">
-                                <button
-                                  type="button"
-                                  disabled
-                                  className="inline-flex items-center justify-center whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] h-8 rounded-lg px-3 gap-2 border-[#0081fb]/30 text-[#0081fb] hover:bg-[#0081fb]/5 hover:border-[#0081fb]/50 hover:text-neutral-900 cursor-pointer"
-                                >
-                                  <img alt="Meta" className="w-4 h-4 object-contain" src="/images/logos/meta.png" />
-                                  <span>Lanzar Campaña</span>
-                                </button>
-                              </div>
                               <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1">
                                   <button
@@ -1588,16 +1578,6 @@ export default function Workspace() {
                                     />
                                   </button>
                                 </div>
-                                <div className="md:hidden">
-                                  <button
-                                    type="button"
-                                    disabled
-                                    className="inline-flex items-center justify-center whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] rounded-lg px-3 h-8 gap-1.5 border-[#0081fb]/30 text-[#0081fb] hover:bg-[#0081fb]/5 hover:border-[#0081fb]/50 cursor-pointer"
-                                  >
-                                    <img alt="Meta" className="w-4 h-4 object-contain" src="/images/logos/meta.png" />
-                                    <span className="text-xs">Lanzar</span>
-                                  </button>
-                                </div>
                                 <a
                                   href={downloadUrl}
                                   download
@@ -1611,20 +1591,6 @@ export default function Workspace() {
                                     aria-hidden="true"
                                   />
                                 </a>
-                                <div className="relative">
-                                  <button
-                                    type="button"
-                                    disabled
-                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground h-10 w-10 rounded-xl"
-                                    aria-label="Animar imagen"
-                                    title="Animar (10-20 créditos)"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
-                                      <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
-                                      <rect x="2" y="6" width="14" height="12" rx="2"></rect>
-                                    </svg>
-                                  </button>
-                                </div>
                                 <button
                                   type="button"
                                   disabled
@@ -1635,29 +1601,6 @@ export default function Workspace() {
                                     <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path>
                                     <path d="m21.854 2.147-10.94 10.939"></path>
                                   </svg>
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled
-                                  className="items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer bg-gradient-to-b from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:translate-y-[-1px] active:translate-y-[1px] active:shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)] border border-primary/50 h-8 rounded-lg px-3 hidden md:inline-flex"
-                                >
-                                  Publicar
-                                </button>
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground h-8 rounded-lg px-3 group gap-1.5 text-neutral-500"
-                                  title="Chat IA"
-                                  disabled
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px] text-sky-500 group-hover:text-sky-600 transition-colors" aria-hidden="true">
-                                    <path d="M12 8V4H8"></path>
-                                    <rect width="16" height="12" x="4" y="8" rx="2"></rect>
-                                    <path d="M2 14h2"></path>
-                                    <path d="M20 14h2"></path>
-                                    <path d="M15 13v2"></path>
-                                    <path d="M9 13v2"></path>
-                                  </svg>
-                                  <span className="text-sm font-medium hidden md:inline">Agent</span>
                                 </button>
                               </div>
                             </div>

@@ -3,7 +3,13 @@ import { query, initPostgresUsers } from "../db/postgres.js";
 import { JWT_SECRET } from "../config/auth.config.js";
 
 export async function authMiddleware(req, res, next) {
-  await initPostgresUsers();
+  try {
+    await initPostgresUsers();
+  } catch (err) {
+    console.error("❌ authMiddleware initPostgresUsers:", err?.message);
+    return res.status(503).json({ error: "service_unavailable" });
+  }
+
   const token =
     req.cookies?.accessToken ||
     (req.headers.authorization?.startsWith("Bearer ")
@@ -11,6 +17,7 @@ export async function authMiddleware(req, res, next) {
       : null);
 
   if (!token) return res.status(401).json({ error: "unauthorized" });
+
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     const result = await query(
@@ -27,6 +34,7 @@ export async function authMiddleware(req, res, next) {
     };
     next();
   } catch (err) {
+    console.error("❌ authMiddleware:", err?.message);
     return res.status(401).json({ error: "unauthorized" });
   }
 }
