@@ -8,7 +8,7 @@
     "build": "echo 'no-backend-build'"
   },
   "dependencies": {
-    "@clerk/clerk-sdk-node": "^4.13.23",
+    "@clerk/express": "^1.7.68",
     "@vercel/blob": "^0.25.0",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",

@@ -2,6 +2,7 @@ console.log("[DEBUG] Starting server.js import");
 import express from "express";
 console.log("[DEBUG] express imported");
 import cors from "cors";
+import { clerkMiddleware } from "@clerk/express";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -45,6 +46,7 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+app.use(clerkMiddleware());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
