@@ -1585,7 +1585,14 @@ export async function createWorkspace(req, res) {
         "SELECT COUNT(*) as n FROM workspaces WHERE user_id = ?",
         [userId],
       );
+      console.log("[createWorkspace] User workspaces count:", {
+        userId,
+        count: count?.n,
+        max: MAX_WORKSPACES_FREE,
+        isAdmin
+      });
       if (count && Number(count.n) >= MAX_WORKSPACES_FREE) {
+        console.warn("[createWorkspace] User reached max workspaces:", userId);
         return res.status(403).json({
           success: false,
           error: `Los usuarios gratuitos pueden tener como máximo ${MAX_WORKSPACES_FREE} espacios de trabajo. Eliminá uno para crear otro.`,
