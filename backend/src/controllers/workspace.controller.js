@@ -595,16 +595,20 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
           console.warn(
             "⚠️ Avatar generation failed for profile:",
             profile.name,
-            err.message,
+            "| Error:",
+            err.message
           );
+          console.warn("⚠️ Avatar prompt was:", avatarPrompt.slice(0, 200));
           return null;
         }),
         generateProfileImage(heroPrompt, "21:9").catch((err) => {
           console.warn(
             "⚠️ Hero/banner generation failed for profile:",
             profile.name,
+            "| Error:",
             err.message,
           );
+          console.warn("⚠️ Hero prompt was:", heroPrompt.slice(0, 200));
           return null;
         }),
       ]);

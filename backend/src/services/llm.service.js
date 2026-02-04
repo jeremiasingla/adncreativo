@@ -699,15 +699,13 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
     requestBody.image_config = { aspect_ratio: aspectRatio };
   }
 
-  if (DEBUG_ICP_IMAGE) {
-    console.log("[ICP image] Request:", {
-      model: ICP_IMAGE_MODEL,
-      modalities: requestBody.modalities,
-      aspectRatio,
-      promptLength: prompt?.length ?? 0,
-      promptPreview: (prompt || "").slice(0, 80) + "...",
-    });
-  }
+  console.log("[ICP image] Request:", {
+    model: ICP_IMAGE_MODEL,
+    modalities: requestBody.modalities,
+    aspectRatio,
+    promptLength: prompt?.length ?? 0,
+    promptPreview: (prompt || "").slice(0, 80) + "...",
+  });
 
   let response;
   try {
@@ -723,42 +721,46 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
       }
     );
   } catch (err) {
-    if (DEBUG_ICP_IMAGE) {
-      console.error("[ICP image] Request error:", err.message);
-      if (err.response) {
-        console.error("[ICP image] Response status:", err.response.status);
-        console.error("[ICP image] Response data:", JSON.stringify(err.response.data, null, 2));
-      }
+    console.error("[ICP image] Request error:", err.message);
+    if (err.response) {
+      console.error("[ICP image] Response status:", err.response.status);
+      console.error("[ICP image] Response data:", JSON.stringify(err.response.data, null, 2));
     }
     throw err;
   }
 
-  if (DEBUG_ICP_IMAGE) {
-    console.log("[ICP image] Response status:", response.status);
-    if (response.status !== 200) {
-      console.error("[ICP image] Response data:", JSON.stringify(response.data, null, 2));
-    }
+  console.log("[ICP image] Response status:", response.status);
+  if (response.status !== 200) {
+    console.error("[ICP image] Error response status:", response.status);
+    console.error("[ICP image] Error response data:", JSON.stringify(response.data, null, 2));
+    console.error("[ICP image] Error response headers:", JSON.stringify(response.headers, null, 2));
   }
 
   if (response.status !== 200) {
     const msg = response.data?.error?.message ?? response.data?.message ?? response.statusText;
+    const errorDetails = {
+      status: response.status,
+      message: msg,
+      data: response.data,
+      model: ICP_IMAGE_MODEL,
+      aspectRatio
+    };
+    console.error("[ICP image] Full error details:", JSON.stringify(errorDetails, null, 2));
     throw new Error(`OpenRouter image: ${response.status} - ${msg}`);
   }
 
   const message = response.data?.choices?.[0]?.message;
   const images = message?.images;
   if (!Array.isArray(images) || images.length === 0) {
-    if (DEBUG_ICP_IMAGE) {
-      console.log("[ICP image] No images in response. message keys:", message ? Object.keys(message) : "no message");
-    }
+    console.log("[ICP image] No images in response. message keys:", message ? Object.keys(message) : "no message");
     return null;
   }
   const first = images[0];
   const url = first?.image_url?.url ?? first?.imageUrl?.url;
   if (typeof url === "string" && url.startsWith("data:")) {
-    if (DEBUG_ICP_IMAGE) console.log("[ICP image] Got image, data URL length:", url.length);
+    console.log("[ICP image] Got image, data URL length:", url.length);
     return url;
   }
-  if (DEBUG_ICP_IMAGE) console.log("[ICP image] First image structure:", JSON.stringify(Object.keys(first || {})));
+  console.log("[ICP image] First image structure:", JSON.stringify(Object.keys(first || {})));
   return null;
 }
