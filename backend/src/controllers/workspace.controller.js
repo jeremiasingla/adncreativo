@@ -420,6 +420,68 @@ export async function getWorkspaceBySlug(req, res) {
   }
 }
 
+/** Ejecuta el flujo completo (KB, perfiles, titulares, creativos) bajo demanda. */
+export async function runFullWorkspaceGeneration(req, res) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+    const { slug } = req.params;
+    if (!slug) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Slug is required" });
+    }
+
+    const row = await get(
+      `SELECT slug, url, branding
+         FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
+    if (!row) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Workspace not found" });
+    }
+
+    let branding = {};
+    try {
+      branding = JSON.parse(row.branding || "{}");
+    } catch (_) {}
+
+    const companyName = branding.companyName || branding.name || null;
+    const headline = branding.headline || null;
+    const personality = branding.personality || null;
+
+    await continueWorkspaceCreationInBackground({
+      userId,
+      slug: row.slug,
+      url: row.url,
+      companyName,
+      headline,
+      personality,
+      metadata: {
+        title: null,
+        ogTitle: null,
+        description: null,
+        ogDescription: null,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Full generation completed",
+      data: { slug: row.slug },
+    });
+  } catch (error) {
+    console.error("❌ Error running full generation:", error.message);
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
+  }
+}
+
 /** Devuelve todos los hooks/headlines generados para un workspace. GET /workspaces/:slug/headlines */
 export async function getWorkspaceHeadlines(req, res) {
   try {

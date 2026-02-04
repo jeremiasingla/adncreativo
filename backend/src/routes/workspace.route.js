@@ -12,6 +12,7 @@ import {
   regenerateAllCustomerProfileImages,
   generateCreatives,
   getCreativeVersions,
+  runFullWorkspaceGeneration,
 } from "../controllers/workspace.controller.js";
 import { createScreenshot } from "../controllers/screenshot.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
@@ -24,6 +25,11 @@ router.get("/workspaces/:slug/campaigns", authMiddleware, getWorkspaceCampaigns)
 router.get("/workspaces/:slug", authMiddleware, getWorkspaceBySlug);
 router.post("/workspaces/screenshot", authMiddleware, captureWorkspaceScreenshot);
 router.post("/workspaces/new", authMiddleware, createWorkspace);
+router.post(
+  "/workspaces/:slug/run-full-generation",
+  authMiddleware,
+  runFullWorkspaceGeneration,
+);
 router.delete("/workspaces/:slug", authMiddleware, deleteWorkspace);
 router.patch("/workspaces/:slug/knowledge-base", authMiddleware, updateWorkspaceKnowledgeBase);
 router.post("/workspaces/:slug/customer-profiles/regenerate-all-images", authMiddleware, regenerateAllCustomerProfileImages);
