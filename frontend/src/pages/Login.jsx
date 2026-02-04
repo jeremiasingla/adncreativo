@@ -1,8 +1,9 @@
 import React from "react";
-import { SignIn, SignUp } from "@clerk/clerk-react";
+import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
 export default function Login({ onClose }) {
   const [isSignUp, setIsSignUp] = React.useState(false);
+  const redirectUrl = window.location.pathname;
 
   return (
     <div
@@ -14,40 +15,17 @@ export default function Login({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         {isSignUp ? (
-          <SignUp
-            mode="modal"
-            routing="virtual"
-            forceRedirectUrl={window.location.pathname}
-            skipInvitationScreen={true}
-            appearance={{
-              elements: {
-                modalBackdrop: "hidden",
-                rootBox: "flex justify-center items-center",
-                card: "shadow-2xl rounded-2xl bg-white",
-                formButtonPrimary:
-                  "bg-black hover:bg-gray-800 text-white rounded-lg",
-                footerActionLink: "hidden",
-                footer: "hidden",
-              },
-            }}
-          />
+          <SignUpButton mode="modal" forceRedirectUrl={redirectUrl}>
+            <button className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition font-medium">
+              Crear cuenta
+            </button>
+          </SignUpButton>
         ) : (
-          <SignIn
-            mode="modal"
-            routing="virtual"
-            forceRedirectUrl={window.location.pathname}
-            appearance={{
-              elements: {
-                modalBackdrop: "hidden",
-                rootBox: "flex justify-center items-center",
-                card: "shadow-2xl rounded-2xl bg-white",
-                formButtonPrimary:
-                  "bg-black hover:bg-gray-800 text-white rounded-lg",
-                footerActionLink: "hidden",
-                footer: "hidden",
-              },
-            }}
-          />
+          <SignInButton mode="modal" forceRedirectUrl={redirectUrl}>
+            <button className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition font-medium">
+              Iniciar sesión
+            </button>
+          </SignInButton>
         )}
 
         {/* Toggle button between SignIn and SignUp */}
