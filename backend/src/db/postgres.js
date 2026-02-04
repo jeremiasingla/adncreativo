@@ -5,9 +5,17 @@ import pg from "pg";
 const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+console.log(
+  "[DEBUG] DATABASE_URL:",
+  process.env.DATABASE_URL ? "PRESENTE" : "AUSENTE",
+);
+console.log(
+  "[DEBUG] POSTGRES_URL:",
+  process.env.POSTGRES_URL ? "PRESENTE" : "AUSENTE",
+);
 if (!connectionString) {
   console.warn(
-    "⚠️ DATABASE_URL no configurado. Postgres está deshabilitado. Algunas funciones no estarán disponibles."
+    "⚠️ DATABASE_URL no configurado. Postgres está deshabilitado. Algunas funciones no estarán disponibles.",
   );
 }
 

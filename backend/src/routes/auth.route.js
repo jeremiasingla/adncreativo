@@ -1,5 +1,5 @@
 import express from "express";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import {
   register,
   login,
@@ -11,11 +11,14 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// Detrás de Vercel/proxy: usar X-Forwarded-For para no ignorar el header Forwarded
+// Detrás de Vercel/proxy: usar X-Forwarded-For con soporte IPv6
 const keyGenerator = (req) => {
   const forwarded = req.headers["x-forwarded-for"];
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return req.ip || req.socket?.remoteAddress || "unknown";
+  if (forwarded) {
+    const ip = forwarded.split(",")[0].trim();
+    return ipKeyGenerator(req, { ip });
+  }
+  return ipKeyGenerator(req);
 };
 
 const authLimiter = rateLimit({

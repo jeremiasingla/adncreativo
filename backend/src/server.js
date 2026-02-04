@@ -2,7 +2,6 @@ console.log("[DEBUG] Starting server.js import");
 import express from "express";
 console.log("[DEBUG] express imported");
 import cors from "cors";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -20,22 +19,27 @@ import fs from "fs";
 import { initPostgresWorkspaces } from "./db/postgres.js";
 console.log("[DEBUG] All imports complete");
 
-// ADNCreativo Backend v2.0.1 - CORS fix
-dotenv.config();
-console.log("[DEBUG] dotenv configured");
-
 // Inicializar tablas users y workspaces en Postgres (Neon)
 initPostgresWorkspaces().catch((err) =>
-  console.warn("⚠️ initPostgresWorkspaces:", err?.message)
+  console.warn("⚠️ initPostgresWorkspaces:", err?.message),
 );
 
 const app = express();
 
-// CORS básico (útil si el form está en otro dominio)
+// CORS completo: permite todos los orígenes con credenciales
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  const origin = req.headers.origin;
+  res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, Cookie, X-Requested-With",
+  );
+  res.setHeader("Access-Control-Expose-Headers", "Set-Cookie");
   if (req.method === "OPTIONS") return res.status(204).end();
   next();
 });
@@ -89,7 +93,7 @@ if (frontendExists) {
       "/onboarding",
       "/onboarding/*",
     ],
-    (_, res) => res.sendFile(path.join(frontendDist, "index.html"))
+    (_, res) => res.sendFile(path.join(frontendDist, "index.html")),
   );
   app.get("*", (_, res) => res.sendFile(path.join(frontendDist, "index.html")));
 } else {
@@ -97,8 +101,15 @@ if (frontendExists) {
     res.status(404).json({
       error: "Not found",
       message: "Usa la URL del frontend (adncreativo-frontend.vercel.app).",
-    })
+    }),
   );
 }
+
+// Iniciar servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Servidor escuchando en puerto ${PORT}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+});
 
 export default app;

@@ -22,7 +22,7 @@ import { saveCreativeImage } from "../utils/creativeImage.js";
 
 const SCREENSHOT_DIR = path.resolve(
   process.env.SCREENSHOT_DIR ||
-    path.join(process.cwd(), "storage", "screenshots")
+    path.join(process.cwd(), "storage", "screenshots"),
 );
 
 /** Convierte URL de logo/imagen relativa a absoluta para que OpenRouter pueda cargarla. */
@@ -184,7 +184,7 @@ function buildCampaignsFromCreatives(creativesList, branding, orgId, baseUrl) {
   const campaignId = crypto.randomUUID();
   const adSetId = crypto.randomUUID();
   const ads = creativesList.map((c, i) =>
-    creativeToAd(c, branding, i, baseUrl)
+    creativeToAd(c, branding, i, baseUrl),
   );
   return {
     campaigns: [
@@ -218,7 +218,7 @@ export async function getWorkspaceCampaigns(req, res) {
     }
     const row = await get(
       `SELECT slug, url, branding, creatives, campaigns FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug]
+      [userId, slug],
     );
     if (!row) {
       return res
@@ -247,7 +247,7 @@ export async function getWorkspaceCampaigns(req, res) {
         creativesList,
         brandingWithUrl,
         row.slug,
-        baseUrl
+        baseUrl,
       );
     }
     return res.status(200).json({
@@ -273,7 +273,7 @@ export async function listWorkspaces(req, res) {
     const rows = await all(
       `SELECT id, slug, url, branding, screenshot_path, created_at
          FROM workspaces WHERE user_id = ? ORDER BY created_at DESC`,
-      [userId]
+      [userId],
     );
 
     const workspaces = rows.map((row) => {
@@ -331,7 +331,7 @@ export async function getWorkspaceBySlug(req, res) {
     const row = await get(
       `SELECT id, slug, url, branding, screenshot_path, knowledge_base, customer_profiles, headlines, creatives, campaigns, created_at
          FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug]
+      [userId, slug],
     );
     if (!row) {
       return res
@@ -375,7 +375,7 @@ export async function getWorkspaceBySlug(req, res) {
         creativesList,
         brandingWithUrl,
         row.slug,
-        baseUrl
+        baseUrl,
       );
     }
     return res.status(200).json({
@@ -435,7 +435,7 @@ export async function getWorkspaceHeadlines(req, res) {
     }
     const row = await get(
       `SELECT id, headlines FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug]
+      [userId, slug],
     );
     if (!row) {
       return res
@@ -480,7 +480,7 @@ export async function generateCustomerProfileImages(req, res) {
     }
     const row = await get(
       `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug]
+      [userId, slug],
     );
     if (!row) {
       return res
@@ -510,7 +510,7 @@ export async function generateCustomerProfileImages(req, res) {
         const avatarPath = await saveIcpImage(
           avatarDataUrl,
           `${slug}-${profileId.slice(0, 8)}`,
-          "avatar"
+          "avatar",
         );
         if (avatarPath)
           avatarUrl = avatarPath.startsWith("http")
@@ -532,7 +532,7 @@ export async function generateCustomerProfileImages(req, res) {
         const heroPath = await saveIcpImage(
           heroDataUrl,
           `${slug}-${profileId.slice(0, 8)}`,
-          "hero"
+          "hero",
         );
         if (heroPath)
           heroImageUrl = heroPath.startsWith("http")
@@ -555,7 +555,7 @@ export async function generateCustomerProfileImages(req, res) {
     };
     await run(
       `UPDATE workspaces SET customer_profiles = ? WHERE user_id = ? AND slug = ?`,
-      [JSON.stringify(profiles), userId, slug]
+      [JSON.stringify(profiles), userId, slug],
     );
 
     return res.status(200).json({
@@ -574,7 +574,7 @@ export async function generateCustomerProfileImages(req, res) {
 export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
   const row = await get(
     `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
-    [userId, slug]
+    [userId, slug],
   );
   if (!row) return null;
   let profiles = [];
@@ -595,7 +595,7 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
           console.warn(
             "⚠️ Avatar generation failed for profile:",
             profile.name,
-            err.message
+            err.message,
           );
           return null;
         }),
@@ -603,28 +603,36 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
           console.warn(
             "⚠️ Hero/banner generation failed for profile:",
             profile.name,
-            err.message
+            err.message,
           );
           return null;
         }),
       ]);
       const prefix = `${slug}-${profileId.slice(0, 8)}`;
       const [avatarPath, heroPath] = await Promise.all([
-        avatarDataUrl ? saveIcpImage(avatarDataUrl, prefix, "avatar") : Promise.resolve(null),
-        heroDataUrl ? saveIcpImage(heroDataUrl, prefix, "hero") : Promise.resolve(null),
+        avatarDataUrl
+          ? saveIcpImage(avatarDataUrl, prefix, "avatar")
+          : Promise.resolve(null),
+        heroDataUrl
+          ? saveIcpImage(heroDataUrl, prefix, "hero")
+          : Promise.resolve(null),
       ]);
       const avatarUrl = avatarPath
-        ? (avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`)
+        ? avatarPath.startsWith("http")
+          ? avatarPath
+          : `/icp-avatars/${path.basename(avatarPath)}`
         : null;
       const heroImageUrl = heroPath
-        ? (heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`)
+        ? heroPath.startsWith("http")
+          ? heroPath
+          : `/icp-heroes/${path.basename(heroPath)}`
         : null;
       return {
         ...profile,
         avatarUrl: toAbsoluteImageUrl(avatarUrl),
         heroImageUrl: toAbsoluteImageUrl(heroImageUrl),
       };
-    })
+    }),
   );
 
   for (let i = 0; i < updatedProfiles.length; i++) {
@@ -633,7 +641,7 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
 
   await run(
     `UPDATE workspaces SET customer_profiles = ? WHERE user_id = ? AND slug = ?`,
-    [JSON.stringify(profiles), userId, slug]
+    [JSON.stringify(profiles), userId, slug],
   );
 
   return { profiles, deleted };
@@ -676,7 +684,7 @@ export async function deleteWorkspaceBySlug(slug) {
     return { deleted: false, error: "slug required" };
   const row = await get(
     "SELECT id, screenshot_path FROM workspaces WHERE slug = ?",
-    [slug]
+    [slug],
   );
   if (!row) return { deleted: false, error: "Workspace not found" };
 
@@ -694,7 +702,7 @@ export async function deleteWorkspaceBySlug(slug) {
       console.warn(
         "⚠️ Could not delete screenshot file:",
         screenshotPath,
-        err.message
+        err.message,
       );
     }
   }
@@ -718,7 +726,7 @@ export async function deleteWorkspace(req, res) {
     }
     const row = await get(
       `SELECT id, screenshot_path FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug]
+      [userId, slug],
     );
     if (!row) {
       return res
@@ -740,14 +748,14 @@ export async function deleteWorkspace(req, res) {
         console.warn(
           "⚠️ Could not delete screenshot file:",
           screenshotPath,
-          err.message
+          err.message,
         );
       }
     }
 
     const result = await run(
       "DELETE FROM workspaces WHERE user_id = ? AND slug = ?",
-      [userId, slug]
+      [userId, slug],
     );
     if (result.changes === 0) {
       return res
@@ -779,7 +787,7 @@ export async function generateCreatives(req, res) {
 
     const row = await get(
       `SELECT id, branding, headlines, customer_profiles, creatives FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug]
+      [userId, slug],
     );
 
     if (!row) {
@@ -854,7 +862,7 @@ export async function generateCreatives(req, res) {
     if (!isAdmin) {
       count = Math.min(
         count,
-        MAX_CREATIVES_PER_WORKSPACE_FREE - creativesList.length
+        MAX_CREATIVES_PER_WORKSPACE_FREE - creativesList.length,
       );
       if (count <= 0) {
         return res.status(403).json({
@@ -908,7 +916,7 @@ export async function generateCreatives(req, res) {
         const imageDataUrl = await generateCreativeImageSeedream(
           imagePrompt,
           aspectRatio,
-          imagesForThisCreative
+          imagesForThisCreative,
         );
         if (imageDataUrl) {
           const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
@@ -936,8 +944,9 @@ export async function generateCreatives(req, res) {
       const baseLength = creativesList.length;
       const results = await Promise.all(
         Array.from({ length: chunkSize }, (_, j) =>
-          generateOneCreative(start + j, baseLength)
-        );
+          generateOneCreative(start + j, baseLength),
+        ),
+      );
       for (const creative of results) {
         if (creative) {
           creativesList.push(creative);
@@ -946,7 +955,7 @@ export async function generateCreatives(req, res) {
             "[Creative] Generated creative",
             generated,
             "for workspace",
-            slug
+            slug,
           );
         }
       }
@@ -957,11 +966,11 @@ export async function generateCreatives(req, res) {
       creativesList,
       branding,
       slug,
-      baseUrl
+      baseUrl,
     );
     await run(
       "UPDATE workspaces SET creatives = ?, campaigns = ? WHERE slug = ?",
-      [JSON.stringify(creativesList), JSON.stringify(campaignsPayload), slug]
+      [JSON.stringify(creativesList), JSON.stringify(campaignsPayload), slug],
     );
 
     return res.status(200).json({
@@ -997,7 +1006,7 @@ export async function getCreativeVersions(req, res) {
 
     const row = await get(
       `SELECT id, creatives, campaigns FROM workspaces WHERE user_id = ? AND slug = ?`,
-      [userId, slug]
+      [userId, slug],
     );
 
     if (!row) {
@@ -1173,7 +1182,7 @@ export async function updateWorkspaceKnowledgeBase(req, res) {
     const text = typeof knowledgeBase === "string" ? knowledgeBase : "";
     const result = await run(
       `UPDATE workspaces SET knowledge_base = ? WHERE user_id = ? AND slug = ?`,
-      [text, userId, slug]
+      [text, userId, slug],
     );
     if (result.changes === 0) {
       return res
@@ -1289,7 +1298,7 @@ async function continueWorkspaceCreationInBackground(params) {
             console.warn(
               "⚠️ Avatar generation failed for profile:",
               p.name,
-              err.message
+              err.message,
             );
             return null;
           }),
@@ -1297,21 +1306,29 @@ async function continueWorkspaceCreationInBackground(params) {
             console.warn(
               "⚠️ Hero/banner generation failed for profile:",
               p.name,
-              err.message
+              err.message,
             );
             return null;
           }),
         ]);
         const prefix = `${slug}-${profileId.slice(0, 8)}`;
         const [avatarPath, heroPath] = await Promise.all([
-          avatarDataUrl ? saveIcpImage(avatarDataUrl, prefix, "avatar") : Promise.resolve(null),
-          heroDataUrl ? saveIcpImage(heroDataUrl, prefix, "hero") : Promise.resolve(null),
+          avatarDataUrl
+            ? saveIcpImage(avatarDataUrl, prefix, "avatar")
+            : Promise.resolve(null),
+          heroDataUrl
+            ? saveIcpImage(heroDataUrl, prefix, "hero")
+            : Promise.resolve(null),
         ]);
         const avatarUrl = avatarPath
-          ? (avatarPath.startsWith("http") ? avatarPath : `/icp-avatars/${path.basename(avatarPath)}`)
+          ? avatarPath.startsWith("http")
+            ? avatarPath
+            : `/icp-avatars/${path.basename(avatarPath)}`
           : null;
         const heroImageUrl = heroPath
-          ? (heroPath.startsWith("http") ? heroPath : `/icp-heroes/${path.basename(heroPath)}`)
+          ? heroPath.startsWith("http")
+            ? heroPath
+            : `/icp-heroes/${path.basename(heroPath)}`
           : null;
         return {
           id: profileId,
@@ -1336,7 +1353,7 @@ async function continueWorkspaceCreationInBackground(params) {
           createdAt: now,
           updatedAt: now,
         };
-      })
+      }),
     );
     const customerProfilesJson = JSON.stringify(profileResults);
     await run("UPDATE workspaces SET customer_profiles = ? WHERE slug = ?", [
@@ -1364,11 +1381,11 @@ async function continueWorkspaceCreationInBackground(params) {
       const useVoseo =
         profileResults.some((p) =>
           /argentina|uruguay|buenos aires|córdoba|rosario|mendoza|montevideo/i.test(
-            String(p.demographics?.location ?? "")
-          )
+            String(p.demographics?.location ?? ""),
+          ),
         ) ||
         /argentina|uruguay|buenos aires|córdoba|rosario|mendoza|montevideo/i.test(
-          knowledgeBaseText.slice(0, 2000)
+          knowledgeBaseText.slice(0, 2000),
         );
       headlinesList = await generateHeadlines({
         companyName: params.companyName,
@@ -1387,7 +1404,7 @@ async function continueWorkspaceCreationInBackground(params) {
           "[Headlines] Saved",
           headlinesList.length,
           "headlines for workspace",
-          slug
+          slug,
         );
 
         // Campaña de bienvenida: generar 3 creativos automáticamente.
@@ -1406,7 +1423,7 @@ async function continueWorkspaceCreationInBackground(params) {
         try {
           const brandingRow = await get(
             "SELECT branding FROM workspaces WHERE slug = ?",
-            [slug]
+            [slug],
           );
           if (brandingRow?.branding) {
             const b = JSON.parse(brandingRow.branding);
@@ -1423,7 +1440,7 @@ async function continueWorkspaceCreationInBackground(params) {
             if (Array.isArray(b?.images) && referenceImages.length < 2) {
               for (const img of b.images.slice(0, 2 - referenceImages.length)) {
                 const u = toAbsoluteImageUrl(
-                  typeof img === "string" ? img : img?.url
+                  typeof img === "string" ? img : img?.url,
                 );
                 if (u) referenceImages.push({ url: u });
               }
@@ -1436,7 +1453,7 @@ async function continueWorkspaceCreationInBackground(params) {
         try {
           const row = await get(
             "SELECT creatives FROM workspaces WHERE slug = ?",
-            [slug]
+            [slug],
           );
           if (row?.creatives != null && row.creatives !== "")
             creativesList = JSON.parse(row.creatives);
@@ -1476,13 +1493,13 @@ async function continueWorkspaceCreationInBackground(params) {
               imagePrompt,
               aspectRatio,
               imagesForThisCreative,
-              { source: "welcome" }
+              { source: "welcome" },
             );
             if (imageDataUrl) {
               const saved = await saveCreativeImage(
                 imageDataUrl,
                 slug,
-                "creativo"
+                "creativo",
               );
               if (saved?.urlPath) {
                 return {
@@ -1502,35 +1519,37 @@ async function continueWorkspaceCreationInBackground(params) {
               "⚠️ Welcome creative",
               i + 1,
               "failed:",
-              creativeErr.message
+              creativeErr.message,
             );
           }
           return null;
         });
-        const welcomeCreatives = (await Promise.all(welcomeCreativePromises)).filter(Boolean);
+        const welcomeCreatives = (
+          await Promise.all(welcomeCreativePromises)
+        ).filter(Boolean);
         for (const c of welcomeCreatives) {
           creativesList.push(c);
         }
         if (welcomeCreatives.length > 0) {
-          await run(
-            "UPDATE workspaces SET creatives = ? WHERE slug = ?",
-            [JSON.stringify(creativesList), slug]
-          );
+          await run("UPDATE workspaces SET creatives = ? WHERE slug = ?", [
+            JSON.stringify(creativesList),
+            slug,
+          ]);
           const campaignsPayload = buildCampaignsFromCreatives(
             creativesList,
             brandingForCampaigns,
             slug,
-            baseUrl
+            baseUrl,
           );
-          await run(
-            "UPDATE workspaces SET campaigns = ? WHERE slug = ?",
-            [JSON.stringify(campaignsPayload), slug]
-          );
+          await run("UPDATE workspaces SET campaigns = ? WHERE slug = ?", [
+            JSON.stringify(campaignsPayload),
+            slug,
+          ]);
           console.log(
             "[Welcome campaign]",
             welcomeCreatives.length,
             "creatives saved for workspace",
-            slug
+            slug,
           );
         }
       }
@@ -1560,7 +1579,7 @@ export async function createWorkspace(req, res) {
     if (!isAdmin && userId) {
       const count = await get(
         "SELECT COUNT(*) as n FROM workspaces WHERE user_id = ?",
-        [userId]
+        [userId],
       );
       if (count && Number(count.n) >= MAX_WORKSPACES_FREE) {
         return res.status(403).json({
@@ -1632,9 +1651,9 @@ export async function createWorkspace(req, res) {
             !img.startsWith("data:") &&
             img !== logo &&
             img !== favicon &&
-            img !== ogImage
-        )
-      )
+            img !== ogImage,
+        ),
+      ),
     );
 
     // Guardar URLs de Firecrawl tal cual; el front las carga/lee directamente
@@ -1763,31 +1782,31 @@ export async function createWorkspace(req, res) {
       rawColors.primary,
       branding?.components?.buttonPrimary?.background,
       rawColors.accent,
-      rawColors.textPrimary
+      rawColors.textPrimary,
     );
 
     const fallbackAccent = pickColor(
       rawColors.accent,
       branding?.components?.buttonSecondary?.background,
-      rawColors.primary
+      rawColors.primary,
     );
 
     const fallbackSecondary = pickColor(
       rawColors.secondary,
       branding?.components?.buttonSecondary?.background,
-      rawColors.accent
+      rawColors.accent,
     );
 
     const fallbackBackground = pickColor(
       rawColors.background,
       branding?.components?.input?.background,
-      "#FFFFFF"
+      "#FFFFFF",
     );
 
     const fallbackTextPrimary = pickColor(
       rawColors.textPrimary,
       branding?.components?.buttonPrimary?.textColor,
-      "#000000"
+      "#000000",
     );
 
     const fallbackTextSecondary = rawColors.textSecondary ?? null;
@@ -1861,7 +1880,7 @@ export async function createWorkspace(req, res) {
         screenshotPath,
         "",
         createdAt,
-      ]
+      ],
     );
 
     const screenshotUrl = screenshotPath
@@ -1898,7 +1917,7 @@ export async function createWorkspace(req, res) {
       }).catch((err) => {
         console.error(
           "❌ Error in workspace background creation:",
-          err.message
+          err.message,
         );
       });
     });
