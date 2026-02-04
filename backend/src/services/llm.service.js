@@ -204,6 +204,7 @@ export async function generateKnowledgeBase(input) {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
 
+  const startTime = Date.now();
   const text = JSON.stringify(input);
   const requestBody = {
     model,
@@ -243,6 +244,23 @@ Output ONLY the document text, no preamble or explanation.`,
     { headers },
   );
 
+  // Trackear métricas de costo
+  const usage = response.data?.usage;
+  if (usage) {
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const totalCost = usage.total_cost || 0;
+    recordLLMRequest({
+      model,
+      promptTokens,
+      completionTokens,
+      totalCost,
+      durationMs: Date.now() - startTime,
+      source: "knowledgeBase",
+      workspaceSlug: input?.url ? new URL(input.url).hostname : null,
+    });
+  }
+
   const content = response.data?.choices?.[0]?.message?.content;
   if (!content || typeof content !== "string") {
     throw new Error("LLM returned empty or invalid knowledge base");
@@ -260,6 +278,7 @@ export async function generateCustomerProfiles(input) {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
 
+  const startTime = Date.now();
   const text = JSON.stringify({
     url: input.url,
     companyName: input.companyName,
@@ -322,6 +341,23 @@ Rules:
     { headers },
   );
 
+  // Trackear métricas de costo
+  const usage = response.data?.usage;
+  if (usage) {
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const totalCost = usage.total_cost || 0;
+    recordLLMRequest({
+      model,
+      promptTokens,
+      completionTokens,
+      totalCost,
+      durationMs: Date.now() - startTime,
+      source: "profiles",
+      workspaceSlug: input?.url ? new URL(input.url).hostname : null,
+    });
+  }
+
   const content = response.data?.choices?.[0]?.message?.content;
   if (!content || typeof content !== "string") {
     throw new Error("LLM returned empty or invalid customer profiles");
@@ -348,6 +384,7 @@ export async function generateHeadlines(input) {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
 
+  const startTime = Date.now();
   const {
     companyName,
     headline,
@@ -416,6 +453,23 @@ Output: ÚNICAMENTE un objeto JSON con esta estructura, sin markdown ni texto ex
     { headers },
   );
 
+  // Trackear métricas de costo
+  const usage = response.data?.usage;
+  if (usage) {
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const totalCost = usage.total_cost || 0;
+    recordLLMRequest({
+      model,
+      promptTokens,
+      completionTokens,
+      totalCost,
+      durationMs: Date.now() - startTime,
+      source: "headlines",
+      workspaceSlug: input?.companyName ? "headlines-" + input.companyName : null,
+    });
+  }
+
   const content = response.data?.choices?.[0]?.message?.content;
   if (!content || typeof content !== "string") {
     throw new Error("LLM returned empty or invalid headlines");
@@ -438,6 +492,7 @@ export async function generateCreativeImagePrompt(input) {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
 
+  const startTime = Date.now();
   const {
     headline,
     companyName,
@@ -540,6 +595,23 @@ When brandColors are provided, use the exact HEX values in the Scene section. Th
     requestBody,
     { headers },
   );
+
+  // Trackear métricas de costo
+  const usage = response.data?.usage;
+  if (usage) {
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const totalCost = usage.total_cost || 0;
+    recordLLMRequest({
+      model,
+      promptTokens,
+      completionTokens,
+      totalCost,
+      durationMs: Date.now() - startTime,
+      source: "creative_image_prompt",
+      workspaceSlug: input?.companyName ? input.companyName : null,
+    });
+  }
 
   const content = response.data?.choices?.[0]?.message?.content;
   if (!content || typeof content !== "string") {
@@ -772,6 +844,7 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
 
+  const startTime = Date.now();
   const requestBody = {
     model: ICP_IMAGE_MODEL,
     modalities: ["image"],
@@ -822,6 +895,21 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
       );
     }
     throw err;
+  }
+
+  // Trackear métricas (solo para respuestas exitosas con usage)
+  const usage = response.data?.usage;
+  if (usage && response.status === 200) {
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const totalCost = usage.total_cost || 0;
+    recordImageGeneration({
+      model: ICP_IMAGE_MODEL,
+      size: aspectRatio,
+      cost: totalCost,
+      durationMs: Date.now() - startTime,
+      source: "profiles",
+    });
   }
 
   console.log("[ICP image] Response status:", response.status);
