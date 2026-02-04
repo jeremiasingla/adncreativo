@@ -186,10 +186,14 @@ function AppLayout() {
     pathname === "/onboarding/step/validate" || isWorkspaceRoute;
 
   const [showAuthModal, setShowAuthModal] = React.useState(false);
+  const [isSignUp, setIsSignUp] = React.useState(false);
 
   return (
     <div className="min-h-screen bg-white">
-      {!hideHeader && <Navigation onOpenSignIn={() => setShowAuthModal(true)} />}
+      {!hideHeader && <Navigation onOpenSignIn={() => {
+        setShowAuthModal(true);
+        setIsSignUp(false);
+      }} />}
       <Routes>
         <Route path="/" element={<RootRoute />} />
         <Route
@@ -212,7 +216,11 @@ function AppLayout() {
       
       {showAuthModal &&
         ReactDOM.createPortal(
-          <Login onClose={() => setShowAuthModal(false)} />,
+          <Login 
+            onClose={() => setShowAuthModal(false)} 
+            isSignUp={isSignUp}
+            setIsSignUp={setIsSignUp}
+          />,
           document.body
         )}
     </div>

@@ -1,8 +1,7 @@
 import React from "react";
-import { SignInButton, SignUpButton } from "@clerk/clerk-react";
+import { SignIn, SignUp } from "@clerk/clerk-react";
 
-export default function Login({ onClose }) {
-  const [isSignUp, setIsSignUp] = React.useState(false);
+export default function Login({ onClose, isSignUp, setIsSignUp }) {
   const redirectUrl = window.location.pathname;
 
   return (
@@ -15,17 +14,39 @@ export default function Login({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         {isSignUp ? (
-          <SignUpButton mode="modal" forceRedirectUrl={redirectUrl}>
-            <button className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition font-medium">
-              Crear cuenta
-            </button>
-          </SignUpButton>
+          <SignUp
+            mode="modal"
+            routing="virtual"
+            forceRedirectUrl={redirectUrl}
+            appearance={{
+              elements: {
+                modalBackdrop: "hidden",
+                rootBox: "flex justify-center items-center",
+                card: "shadow-2xl rounded-2xl bg-white",
+                formButtonPrimary:
+                  "bg-black hover:bg-gray-800 text-white rounded-lg",
+                footerActionLink: "hidden",
+                footer: "hidden",
+              },
+            }}
+          />
         ) : (
-          <SignInButton mode="modal" forceRedirectUrl={redirectUrl}>
-            <button className="w-full px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition font-medium">
-              Iniciar sesión
-            </button>
-          </SignInButton>
+          <SignIn
+            mode="modal"
+            routing="virtual"
+            forceRedirectUrl={redirectUrl}
+            appearance={{
+              elements: {
+                modalBackdrop: "hidden",
+                rootBox: "flex justify-center items-center",
+                card: "shadow-2xl rounded-2xl bg-white",
+                formButtonPrimary:
+                  "bg-black hover:bg-gray-800 text-white rounded-lg",
+                footerActionLink: "hidden",
+                footer: "hidden",
+              },
+            }}
+          />
         )}
 
         {/* Toggle button between SignIn and SignUp */}
