@@ -129,6 +129,26 @@ export async function initPostgresWorkspaces() {
       console.warn("[DEBUG] Migration check/execution note:", migErr.message);
     }
     
+    // Migración: agregar clerk_org_id si no existe
+    try {
+      const clerkOrgIdInfo = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'workspaces' AND column_name = 'clerk_org_id'
+      `);
+      
+      if (!clerkOrgIdInfo.rows || clerkOrgIdInfo.rows.length === 0) {
+        console.log("[DEBUG] Adding clerk_org_id column...");
+        await query(`
+          ALTER TABLE workspaces 
+          ADD COLUMN clerk_org_id TEXT
+        `);
+        console.log("[DEBUG] clerk_org_id column added successfully");
+      }
+    } catch (clerkOrgIdErr) {
+      console.warn("[DEBUG] clerk_org_id migration note:", clerkOrgIdErr.message);
+    }
+    
     workspacesTableInitialized = true;
   } catch (err) {
     console.warn("⚠️ initPostgresWorkspaces:", err.message);
