@@ -13,7 +13,13 @@ if (!rootEl) {
 } else {
   createRoot(rootEl).render(
     <React.StrictMode>
-      <ClerkProvider publishableKey={publishableKey} localization={esUY}>
+      <ClerkProvider 
+        publishableKey={publishableKey} 
+        localization={esUY}
+        afterSignInUrl="/"
+        afterSignUpUrl="/"
+        skipInvitationScreen={true}
+      >
         <App />
       </ClerkProvider>
     </React.StrictMode>,
