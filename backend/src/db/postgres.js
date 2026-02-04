@@ -105,6 +105,19 @@ export async function initPostgresWorkspaces() {
         // Si es integer, convertir a text
         if (currentType === 'integer') {
           console.log("[DEBUG] Migrating user_id from integer to text...");
+          
+          // Primero, remover la foreign key constraint si existe
+          try {
+            await query(`
+              ALTER TABLE workspaces 
+              DROP CONSTRAINT IF EXISTS workspaces_user_id_fkey
+            `);
+            console.log("[DEBUG] Foreign key constraint dropped");
+          } catch (fkErr) {
+            console.debug("[DEBUG] FK drop skipped:", fkErr.message);
+          }
+          
+          // Ahora convertir el tipo
           await query(`
             ALTER TABLE workspaces 
             ALTER COLUMN user_id TYPE TEXT USING user_id::text
