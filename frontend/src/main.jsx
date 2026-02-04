@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { ClerkProvider } from "@clerk/clerk-react";
+import { esUY } from "@clerk/localizations";
 import App from "./App";
 import "./styles/tailwind.css";
 
@@ -12,7 +13,7 @@ if (!rootEl) {
 } else {
   createRoot(rootEl).render(
     <React.StrictMode>
-      <ClerkProvider publishableKey={publishableKey} localization="es">
+      <ClerkProvider publishableKey={publishableKey} localization={esUY}>
         <App />
       </ClerkProvider>
     </React.StrictMode>,
