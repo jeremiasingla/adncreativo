@@ -184,3 +184,22 @@ function formatDuration(ms) {
   if (m > 0) return `${m} m ${s % 60} s`;
   return `${s} s`;
 }
+
+/**
+ * Limpia todas las métricas almacenadas (LLM e imágenes)
+ */
+export function clearAllMetrics() {
+  const clearedLLMCount = llmEvents.length;
+  const clearedImageCount = imageEvents.length;
+  
+  llmEvents.length = 0;
+  imageEvents.length = 0;
+  
+  console.log(`[Metrics] Cleared all metrics - LLM events: ${clearedLLMCount}, Image events: ${clearedImageCount}`);
+  
+  return {
+    clearedLLMEvents: clearedLLMCount,
+    clearedImageEvents: clearedImageCount,
+    message: "All metrics cleared successfully",
+  };
+}

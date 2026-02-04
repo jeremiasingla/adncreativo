@@ -1,4 +1,4 @@
-import { getAllMetrics, getLLMMetrics, getImageMetrics } from "../services/metrics.service.js";
+import { getAllMetrics, getLLMMetrics, getImageMetrics, clearAllMetrics } from "../services/metrics.service.js";
 
 /**
  * GET /admin/metrics
@@ -38,6 +38,20 @@ export function getImageMetricsEndpoint(req, res) {
     res.json({ success: true, data: metrics });
   } catch (error) {
     console.error("❌ Error getting image metrics:", error.message);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+}
+
+/**
+ * DELETE /admin/metrics
+ * Elimina todas las métricas almacenadas (solo admin).
+ */
+export function clearMetrics(req, res) {
+  try {
+    const result = clearAllMetrics();
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error("❌ Error clearing metrics:", error.message);
     res.status(500).json({ success: false, error: "Internal server error" });
   }
 }
