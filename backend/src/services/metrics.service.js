@@ -29,7 +29,15 @@ const SIZE_TO_ESTIMATED_USD = {
  * @param {string} [opts.source] - Origen: "branding" | "profiles" | "headlines" | "creative_image"
  * @param {string} [opts.workspaceSlug] - Slug del workspace relacionado
  */
-export function recordLLMRequest({ model, promptTokens, completionTokens, totalCost, durationMs, source = "unknown", workspaceSlug = null }) {
+export function recordLLMRequest({
+  model,
+  promptTokens,
+  completionTokens,
+  totalCost,
+  durationMs,
+  source = "unknown",
+  workspaceSlug = null,
+}) {
   llmEvents.push({
     model,
     promptTokens,
@@ -41,7 +49,9 @@ export function recordLLMRequest({ model, promptTokens, completionTokens, totalC
     workspaceSlug,
     timestamp: new Date().toISOString(),
   });
-  console.log(`[Metrics] LLM Request - ${source} | Model: ${model} | Tokens: ${promptTokens + completionTokens} | Cost: $${totalCost.toFixed(4)} | Duration: ${durationMs}ms`);
+  console.log(
+    `[Metrics] LLM Request - ${source} | Model: ${model} | Tokens: ${promptTokens + completionTokens} | Cost: $${totalCost.toFixed(4)} | Duration: ${durationMs}ms`,
+  );
 }
 
 /**
@@ -54,7 +64,14 @@ export function recordLLMRequest({ model, promptTokens, completionTokens, totalC
  * @param {string} [opts.source] - Origen: "creative" | "welcome" | "profile".
  * @param {number} [opts.estimatedUsd] - Costo estimado o real
  */
-export function recordImageGeneration({ model, size, aspectRatio, durationMs, source = "creative", estimatedUsd = null }) {
+export function recordImageGeneration({
+  model,
+  size,
+  aspectRatio,
+  durationMs,
+  source = "creative",
+  estimatedUsd = null,
+}) {
   const cost = estimatedUsd ?? SIZE_TO_ESTIMATED_USD[size] ?? 0.08;
   imageEvents.push({
     model,
@@ -66,7 +83,9 @@ export function recordImageGeneration({ model, size, aspectRatio, durationMs, so
     source,
     timestamp: new Date().toISOString(),
   });
-  console.log(`[Metrics] Image Gen - ${source} | Model: ${model} | Size: ${size} | Cost: $${cost.toFixed(4)} | Duration: ${durationMs}ms`);
+  console.log(
+    `[Metrics] Image Gen - ${source} | Model: ${model} | Size: ${size} | Cost: $${cost.toFixed(4)} | Duration: ${durationMs}ms`,
+  );
 }
 
 /**
@@ -82,23 +101,26 @@ export function getLLMMetrics() {
   const byModel = {};
   const bySource = {};
   const byWorkspace = {};
-  
+
   for (const e of llmEvents) {
     // Por modelo
-    if (!byModel[e.model]) byModel[e.model] = { requests: 0, cost: 0, tokens: 0 };
+    if (!byModel[e.model])
+      byModel[e.model] = { requests: 0, cost: 0, tokens: 0 };
     byModel[e.model].requests++;
     byModel[e.model].cost += e.totalCost;
     byModel[e.model].tokens += e.totalTokens;
-    
+
     // Por origen
-    if (!bySource[e.source]) bySource[e.source] = { requests: 0, cost: 0, tokens: 0 };
+    if (!bySource[e.source])
+      bySource[e.source] = { requests: 0, cost: 0, tokens: 0 };
     bySource[e.source].requests++;
     bySource[e.source].cost += e.totalCost;
     bySource[e.source].tokens += e.totalTokens;
-    
+
     // Por workspace
     if (e.workspaceSlug) {
-      if (!byWorkspace[e.workspaceSlug]) byWorkspace[e.workspaceSlug] = { requests: 0, cost: 0, tokens: 0 };
+      if (!byWorkspace[e.workspaceSlug])
+        byWorkspace[e.workspaceSlug] = { requests: 0, cost: 0, tokens: 0 };
       byWorkspace[e.workspaceSlug].requests++;
       byWorkspace[e.workspaceSlug].cost += e.totalCost;
       byWorkspace[e.workspaceSlug].tokens += e.totalTokens;
@@ -113,15 +135,27 @@ export function getLLMMetrics() {
       totalTokens,
       totalDurationMs,
       totalDurationFormatted: formatDuration(totalDurationMs),
-      avgCostPerRequest: totalRequests > 0 ? Math.round((totalCost / totalRequests) * 10000) / 10000 : 0,
+      avgCostPerRequest:
+        totalRequests > 0
+          ? Math.round((totalCost / totalRequests) * 10000) / 10000
+          : 0,
       byModel: Object.fromEntries(
-        Object.entries(byModel).map(([k, v]) => [k, { ...v, cost: Math.round(v.cost * 10000) / 10000 }])
+        Object.entries(byModel).map(([k, v]) => [
+          k,
+          { ...v, cost: Math.round(v.cost * 10000) / 10000 },
+        ]),
       ),
       bySource: Object.fromEntries(
-        Object.entries(bySource).map(([k, v]) => [k, { ...v, cost: Math.round(v.cost * 10000) / 10000 }])
+        Object.entries(bySource).map(([k, v]) => [
+          k,
+          { ...v, cost: Math.round(v.cost * 10000) / 10000 },
+        ]),
       ),
       byWorkspace: Object.fromEntries(
-        Object.entries(byWorkspace).map(([k, v]) => [k, { ...v, cost: Math.round(v.cost * 10000) / 10000 }])
+        Object.entries(byWorkspace).map(([k, v]) => [
+          k,
+          { ...v, cost: Math.round(v.cost * 10000) / 10000 },
+        ]),
       ),
     },
     events: [...llmEvents].reverse().slice(0, 50), // Últimos 50 eventos
@@ -168,7 +202,7 @@ export function getAllMetrics() {
   const llm = getLLMMetrics();
   const images = getImageMetrics();
   const totalCost = llm.summary.totalCost + images.summary.totalEstimatedUsd;
-  
+
   return {
     totalCost: Math.round(totalCost * 10000) / 10000,
     remaining: Math.round((4.63 - totalCost) * 100) / 100, // Actualizar con balance real
@@ -191,12 +225,14 @@ function formatDuration(ms) {
 export function clearAllMetrics() {
   const clearedLLMCount = llmEvents.length;
   const clearedImageCount = imageEvents.length;
-  
+
   llmEvents.length = 0;
   imageEvents.length = 0;
-  
-  console.log(`[Metrics] Cleared all metrics - LLM events: ${clearedLLMCount}, Image events: ${clearedImageCount}`);
-  
+
+  console.log(
+    `[Metrics] Cleared all metrics - LLM events: ${clearedLLMCount}, Image events: ${clearedImageCount}`,
+  );
+
   return {
     clearedLLMEvents: clearedLLMCount,
     clearedImageEvents: clearedImageCount,

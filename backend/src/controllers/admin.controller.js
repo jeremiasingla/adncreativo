@@ -1,4 +1,9 @@
-import { getAllMetrics, getLLMMetrics, getImageMetrics, clearAllMetrics } from "../services/metrics.service.js";
+import {
+  getAllMetrics,
+  getLLMMetrics,
+  getImageMetrics,
+  clearAllMetrics,
+} from "../services/metrics.service.js";
 
 /**
  * GET /admin/metrics

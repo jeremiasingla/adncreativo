@@ -596,7 +596,7 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
             "⚠️ Avatar generation failed for profile:",
             profile.name,
             "| Error:",
-            err.message
+            err.message,
           );
           console.warn("⚠️ Avatar prompt was:", avatarPrompt.slice(0, 200));
           return null;
@@ -1589,7 +1589,7 @@ export async function createWorkspace(req, res) {
         userId,
         count: count?.n,
         max: MAX_WORKSPACES_FREE,
-        isAdmin
+        isAdmin,
       });
       if (count && Number(count.n) >= MAX_WORKSPACES_FREE) {
         console.warn("[createWorkspace] User reached max workspaces:", userId);

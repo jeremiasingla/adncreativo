@@ -8,6 +8,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { FullScreenLoadingSpinner } from "./components/LoadingSpinner";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -55,11 +56,7 @@ class ErrorBoundary extends React.Component {
 function RootRoute() {
   const { user, loading } = useAuth();
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-gray-500">Cargando...</p>
-      </div>
-    );
+    return <FullScreenLoadingSpinner />;
   }
   return user ? <Dashboard /> : <Home />;
 }
@@ -67,11 +64,7 @@ function RootRoute() {
 function GuestOnly({ children }) {
   const { user, loading } = useAuth();
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-gray-500">Cargando...</p>
-      </div>
-    );
+    return <FullScreenLoadingSpinner />;
   }
   return user ? <Navigate to="/" replace /> : children;
 }
@@ -80,11 +73,7 @@ function AuthOnly({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-gray-500">Cargando...</p>
-      </div>
-    );
+    return <FullScreenLoadingSpinner />;
   }
   if (!user) {
     try {

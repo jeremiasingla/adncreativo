@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import WorkspaceSidebar from "../components/WorkspaceSidebar";
 import BrandingView from "../components/BrandingView";
+import { CenteredLoadingSpinner } from "../components/LoadingSpinner";
 import { fetchWithAuth } from "../api/fetchWithAuth";
 
 function IconHouse({ className }) {
@@ -180,21 +181,6 @@ function IconDownload({ className }) {
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <path d="m7 10 5 5 5-5" />
     </svg>
-  );
-}
-
-/** Spinner circular centrado para estados de carga de cada vista. */
-function CenteredSpinner() {
-  return (
-    <div
-      className="flex-1 min-h-0 flex items-center justify-center p-8"
-      aria-label="Cargando"
-    >
-      <div
-        className="w-10 h-10 border-2 border-neutral-300 border-t-primary rounded-full animate-spin"
-        aria-hidden="true"
-      />
-    </div>
   );
 }
 function IconPalette({ className }) {
@@ -1274,7 +1260,7 @@ export default function Workspace() {
           {!isProfileDetail && segmentForDisplay === "branding" && (
             <div className="flex-1 min-h-0 flex flex-col overflow-auto">
               {brandingLoading ? (
-                <CenteredSpinner />
+                <CenteredLoadingSpinner />
               ) : (
                 <BrandingView branding={workspaceBranding} />
               )}
@@ -1283,7 +1269,7 @@ export default function Workspace() {
           {!isProfileDetail && segmentForDisplay === "base-de-conocimiento" && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden font-sans">
               {knowledgeBaseLoading ? (
-                <CenteredSpinner />
+                <CenteredLoadingSpinner />
               ) : (
                 <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
                   <div className="max-w-4xl mx-auto">
@@ -1923,7 +1909,7 @@ export default function Workspace() {
                         </button>
                       </div>
                       {creativesLoading ? (
-                        <CenteredSpinner />
+                        <CenteredLoadingSpinner />
                       ) : creativesList.length === 0 ? (
                         <div className="py-12 text-center text-muted-foreground">
                           <p className="text-sm">
@@ -2038,7 +2024,7 @@ export default function Workspace() {
               }}
             >
               {customerProfilesLoading ? (
-                <CenteredSpinner />
+                <CenteredLoadingSpinner />
               ) : (
                 <div className="p-4 md:p-6">
                   <div className="max-w-4xl mx-auto">

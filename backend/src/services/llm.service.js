@@ -129,7 +129,10 @@ Example (structure only):
       body: body ? JSON.stringify(body, null, 2) : "(no body)",
     });
     if (status === 400 && body) {
-      console.error("⚠️ OpenRouter 400 details:", JSON.stringify(body, null, 2));
+      console.error(
+        "⚠️ OpenRouter 400 details:",
+        JSON.stringify(body, null, 2),
+      );
     }
     if (status === 400 && input?.screenshot) {
       console.log("[LLM debug] Retrying without screenshot...");
@@ -139,12 +142,17 @@ Example (structure only):
           requestBody(false),
           { headers },
         );
-        console.log("[LLM debug] Retry without screenshot OK, status:", response?.status);
+        console.log(
+          "[LLM debug] Retry without screenshot OK, status:",
+          response?.status,
+        );
       } catch (retryErr) {
         console.error("[LLM debug] Retry failed:", {
           message: retryErr.message,
           status: retryErr.response?.status,
-          body: retryErr.response?.data ? JSON.stringify(retryErr.response.data, null, 2) : "(no body)",
+          body: retryErr.response?.data
+            ? JSON.stringify(retryErr.response.data, null, 2)
+            : "(no body)",
         });
         throw retryErr;
       }
@@ -175,7 +183,7 @@ Example (structure only):
       totalCost,
       durationMs: Date.now() - startTime,
       source: "branding",
-      workspaceSlug: input?.url ? new URL(input.url).hostname : null
+      workspaceSlug: input?.url ? new URL(input.url).hostname : null,
     });
   }
 
@@ -430,9 +438,21 @@ export async function generateCreativeImagePrompt(input) {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
 
-  const { headline, companyName, brandingSummary, clientIdealSummary, brandingColors, hasLogoOrImages, aspectRatio: inputAspectRatio } = input;
-  const aspectRatio = inputAspectRatio && typeof inputAspectRatio === "string" ? inputAspectRatio.trim() : "4:5";
-  const colors = brandingColors && typeof brandingColors === "object" ? brandingColors : {};
+  const {
+    headline,
+    companyName,
+    brandingSummary,
+    clientIdealSummary,
+    brandingColors,
+    hasLogoOrImages,
+    aspectRatio: inputAspectRatio,
+  } = input;
+  const aspectRatio =
+    inputAspectRatio && typeof inputAspectRatio === "string"
+      ? inputAspectRatio.trim()
+      : "4:5";
+  const colors =
+    brandingColors && typeof brandingColors === "object" ? brandingColors : {};
   const colorList = [
     colors.primary && `primary: ${colors.primary}`,
     colors.secondary && `secondary: ${colors.secondary}`,
@@ -559,10 +579,16 @@ async function fetchImageBuffer(url) {
     }
   }
   try {
-    const res = await axios.get(url, { responseType: "arraybuffer", timeout: 15000 });
+    const res = await axios.get(url, {
+      responseType: "arraybuffer",
+      timeout: 15000,
+    });
     return Buffer.from(res.data);
   } catch (err) {
-    console.warn("[Creative image] Failed to fetch reference image:", err.message);
+    console.warn(
+      "[Creative image] Failed to fetch reference image:",
+      err.message,
+    );
     return null;
   }
 }
@@ -577,34 +603,60 @@ async function fetchImageBuffer(url) {
  * @returns {Promise<string|null>} - data URL base64 (data:image/png;base64,...) o null
  */
 /** Instrucción fija añadida a todo prompt de creativo para que el modelo de imagen no dibuje el logo de Meta. */
-const NO_META_LOGO_SUFFIX = "\n\nIMPORTANT: Do NOT include the Meta logo, Facebook logo, Instagram logo, or any Meta/Facebook/Instagram branding (e.g. \"from Meta\", infinity symbol, watermarks) in the image. The ad is for use on Meta platforms but the image itself must not show Meta's branding.";
+const NO_META_LOGO_SUFFIX =
+  '\n\nIMPORTANT: Do NOT include the Meta logo, Facebook logo, Instagram logo, or any Meta/Facebook/Instagram branding (e.g. "from Meta", infinity symbol, watermarks) in the image. The ad is for use on Meta platforms but the image itself must not show Meta\'s branding.';
 
-export async function generateCreativeImageSeedream(prompt, aspectRatio = "4:5", referenceImages = [], opts = {}) {
+export async function generateCreativeImageSeedream(
+  prompt,
+  aspectRatio = "4:5",
+  referenceImages = [],
+  opts = {},
+) {
   const metricSource = opts?.source || "creative";
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is missing (required for gpt-image-1.5 creative images)");
+    throw new Error(
+      "OPENAI_API_KEY is missing (required for gpt-image-1.5 creative images)",
+    );
   }
 
   const fullPrompt = (prompt || "").trim() + NO_META_LOGO_SUFFIX;
 
   const allowedRatios = ["21:9", "16:9", "9:16", "4:5", "3:4", "4:3", "1:1"];
-  const requestedRatio = aspectRatio && allowedRatios.includes(aspectRatio) ? aspectRatio : "4:5";
+  const requestedRatio =
+    aspectRatio && allowedRatios.includes(aspectRatio) ? aspectRatio : "4:5";
   const size = ASPECT_TO_OPENAI_SIZE[requestedRatio] || "1024x1536";
 
-  console.log("[Creative image] Model:", CREATIVE_IMAGE_MODEL, "| Aspect:", requestedRatio, "| Size:", size);
+  console.log(
+    "[Creative image] Model:",
+    CREATIVE_IMAGE_MODEL,
+    "| Aspect:",
+    requestedRatio,
+    "| Size:",
+    size,
+  );
   if (referenceImages?.length) {
-    console.log("[Creative image] Reference images (logo/brand):", referenceImages.length);
+    console.log(
+      "[Creative image] Reference images (logo/brand):",
+      referenceImages.length,
+    );
   }
 
-  const hasReferenceImages = Array.isArray(referenceImages) && referenceImages.length > 0 && referenceImages.some((img) => img?.url);
+  const hasReferenceImages =
+    Array.isArray(referenceImages) &&
+    referenceImages.length > 0 &&
+    referenceImages.some((img) => img?.url);
 
   if (hasReferenceImages) {
-    const urls = referenceImages.filter((img) => img?.url).map((img) => img.url);
+    const urls = referenceImages
+      .filter((img) => img?.url)
+      .map((img) => img.url);
     const buffers = await Promise.all(urls.map((url) => fetchImageBuffer(url)));
     const validBuffers = buffers.filter(Boolean);
     if (validBuffers.length === 0) {
-      console.warn("[Creative image] No valid reference images, falling back to generations (no logo).");
+      console.warn(
+        "[Creative image] No valid reference images, falling back to generations (no logo).",
+      );
     } else {
       try {
         const form = new FormData();
@@ -612,7 +664,11 @@ export async function generateCreativeImageSeedream(prompt, aspectRatio = "4:5",
         form.append("prompt", fullPrompt);
         form.append("size", size);
         validBuffers.forEach((buf, i) => {
-          form.append("image[]", new Blob([buf], { type: "image/png" }), `image${i}.png`);
+          form.append(
+            "image[]",
+            new Blob([buf], { type: "image/png" }),
+            `image${i}.png`,
+          );
         });
         const start = Date.now();
         const res = await fetch("https://api.openai.com/v1/images/edits", {
@@ -633,7 +689,11 @@ export async function generateCreativeImageSeedream(prompt, aspectRatio = "4:5",
           return `data:image/png;base64,${data.data[0].b64_json}`;
         }
         const errMsg = data?.error?.message ?? res.statusText;
-        console.warn("[Creative image] OpenAI edits error:", res.status, errMsg);
+        console.warn(
+          "[Creative image] OpenAI edits error:",
+          res.status,
+          errMsg,
+        );
       } catch (err) {
         console.warn("[Creative image] OpenAI edits failed:", err.message);
       }
@@ -660,8 +720,15 @@ export async function generateCreativeImageSeedream(prompt, aspectRatio = "4:5",
   const durationMs = Date.now() - start;
 
   if (response.status !== 200) {
-    const msg = response.data?.error?.message ?? response.data?.message ?? response.statusText;
-    console.warn("[Creative image] OpenAI generations error:", response.status, msg);
+    const msg =
+      response.data?.error?.message ??
+      response.data?.message ??
+      response.statusText;
+    console.warn(
+      "[Creative image] OpenAI generations error:",
+      response.status,
+      msg,
+    );
     return null;
   }
 
@@ -680,13 +747,17 @@ export async function generateCreativeImageSeedream(prompt, aspectRatio = "4:5",
 }
 
 /** @deprecated Usar generateCreativeImageSeedream. Conservado por compatibilidad. */
-export async function generateCreativeImageNanoBananaPro(prompt, aspectRatio = "1:1") {
+export async function generateCreativeImageNanoBananaPro(
+  prompt,
+  aspectRatio = "1:1",
+) {
   return generateCreativeImageSeedream(prompt, aspectRatio || "4:5");
 }
 
 /** Avatares y banners de ICP: Seedream 4.5 vía OpenRouter (modalities: ["image"]). */
 const ICP_IMAGE_MODEL = "bytedance-seed/seedream-4.5";
-const DEBUG_ICP_IMAGE = process.env.DEBUG_ICP_IMAGE === "1" || process.env.DEBUG_ICP_IMAGE === "true";
+const DEBUG_ICP_IMAGE =
+  process.env.DEBUG_ICP_IMAGE === "1" || process.env.DEBUG_ICP_IMAGE === "true";
 
 /**
  * Genera una imagen para ICP (avatar o banner) con Seedream 4.5 vía OpenRouter.
@@ -713,7 +784,10 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
     ],
   };
 
-  if (aspectRatio && (aspectRatio === "21:9" || aspectRatio === "16:9" || aspectRatio === "1:1")) {
+  if (
+    aspectRatio &&
+    (aspectRatio === "21:9" || aspectRatio === "16:9" || aspectRatio === "1:1")
+  ) {
     requestBody.image_config = { aspect_ratio: aspectRatio };
   }
 
@@ -736,13 +810,16 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
           "Content-Type": "application/json",
         },
         validateStatus: () => true,
-      }
+      },
     );
   } catch (err) {
     console.error("[ICP image] Request error:", err.message);
     if (err.response) {
       console.error("[ICP image] Response status:", err.response.status);
-      console.error("[ICP image] Response data:", JSON.stringify(err.response.data, null, 2));
+      console.error(
+        "[ICP image] Response data:",
+        JSON.stringify(err.response.data, null, 2),
+      );
     }
     throw err;
   }
@@ -750,27 +827,42 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
   console.log("[ICP image] Response status:", response.status);
   if (response.status !== 200) {
     console.error("[ICP image] Error response status:", response.status);
-    console.error("[ICP image] Error response data:", JSON.stringify(response.data, null, 2));
-    console.error("[ICP image] Error response headers:", JSON.stringify(response.headers, null, 2));
+    console.error(
+      "[ICP image] Error response data:",
+      JSON.stringify(response.data, null, 2),
+    );
+    console.error(
+      "[ICP image] Error response headers:",
+      JSON.stringify(response.headers, null, 2),
+    );
   }
 
   if (response.status !== 200) {
-    const msg = response.data?.error?.message ?? response.data?.message ?? response.statusText;
+    const msg =
+      response.data?.error?.message ??
+      response.data?.message ??
+      response.statusText;
     const errorDetails = {
       status: response.status,
       message: msg,
       data: response.data,
       model: ICP_IMAGE_MODEL,
-      aspectRatio
+      aspectRatio,
     };
-    console.error("[ICP image] Full error details:", JSON.stringify(errorDetails, null, 2));
+    console.error(
+      "[ICP image] Full error details:",
+      JSON.stringify(errorDetails, null, 2),
+    );
     throw new Error(`OpenRouter image: ${response.status} - ${msg}`);
   }
 
   const message = response.data?.choices?.[0]?.message;
   const images = message?.images;
   if (!Array.isArray(images) || images.length === 0) {
-    console.log("[ICP image] No images in response. message keys:", message ? Object.keys(message) : "no message");
+    console.log(
+      "[ICP image] No images in response. message keys:",
+      message ? Object.keys(message) : "no message",
+    );
     return null;
   }
   const first = images[0];
@@ -779,6 +871,9 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
     console.log("[ICP image] Got image, data URL length:", url.length);
     return url;
   }
-  console.log("[ICP image] First image structure:", JSON.stringify(Object.keys(first || {})));
+  console.log(
+    "[ICP image] First image structure:",
+    JSON.stringify(Object.keys(first || {})),
+  );
   return null;
 }
