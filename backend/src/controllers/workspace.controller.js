@@ -966,6 +966,8 @@ export async function generateCreatives(req, res) {
         CREATIVE_ASPECT_RATIOS[
           (baseLength + offsetIndex) % CREATIVE_ASPECT_RATIOS.length
         ];
+      const platform = getPlatformFromAspectRatio(aspectRatio);
+      const version = ((baseLength + offsetIndex) % 3) + 1;
       const useLogoThisTime =
         hasLogoOrImages && (baseLength + offsetIndex) % 2 === 0;
       const imagesForThisCreative = useLogoThisTime ? referenceImages : [];
@@ -996,6 +998,9 @@ export async function generateCreatives(req, res) {
               createdAt: new Date().toISOString(),
               model: modelUsed,
               aspectRatio,
+              aspect_ratio: aspectRatio,
+              version,
+              platform,
             };
           }
         }
