@@ -1461,48 +1461,89 @@ export default function Workspace() {
                     if (promptText) navigator.clipboard.writeText(promptText);
                   };
                   return (
-                    <div className="flex h-full overflow-hidden flex-1 min-h-0">
-                      <div className="flex flex-1 flex-col overflow-hidden min-h-0 bg-white md:rounded-xl md:border md:border-neutral-200/60 md:shadow-sm transition-all ease-out duration-300">
+                    <div className="flex h-full overflow-hidden flex-1">
+                      <div className="flex flex-col overflow-hidden min-h-0 bg-white md:rounded-xl md:border md:border-neutral-200/60 md:shadow-sm transition-all ease-out duration-300" style={{ width: "100%" }}>
                         <div className="h-full w-full flex relative">
                           <div className="flex-1 flex flex-col min-w-0">
-                            <div className="shrink-0 h-14 flex items-center justify-between gap-3 px-4 md:px-6">
-                              <div className="flex items-center gap-2 min-w-0 flex-1 md:flex-initial">
+                            <div className="shrink-0 h-14 flex items-center justify-between px-4 md:px-6 relative">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate(
+                                    workspaceSlug
+                                      ? `/${workspaceSlug}/creatives`
+                                      : "#",
+                                  )
+                                }
+                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground h-10 w-10 rounded-xl md:hidden"
+                                aria-label="Volver"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="24"
+                                  height="24"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  className="w-5 h-5"
+                                  aria-hidden="true"
+                                >
+                                  <path d="m12 19-7-7 7-7" />
+                                  <path d="M19 12H5" />
+                                </svg>
+                              </button>
+                              <nav aria-label="breadcrumb" className="hidden md:flex">
+                                <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
+                                  <li className="inline-flex items-center gap-1.5">
+                                    <a className="transition-colors flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 cursor-pointer">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                                        <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+                                        <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                      </svg>
+                                      <span>Inicio</span>
+                                    </a>
+                                  </li>
+                                  <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right" aria-hidden="true">
+                                      <path d="m9 18 6-6-6-6"></path>
+                                    </svg>
+                                  </li>
+                                  <li className="inline-flex items-center gap-1.5">
+                                    <a className="transition-colors flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 cursor-pointer">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                                        <circle cx="9" cy="9" r="2"></circle>
+                                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                                      </svg>
+                                      <span>Creativos</span>
+                                    </a>
+                                  </li>
+                                  <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right" aria-hidden="true">
+                                      <path d="m9 18 6-6-6-6"></path>
+                                    </svg>
+                                  </li>
+                                  <li className="inline-flex items-center gap-1.5">
+                                    <span role="link" aria-disabled="true" aria-current="page" className="flex items-center gap-1.5 text-neutral-900 font-medium">
+                                      {displayName}
+                                    </span>
+                                  </li>
+                                </ol>
+                              </nav>
+                              <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex">
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    navigate(
-                                      workspaceSlug
-                                        ? `/${workspaceSlug}/creatives`
-                                        : "#",
-                                    )
-                                  }
-                                  className="inline-flex items-center justify-center shrink-0 text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer hover:bg-accent hover:text-accent-foreground h-10 w-10 rounded-xl"
-                                  aria-label="Volver"
+                                  disabled
+                                  className="inline-flex items-center justify-center whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] h-8 rounded-lg px-3 gap-2 border-[#0081fb]/30 text-[#0081fb] hover:bg-[#0081fb]/5 hover:border-[#0081fb]/50 hover:text-neutral-900 cursor-pointer"
                                 >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="w-5 h-5"
-                                    aria-hidden="true"
-                                  >
-                                    <path d="m12 19-7-7 7-7" />
-                                    <path d="M19 12H5" />
-                                  </svg>
+                                  <img alt="Meta" className="w-4 h-4 object-contain" src="/images/logos/meta.png" />
+                                  <span>Lanzar Campaña</span>
                                 </button>
-                                <div className="hidden md:block min-w-0">
-                                  <span className="text-sm text-neutral-600 truncate">
-                                    {displayName}
-                                  </span>
-                                </div>
                               </div>
-                              <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex items-center gap-2">
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
@@ -1515,7 +1556,7 @@ export default function Workspace() {
                                           : "#",
                                       )
                                     }
-                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold cursor-pointer h-8 w-8 p-0 rounded-lg hover:bg-accent hover:text-accent-foreground disabled:opacity-30 disabled:pointer-events-none"
+                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer h-8 w-8 p-0 rounded-lg hover:bg-accent hover:text-accent-foreground disabled:opacity-30"
                                     aria-label="Anterior"
                                   >
                                     <IconChevronLeft
@@ -1539,7 +1580,7 @@ export default function Workspace() {
                                           : "#",
                                       )
                                     }
-                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold cursor-pointer h-8 w-8 p-0 rounded-lg hover:bg-accent hover:text-accent-foreground disabled:opacity-30 disabled:pointer-events-none"
+                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer h-8 w-8 p-0 rounded-lg hover:bg-accent hover:text-accent-foreground disabled:opacity-30"
                                     aria-label="Siguiente"
                                   >
                                     <IconChevronRight
@@ -1548,76 +1589,174 @@ export default function Workspace() {
                                     />
                                   </button>
                                 </div>
+                                <div className="md:hidden">
+                                  <button
+                                    type="button"
+                                    disabled
+                                    className="inline-flex items-center justify-center whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] rounded-lg px-3 h-8 gap-1.5 border-[#0081fb]/30 text-[#0081fb] hover:bg-[#0081fb]/5 hover:border-[#0081fb]/50 cursor-pointer"
+                                  >
+                                    <img alt="Meta" className="w-4 h-4 object-contain" src="/images/logos/meta.png" />
+                                    <span className="text-xs">Lanzar</span>
+                                  </button>
+                                </div>
                                 <a
                                   href={downloadUrl}
                                   download
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold cursor-pointer hover:bg-accent hover:text-accent-foreground h-10 w-10 rounded-xl"
+                                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground h-10 w-10 rounded-xl"
                                   aria-label="Descargar imagen"
                                 >
                                   <IconDownload
-                                    className="w-5 h-5"
+                                    className="h-5 w-5"
                                     aria-hidden="true"
                                   />
                                 </a>
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    disabled
+                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground h-10 w-10 rounded-xl"
+                                    aria-label="Animar imagen"
+                                    title="Animar (10-20 créditos)"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+                                      <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
+                                      <rect x="2" y="6" width="14" height="12" rx="2"></rect>
+                                    </svg>
+                                  </button>
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground h-10 w-10 rounded-xl md:hidden"
+                                  aria-label="Publicar en redes sociales"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+                                    <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path>
+                                    <path d="m21.854 2.147-10.94 10.939"></path>
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer bg-gradient-to-b from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:translate-y-[-1px] active:translate-y-[1px] active:shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)] border border-primary/50 h-8 rounded-lg px-3 hidden md:inline-flex"
+                                >
+                                  Publicar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground h-8 rounded-lg px-3 group gap-1.5 text-neutral-500"
+                                  title="Chat IA"
+                                  disabled
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px] text-sky-500 group-hover:text-sky-600 transition-colors" aria-hidden="true">
+                                    <path d="M12 8V4H8"></path>
+                                    <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+                                    <path d="M2 14h2"></path>
+                                    <path d="M20 14h2"></path>
+                                    <path d="M15 13v2"></path>
+                                    <path d="M9 13v2"></path>
+                                  </svg>
+                                  <span className="text-sm font-medium hidden md:inline">Agent</span>
+                                </button>
                               </div>
                             </div>
                             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                              <div className="md:hidden px-4 pt-3 pb-2 flex-shrink-0">
+                              <div className="md:hidden px-4 pt-3 pb-2 flex-shrink-0" data-prompt-sidebar="true">
                                 <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2">
-                                  <div className="flex items-center gap-2">
-                                    <IconMessageSquare
-                                      className="w-3.5 h-3.5 text-neutral-500 flex-shrink-0"
-                                      aria-hidden="true"
-                                    />
-                                    <span className="text-xs font-medium text-neutral-700 truncate flex-1">
-                                      {(selectedCreative.headline || "").slice(
-                                        0,
-                                        50,
-                                      )}
-                                      {(selectedCreative.headline || "")
-                                        .length > 50
-                                        ? "…"
-                                        : ""}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={copyPrompt}
-                                      className="inline-flex items-center justify-center rounded-xl h-6 w-6 hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                                      title="Copiar prompt"
-                                    >
-                                      <IconCopy
-                                        className="h-3.5 w-3.5 text-neutral-400"
+                                  <div role="button" tabIndex={0} className="w-full text-left cursor-pointer">
+                                    <div className="flex items-center gap-2">
+                                      <IconMessageSquare
+                                        className="h-3.5 w-3.5 text-neutral-500 flex-shrink-0"
                                         aria-hidden="true"
                                       />
-                                    </button>
+                                      <span className="text-xs font-medium text-neutral-700 truncate flex-1">
+                                        "{(selectedCreative.headline || "").slice(0, 50)}
+                                        {(selectedCreative.headline || "").length > 50
+                                          ? "…"
+                                          : ""}
+                                        "
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={copyPrompt}
+                                        className="inline-flex items-center justify-center rounded-xl h-6 w-6 hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                        title="Copiar prompt"
+                                      >
+                                        <IconCopy
+                                          className="h-3.5 w-3.5 text-neutral-400"
+                                          aria-hidden="true"
+                                        />
+                                      </button>
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform duration-200" aria-hidden="true">
+                                        <path d="m6 9 6 6 6-6"></path>
+                                      </svg>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex-1 flex items-center justify-center p-4 md:p-8 min-h-0 overflow-auto relative">
+                              <div className="flex-1 flex items-center justify-center p-4 md:p-8 min-h-0 overflow-auto relative" data-image-container="true">
                                 <div className="relative max-w-full max-h-full">
                                   <img
-                                    src={selectedCreative.imageUrl}
-                                    alt={
-                                      selectedCreative.headline || "Creativo"
-                                    }
+                                    alt="Ad creative"
                                     className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
-                                    style={{
-                                      maxHeight: "calc(-300px + 100vh)",
-                                    }}
+                                    src={selectedCreative.imageUrl}
+                                    style={{ maxHeight: "calc(-300px + 100vh)" }}
                                   />
                                 </div>
                               </div>
                               <div className="shrink-0 px-4 md:px-6 py-3 bg-white">
                                 <div className="max-w-3xl mx-auto">
-                                  <div className="w-full max-w-2xl mx-auto relative rounded-xl p-1 border border-neutral-200/50 bg-white">
-                                    <textarea
-                                      className="w-full px-3 py-2 text-sm border-0 outline-none resize-none rounded-lg bg-transparent text-foreground placeholder:text-muted-foreground min-h-12"
-                                      placeholder="Describí cambios para una nueva versión..."
-                                      rows={2}
-                                      readOnly
-                                    />
+                                  <div className="w-full max-w-2xl mx-auto relative rounded-xl p-1 transition-all duration-300 glass-prompt-wrap glass-prompt-wrap-dark">
+                                    <div className="rounded-lg bg-white border border-neutral-200/50 transition-all duration-300">
+                                      <span aria-hidden="true" className="hidden"></span>
+                                      <input aria-label="Upload files" className="hidden" title="Upload files" type="file" />
+                                      <form className="w-full">
+                                        <div data-slot="input-group" role="group" className="group/input-group relative flex w-full items-center border-neutral-200 transition-all outline-none min-w-0 has-[>textarea]:h-auto has-[>[data-align=inline-start]]:[&>input]:pl-2 has-[>[data-align=inline-end]]:[&>input]:pr-2 has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-2 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-2 has-[[data-slot][aria-invalid=true]]:ring-destructive/20 has-[[data-slot][aria-invalid=true]]:border-destructive dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40 border-0 shadow-none rounded-lg bg-background">
+                                          <div className="contents">
+                                            <textarea
+                                              data-slot="input-group-control"
+                                              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive flex field-sizing-content w-full px-3 text-base transition-[color,box-shadow] outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm flex-1 resize-none rounded-none border-0 bg-transparent py-2 shadow-none focus-visible:ring-0 dark:bg-transparent text-foreground placeholder:text-muted-foreground field-sizing-content field-sizing-content max-h-48 min-h-12 sm:min-h-16"
+                                              name="message"
+                                              placeholder="Describí cambios para una nueva versión..."
+                                            ></textarea>
+                                            <sider-quick-compose-btn dir="ltr" data-gpts-theme="light" data-ext-text-inserter="no" style={{ display: "contents" }}></sider-quick-compose-btn>
+                                          </div>
+                                          <div role="group" data-slot="input-group-addon" data-align="block-end" className="text-muted-foreground flex h-auto cursor-text py-1 text-sm font-medium select-none [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-[calc(var(--radius)-5px)] group-data-[disabled=true]/input-group:opacity-50 order-last w-full px-3 pb-2 [.border-t]:pt-2 group-has-[>input]/input-group:pb-2 gap-1 justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                              <button data-slot="button" className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 relative rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 text-sm font-normal text-neutral-600" type="button" disabled>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                                                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                                                  <circle cx="9" cy="9" r="2"></circle>
+                                                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                                                </svg>
+                                                <span className="hidden sm:inline">Imágenes</span>
+                                              </button>
+                                              <button data-slot="dropdown-menu-trigger" className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 text-sm font-normal text-neutral-600" type="button" disabled aria-haspopup="menu" aria-expanded="false">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
+                                                  <path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
+                                                  <path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"></path>
+                                                  <path d="M8 6v8"></path>
+                                                </svg>
+                                                <span className="hidden sm:inline">Anuncio</span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-3 opacity-60 hidden sm:inline" aria-hidden="true">
+                                                  <path d="m6 9 6 6 6-6"></path>
+                                                </svg>
+                                              </button>
+                                            </div>
+                                            <span className="cursor-default">
+                                              <button data-slot="button" className="justify-center whitespace-nowrap font-semibold transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-gradient-to-b from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:translate-y-[-1px] active:translate-y-[1px] active:shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)] border border-primary/50 text-sm flex gap-2 items-center size-8 p-0 has-[>svg]:p-0 rounded-full" type="submit" data-size="icon-sm" aria-label="Submit" disabled>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-up" aria-hidden="true">
+                                                  <path d="m5 12 7-7 7 7"></path>
+                                                  <path d="M12 19V5"></path>
+                                                </svg>
+                                              </button>
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </form>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1630,138 +1769,44 @@ export default function Workspace() {
                               </span>
                             </div>
                             <div className="px-4 py-4 space-y-3">
-                              <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-500">
                                   Aspect Ratio
                                 </span>
-                                <div
-                                  className="relative shrink-0"
-                                  ref={aspectRatioMenuRef}
+                                <button
+                                  data-slot="dropdown-menu-trigger"
+                                  type="button"
+                                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 font-normal text-neutral-600 h-7 text-xs"
+                                  aria-haspopup="menu"
+                                  aria-expanded="false"
+                                  data-state="closed"
                                 >
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setAspectRatioMenuOpen((open) => !open)
-                                    }
-                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] border-neutral-200 rounded-full size-8 sm:w-auto sm:h-auto sm:!px-2 sm:!py-1.5 font-normal text-neutral-600 h-7 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2"
-                                    aria-haspopup="listbox"
-                                    aria-expanded={aspectRatioMenuOpen}
-                                    aria-label="Cambiar aspect ratio"
-                                  >
-                                    <IconRatio
-                                      className="size-4 shrink-0"
-                                      aria-hidden="true"
-                                    />
-                                    <span className="hidden sm:inline">
-                                      {aspectRatio}
-                                    </span>
-                                    <IconChevronDown
-                                      className="size-3 opacity-60 hidden sm:inline shrink-0"
-                                      aria-hidden="true"
-                                    />
-                                  </button>
-                                  {aspectRatioMenuOpen && (
-                                    <div
-                                      className="absolute right-0 top-full mt-1 z-50 min-w-[11rem] rounded-lg border border-neutral-200 bg-white py-1 shadow-lg outline-none"
-                                      role="menu"
-                                      aria-orientation="vertical"
-                                      aria-label="Opciones de aspect ratio"
-                                      data-slot="dropdown-menu-content"
-                                    >
-                                      {ASPECT_RATIO_MENU_OPTIONS.map(
-                                        (opt, idx) => (
-                                          <React.Fragment key={opt.ratio}>
-                                            {idx ===
-                                              ASPECT_RATIO_PORTRAIT_COUNT && (
-                                              <div
-                                                role="separator"
-                                                aria-orientation="horizontal"
-                                                className="my-1 h-px bg-neutral-200"
-                                                data-slot="dropdown-menu-separator"
-                                              />
-                                            )}
-                                            <button
-                                              type="button"
-                                              role="menuitem"
-                                              tabIndex={-1}
-                                              data-slot="dropdown-menu-item"
-                                              onClick={() => {
-                                                setCreativesList((prev) => {
-                                                  const i = prev.findIndex(
-                                                    (c, j) =>
-                                                      getCreativeId(c, j) ===
-                                                      creativeId,
-                                                  );
-                                                  if (i < 0) return prev;
-                                                  const next = [...prev];
-                                                  next[i] = {
-                                                    ...next[i],
-                                                    aspectRatio: opt.ratio,
-                                                  };
-                                                  return next;
-                                                });
-                                                setAspectRatioMenuOpen(false);
-                                              }}
-                                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
-                                            >
-                                              <div className="shrink-0 flex items-center justify-center w-4 h-4">
-                                                {opt.icon === "check" ? (
-                                                  <IconCheck
-                                                    className="w-4 h-4 text-current"
-                                                    aria-hidden="true"
-                                                  />
-                                                ) : (
-                                                  <div
-                                                    className="border border-current rounded-sm bg-transparent opacity-70"
-                                                    style={{
-                                                      width: opt.w,
-                                                      height: opt.h,
-                                                    }}
-                                                    aria-hidden="true"
-                                                  />
-                                                )}
-                                              </div>
-                                              <span>{opt.label}</span>
-                                            </button>
-                                          </React.Fragment>
-                                        ),
-                                      )}
-                                      <div
-                                        role="separator"
-                                        aria-orientation="horizontal"
-                                        className="my-1 h-px bg-neutral-200"
-                                        data-slot="dropdown-menu-separator"
-                                      />
-                                      <div className="px-3 py-2">
-                                        <button
-                                          type="button"
-                                          disabled
-                                          className="text-sm text-neutral-400 cursor-not-allowed"
-                                          data-slot="button"
-                                        >
-                                          Resize image
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
+                                    <rect width="12" height="20" x="6" y="2" rx="2"></rect>
+                                    <rect width="20" height="12" x="2" y="6" rx="2"></rect>
+                                  </svg>
+                                  <span className="hidden sm:inline">{aspectRatio}</span>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-3 opacity-60 hidden sm:inline" aria-hidden="true">
+                                    <path d="m6 9 6 6 6-6"></path>
+                                  </svg>
+                                </button>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-500">
-                                  Versión
+                                  Version
                                 </span>
                                 <span className="text-sm font-medium text-neutral-900">
                                   {totalCount
-                                    ? `${currentIndex + 1} de ${totalCount}`
+                                    ? `${currentIndex + 1} of ${totalCount}`
                                     : "—"}
                                 </span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-500">
-                                  Plataforma
+                                  Platform
                                 </span>
-                                <span className="text-sm font-medium text-neutral-900">
-                                  {platformLabel}
+                                <span className="text-sm font-medium text-neutral-900 capitalize">
+                                  {platformLabel.toLowerCase()}
                                 </span>
                               </div>
                             </div>
