@@ -1,4 +1,5 @@
 import React from "react";
+import ReactDOM from "react-dom";
 import {
   BrowserRouter,
   Routes,
@@ -118,10 +119,9 @@ const navStyle = {
   WebkitBackdropFilter: "blur(5px)",
 };
 
-function Navigation() {
+function Navigation({ onOpenSignIn }) {
   const { user, logout } = useAuth();
   const [scrolled, setScrolled] = React.useState(false);
-  const [showSignIn, setShowSignIn] = React.useState(false);
 
   React.useEffect(() => {
     function onScroll() {
@@ -164,7 +164,7 @@ function Navigation() {
           ) : (
             <button
               type="button"
-              onClick={() => setShowSignIn(true)}
+              onClick={onOpenSignIn}
               className="px-6 py-2 rounded-full bg-black text-white hover:bg-gray-800 transition text-sm font-medium"
             >
               Iniciar sesión
@@ -172,7 +172,6 @@ function Navigation() {
           )}
         </nav>
       </div>
-      {showSignIn && <Login onClose={() => setShowSignIn(false)} />}
     </header>
   );
 }
@@ -186,9 +185,11 @@ function AppLayout() {
   const hideHeader =
     pathname === "/onboarding/step/validate" || isWorkspaceRoute;
 
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
+
   return (
     <div className="min-h-screen bg-white">
-      {!hideHeader && <Navigation />}
+      {!hideHeader && <Navigation onOpenSignIn={() => setShowAuthModal(true)} />}
       <Routes>
         <Route path="/" element={<RootRoute />} />
         <Route
@@ -208,6 +209,12 @@ function AppLayout() {
           }
         />
       </Routes>
+      
+      {showAuthModal &&
+        ReactDOM.createPortal(
+          <Login onClose={() => setShowAuthModal(false)} />,
+          document.body
+        )}
     </div>
   );
 }

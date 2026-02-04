@@ -1,42 +1,76 @@
 import React from "react";
-import { useLocation, Link, useSearchParams } from "react-router-dom";
-import { SignIn } from "@clerk/clerk-react";
-
-const heroBackground = (
-  <>
-    <div className="absolute inset-0 bg-white" aria-hidden />
-    <div
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{
-        background:
-          "radial-gradient(ellipse 120% 80% at 50% 100%, rgba(191,219,254,0.45) 0%, rgba(147,197,253,0.2) 35%, rgba(129,140,248,0.06) 55%, transparent 70%)",
-      }}
-    />
-    <div
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        backgroundRepeat: "repeat",
-        opacity: 0.06,
-      }}
-    />
-  </>
-);
+import { SignIn, SignUp } from "@clerk/clerk-react";
 
 export default function Login({ onClose }) {
+  const [isSignUp, setIsSignUp] = React.useState(false);
+
   return (
-    <SignIn
-      mode="modal"
-      routing="virtual"
-      afterSignInUrl="/"
-      appearance={{
-        baseTheme: undefined,
-        elements: {
-          modalBackdrop: "hidden",
-          rootBox: "flex justify-center items-center",
-          card: "shadow-2xl rounded-2xl",
-        },
-      }}
-    />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-w-md w-full mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {isSignUp ? (
+          <SignUp
+            mode="modal"
+            routing="virtual"
+            afterSignUpUrl="/"
+            signInUrl="javascript:void(0)"
+            appearance={{
+              elements: {
+                modalBackdrop: "hidden",
+                rootBox: "flex justify-center items-center",
+                card: "shadow-2xl rounded-2xl bg-white",
+                formButtonPrimary:
+                  "bg-black hover:bg-gray-800 text-white rounded-lg",
+              },
+            }}
+          />
+        ) : (
+          <SignIn
+            mode="modal"
+            routing="virtual"
+            afterSignInUrl="/"
+            appearance={{
+              elements: {
+                modalBackdrop: "hidden",
+                rootBox: "flex justify-center items-center",
+                card: "shadow-2xl rounded-2xl bg-white",
+                formButtonPrimary:
+                  "bg-black hover:bg-gray-800 text-white rounded-lg",
+              },
+            }}
+          />
+        )}
+
+        {/* Toggle button between SignIn and SignUp */}
+        <div className="text-center mt-4 text-sm text-gray-600">
+          {isSignUp ? (
+            <>
+              ¿Ya tienes cuenta?{" "}
+              <button
+                onClick={() => setIsSignUp(false)}
+                className="text-black font-semibold hover:underline"
+              >
+                Inicia sesión
+              </button>
+            </>
+          ) : (
+            <>
+              ¿No tienes cuenta?{" "}
+              <button
+                onClick={() => setIsSignUp(true)}
+                className="text-black font-semibold hover:underline"
+              >
+                Regístrate
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
