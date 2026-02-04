@@ -989,18 +989,83 @@ export async function generateCreatives(req, res) {
         if (imageDataUrl) {
           const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
           if (saved?.urlPath) {
+            const creativeId = crypto.randomUUID();
+            const campaignId = crypto.randomUUID();
+            const adsetId = crypto.randomUUID();
+            const imagePath = saved.urlPath.startsWith("http")
+              ? saved.urlPath.replace(/^https?:\/\//, "").replace(/^[^/]+\//, "")
+              : saved.urlPath;
             return {
-              id: crypto.randomUUID(),
+              id: creativeId,
+              adsetId,
+              adset_id: adsetId,
+              campaignId,
+              campaign_id: campaignId,
+              orgId: slug,
+              org_id: slug,
+              baseAdId: creativeId,
+              base_ad_id: creativeId,
               headline: chosenHeadline,
               imagePrompt,
               generationPrompt: imagePrompt,
               imageUrl: saved.urlPath,
+              image_url: saved.urlPath,
+              imagePath,
+              image_path: imagePath,
               createdAt: new Date().toISOString(),
+              created_at: new Date().toISOString(),
               model: modelUsed,
               aspectRatio,
               aspect_ratio: aspectRatio,
               version,
               platform,
+              parentAdId: null,
+              parent_ad_id: null,
+              isCurrent: false,
+              is_current: false,
+              name: null,
+              description: null,
+              body: chosenHeadline,
+              cta: "Inicia Ahora",
+              videoUrl: null,
+              video_url: null,
+              videoPath: null,
+              video_path: null,
+              referenceImageUrl: null,
+              reference_image_url: null,
+              status: "succeeded",
+              replicateJobId: null,
+              replicate_job_id: null,
+              errorMessage: null,
+              error_message: null,
+              impressions: 0,
+              clicks: 0,
+              conversions: 0,
+              metadata: {},
+              updatedAt: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              createdBy: userId || null,
+              created_by: userId || null,
+              triggerRunId: null,
+              trigger_run_id: null,
+              triggerAccessToken: null,
+              trigger_access_token: null,
+              hasViewed: false,
+              has_viewed: false,
+              carouselId: null,
+              carousel_id: null,
+              carouselPosition: null,
+              carousel_position: null,
+              carouselTotal: null,
+              carousel_total: null,
+              reminderSentAt: null,
+              reminder_sent_at: null,
+              metaAdId: null,
+              meta_ad_id: null,
+              metaCreativeId: null,
+              meta_creative_id: null,
+              metaStatus: null,
+              meta_status: null,
             };
           }
         }
@@ -1119,6 +1184,32 @@ export async function getCreativeVersions(req, res) {
           String(id).indexOf(adId) !== 0
         )
           return null;
+
+        // Si el creative ya tiene la estructura completa, usa los campos existentes
+        // sino, construye la estructura (compatibilidad con creativos antiguos)
+        const hasCompleteStructure = c.baseAdId && c.adsetId && c.campaignId;
+
+        if (hasCompleteStructure) {
+          // Creative con estructura nueva - solo asegurar URLs absolutas
+          const imageUrl = c.imageUrl?.startsWith("http")
+            ? c.imageUrl
+            : baseUrl +
+              (c.imageUrl?.startsWith("/")
+                ? c.imageUrl
+                : "/" + (c.imageUrl || ""));
+          
+          return {
+            ...c,
+            imageUrl,
+            image_url: imageUrl,
+            orgId: orgId || c.orgId,
+            org_id: orgId || c.org_id,
+            isCurrent: i === creativesList.length - 1,
+            is_current: i === creativesList.length - 1,
+          };
+        }
+
+        // Fallback para creativos antiguos
         const imageUrl = c.imageUrl?.startsWith("http")
           ? c.imageUrl
           : baseUrl +
@@ -1134,9 +1225,9 @@ export async function getCreativeVersions(req, res) {
         const ctaVal =
           adFromCampaign?.cta ?? adFromCampaign?.callToAction ?? null;
         const platform = getPlatformFromAspectRatio(c.aspectRatio);
-        const imagePath = c.imageUrl?.startsWith("http")
+        const imagePath = c.imagePath || (c.imageUrl?.startsWith("http")
           ? c.imageUrl.replace(/^https?:\/\//, "").replace(/^[^/]+\//, "")
-          : c.imageUrl || null;
+          : c.imageUrl || null);
 
         return {
           id,
@@ -1179,11 +1270,11 @@ export async function getCreativeVersions(req, res) {
           impressions: 0,
           clicks: 0,
           conversions: 0,
-          metadata: {},
+          metadata: c.metadata || {},
           createdAt: c.createdAt ?? null,
           created_at: c.createdAt ?? null,
-          updatedAt: c.createdAt ?? null,
-          updated_at: c.createdAt ?? null,
+          updatedAt: c.updatedAt ?? c.createdAt ?? null,
+          updated_at: c.updated_at ?? c.createdAt ?? null,
           createdBy: null,
           created_by: null,
           triggerRunId: null,
