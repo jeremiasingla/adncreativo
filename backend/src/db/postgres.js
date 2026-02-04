@@ -70,6 +70,8 @@ export async function initPostgresWorkspaces() {
   if (!pool || workspacesTableInitialized) return;
   try {
     await initPostgresUsers();
+    
+    // Crear tabla si no existe
     await query(`
       CREATE TABLE IF NOT EXISTS workspaces (
         id SERIAL PRIMARY KEY,
@@ -88,16 +90,30 @@ export async function initPostgresWorkspaces() {
       )
     `);
     
-    // Migración: cambiar user_id de INTEGER a TEXT si existe
+    // Migración: asegurar que user_id sea TEXT (para tablas existentes)
     try {
-      await query(`
-        ALTER TABLE workspaces 
-        ALTER COLUMN user_id DROP DEFAULT,
-        ALTER COLUMN user_id TYPE TEXT USING user_id::text
+      // Verificar el tipo actual de la columna
+      const columnInfo = await query(`
+        SELECT data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'workspaces' AND column_name = 'user_id'
       `);
+      
+      if (columnInfo.rows && columnInfo.rows[0]) {
+        const currentType = columnInfo.rows[0].data_type;
+        
+        // Si es integer, convertir a text
+        if (currentType === 'integer') {
+          console.log("[DEBUG] Migrating user_id from integer to text...");
+          await query(`
+            ALTER TABLE workspaces 
+            ALTER COLUMN user_id TYPE TEXT USING user_id::text
+          `);
+          console.log("[DEBUG] Migration completed successfully");
+        }
+      }
     } catch (migErr) {
-      // Si la migración falla, no es crítico (puede que ya esté en TEXT)
-      console.debug("[DEBUG] Migration skipped:", migErr.message);
+      console.warn("[DEBUG] Migration check/execution note:", migErr.message);
     }
     
     workspacesTableInitialized = true;
