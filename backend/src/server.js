@@ -20,7 +20,7 @@ import fs from "fs";
 import { initPostgresWorkspaces } from "./db/postgres.js";
 console.log("[DEBUG] All imports complete");
 
-// ADNCreativo Backend v2.0.0 - Vercel deployment fix
+// ADNCreativo Backend v2.0.1 - CORS fix
 dotenv.config();
 console.log("[DEBUG] dotenv configured");
 
