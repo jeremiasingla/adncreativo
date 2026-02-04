@@ -44,6 +44,7 @@ export async function query(sql, params) {
 
 let usersTableInitialized = false;
 let workspacesTableInitialized = false;
+let workspacesMigrationDone = false;
 
 /** Crea la tabla users en Postgres si no existe (Neon/Vercel). Debe ejecutarse antes de initPostgresWorkspaces. */
 export async function initPostgresUsers() {
@@ -90,9 +91,23 @@ export async function initPostgresWorkspaces() {
       )
     `);
     
-    // Migración: asegurar que user_id sea TEXT (para tablas existentes)
+    workspacesTableInitialized = true;
+    
+    // Ejecutar migraciones DESPUÉS de que la tabla existe
+    if (!workspacesMigrationDone) {
+      await runWorkspaceMigrations();
+      workspacesMigrationDone = true;
+    }
+  } catch (err) {
+    console.warn("⚠️ initPostgresWorkspaces:", err.message);
+  }
+}
+
+/** Ejecuta migraciones necesarias en la tabla workspaces. */
+async function runWorkspaceMigrations() {
+  try {
+    // Verificar y convertir user_id si es necesario
     try {
-      // Verificar el tipo actual de la columna
       const columnInfo = await query(`
         SELECT data_type 
         FROM information_schema.columns 
@@ -100,7 +115,7 @@ export async function initPostgresWorkspaces() {
       `);
       
       if (columnInfo.rows && columnInfo.rows[0]) {
-        const currentType = columnInfo.rows[0].data_type;
+        const currentType = columnInfo.rows[0].data_type.toLowerCase();
         
         // Si es integer, convertir a text
         if (currentType === 'integer') {
@@ -122,14 +137,14 @@ export async function initPostgresWorkspaces() {
             ALTER TABLE workspaces 
             ALTER COLUMN user_id TYPE TEXT USING user_id::text
           `);
-          console.log("[DEBUG] Migration completed successfully");
+          console.log("[DEBUG] user_id migrated to TEXT successfully");
         }
       }
     } catch (migErr) {
-      console.warn("[DEBUG] Migration check/execution note:", migErr.message);
+      console.warn("[DEBUG] user_id migration:", migErr.message);
     }
     
-    // Migración: agregar clerk_org_id si no existe
+    // Verificar y agregar clerk_org_id si no existe
     try {
       const clerkOrgIdInfo = await query(`
         SELECT column_name 
@@ -146,11 +161,9 @@ export async function initPostgresWorkspaces() {
         console.log("[DEBUG] clerk_org_id column added successfully");
       }
     } catch (clerkOrgIdErr) {
-      console.warn("[DEBUG] clerk_org_id migration note:", clerkOrgIdErr.message);
+      console.warn("[DEBUG] clerk_org_id migration:", clerkOrgIdErr.message);
     }
-    
-    workspacesTableInitialized = true;
   } catch (err) {
-    console.warn("⚠️ initPostgresWorkspaces:", err.message);
+    console.warn("[DEBUG] Migration error:", err.message);
   }
 }
