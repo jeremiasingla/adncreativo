@@ -17,7 +17,7 @@ export default function Login({ onClose }) {
           <SignUp
             mode="modal"
             routing="virtual"
-            afterSignUpUrl="/"
+            forceRedirectUrl={window.location.pathname}
             skipInvitationScreen={true}
             appearance={{
               elements: {
@@ -35,7 +35,7 @@ export default function Login({ onClose }) {
           <SignIn
             mode="modal"
             routing="virtual"
-            afterSignInUrl="/"
+            forceRedirectUrl={window.location.pathname}
             appearance={{
               elements: {
                 modalBackdrop: "hidden",
