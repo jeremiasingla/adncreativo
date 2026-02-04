@@ -1773,23 +1773,109 @@ export default function Workspace() {
                                 <span className="text-sm text-neutral-500">
                                   Aspect Ratio
                                 </span>
-                                <button
-                                  data-slot="dropdown-menu-trigger"
-                                  type="button"
-                                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 font-normal text-neutral-600 h-7 text-xs"
-                                  aria-haspopup="menu"
-                                  aria-expanded="false"
-                                  data-state="closed"
+                                <div
+                                  className="relative shrink-0"
+                                  ref={aspectRatioMenuRef}
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-                                    <rect width="12" height="20" x="6" y="2" rx="2"></rect>
-                                    <rect width="20" height="12" x="2" y="6" rx="2"></rect>
-                                  </svg>
-                                  <span className="hidden sm:inline">{aspectRatio}</span>
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-3 opacity-60 hidden sm:inline" aria-hidden="true">
-                                    <path d="m6 9 6 6 6-6"></path>
-                                  </svg>
-                                </button>
+                                  <button
+                                    data-slot="dropdown-menu-trigger"
+                                    type="button"
+                                    onClick={() =>
+                                      setAspectRatioMenuOpen((open) => !open)
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 font-normal text-neutral-600 h-7 text-xs"
+                                    aria-haspopup="menu"
+                                    aria-expanded={aspectRatioMenuOpen}
+                                    data-state={aspectRatioMenuOpen ? "open" : "closed"}
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
+                                      <rect width="12" height="20" x="6" y="2" rx="2"></rect>
+                                      <rect width="20" height="12" x="2" y="6" rx="2"></rect>
+                                    </svg>
+                                    <span className="hidden sm:inline">{aspectRatio}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-3 opacity-60 hidden sm:inline" aria-hidden="true">
+                                      <path d="m6 9 6 6 6-6"></path>
+                                    </svg>
+                                  </button>
+                                  {aspectRatioMenuOpen && (
+                                    <div
+                                      className="absolute right-0 top-full mt-1 z-50 min-w-[11rem] rounded-lg border border-neutral-200 bg-white py-1 shadow-lg outline-none"
+                                      role="menu"
+                                      aria-orientation="vertical"
+                                      data-slot="dropdown-menu-content"
+                                    >
+                                      {ASPECT_RATIO_MENU_OPTIONS.map((opt, idx) => (
+                                        <React.Fragment key={opt.ratio}>
+                                          {idx === ASPECT_RATIO_PORTRAIT_COUNT && (
+                                            <div
+                                              role="separator"
+                                              aria-orientation="horizontal"
+                                              className="my-1 h-px bg-neutral-200"
+                                              data-slot="dropdown-menu-separator"
+                                            />
+                                          )}
+                                          <button
+                                            type="button"
+                                            role="menuitem"
+                                            data-slot="dropdown-menu-item"
+                                            onClick={() => {
+                                              setCreativesList((prev) => {
+                                                const i = prev.findIndex(
+                                                  (c, j) =>
+                                                    getCreativeId(c, j) ===
+                                                    creativeId,
+                                                );
+                                                if (i < 0) return prev;
+                                                const next = [...prev];
+                                                next[i] = {
+                                                  ...next[i],
+                                                  aspectRatio: opt.ratio,
+                                                };
+                                                return next;
+                                              });
+                                              setAspectRatioMenuOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
+                                          >
+                                            <div className="shrink-0 flex items-center justify-center w-5">
+                                              {aspectRatio === opt.ratio ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-primary" aria-hidden="true">
+                                                  <path d="M20 6 9 17l-5-5"></path>
+                                                </svg>
+                                              ) : (
+                                                <div
+                                                  className="border border-current rounded-sm bg-transparent opacity-70"
+                                                  style={{
+                                                    width: opt.w,
+                                                    height: opt.h,
+                                                  }}
+                                                  aria-hidden="true"
+                                                />
+                                              )}
+                                            </div>
+                                            <span className="flex-1">{opt.label}</span>
+                                          </button>
+                                        </React.Fragment>
+                                      ))}
+                                      <div
+                                        role="separator"
+                                        aria-orientation="horizontal"
+                                        className="my-1 h-px bg-neutral-200"
+                                        data-slot="dropdown-menu-separator"
+                                      />
+                                      <div className="px-3 py-2">
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="text-sm text-neutral-400 cursor-not-allowed"
+                                          data-slot="button"
+                                        >
+                                          Resize image
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-500">
