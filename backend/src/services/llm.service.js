@@ -1,6 +1,5 @@
 import axios from "axios";
 import { recordLLMRequest, recordImageGeneration } from "./metrics.service.js";
-import { recordImageGeneration } from "./metrics.service.js";
 
 export async function refineBrandingWithLLM(input) {
   const apiKey = process.env.OPENROUTER_API_KEY;
