@@ -1391,7 +1391,6 @@ export default function Workspace() {
             <div
               className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain"
               style={{
-                paddingBottom: "calc(2rem + env(safe-area-inset-bottom, 0px))",
                 backgroundColor: "rgb(255, 255, 255)",
                 color: "rgb(15, 20, 25)",
                 fontSize: 16,
