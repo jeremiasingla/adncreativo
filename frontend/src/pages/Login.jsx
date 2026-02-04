@@ -1,5 +1,5 @@
 import React from "react";
-import { SignInButton, SignUpButton } from "@clerk/clerk-react";
+import { SignIn, SignUp } from "@clerk/clerk-react";
 
 export default function Login({ onClose, isSignUp, setIsSignUp }) {
   const redirectUrl = window.location.pathname;
@@ -9,7 +9,9 @@ export default function Login({ onClose, isSignUp, setIsSignUp }) {
     if (!containerRef.current) return;
 
     const handleLinkClick = (e) => {
-      const link = e.target.closest("a");
+      const target = e.target;
+      const link = target.closest("a");
+      
       if (!link) return;
 
       const href = link.getAttribute("href");
@@ -17,18 +19,22 @@ export default function Login({ onClose, isSignUp, setIsSignUp }) {
       // Si es un link de sign up, cambiar a SignUp
       if (href && href.includes("/sign-up")) {
         e.preventDefault();
+        e.stopPropagation();
         setIsSignUp(true);
       }
       // Si es un link de sign in, cambiar a SignIn
-      if (href && href.includes("/sign-in")) {
+      else if (href && href.includes("/sign-in")) {
         e.preventDefault();
+        e.stopPropagation();
         setIsSignUp(false);
       }
     };
 
-    containerRef.current.addEventListener("click", handleLinkClick);
+    const container = containerRef.current;
+    container.addEventListener("click", handleLinkClick, true);
+    
     return () => {
-      containerRef.current?.removeEventListener("click", handleLinkClick);
+      container.removeEventListener("click", handleLinkClick, true);
     };
   }, [setIsSignUp]);
 
@@ -43,19 +49,35 @@ export default function Login({ onClose, isSignUp, setIsSignUp }) {
         onClick={(e) => e.stopPropagation()}
       >
         {isSignUp ? (
-          <SignUpButton 
-            mode="modal" 
+          <SignUp
+            mode="modal"
+            routing="virtual"
             forceRedirectUrl={redirectUrl}
-          >
-            <div className="w-full" />
-          </SignUpButton>
+            appearance={{
+              elements: {
+                modalBackdrop: "hidden",
+                rootBox: "flex justify-center items-center",
+                card: "shadow-2xl rounded-2xl bg-white",
+                formButtonPrimary:
+                  "bg-black hover:bg-gray-800 text-white rounded-lg",
+              },
+            }}
+          />
         ) : (
-          <SignInButton 
-            mode="modal" 
+          <SignIn
+            mode="modal"
+            routing="virtual"
             forceRedirectUrl={redirectUrl}
-          >
-            <div className="w-full" />
-          </SignInButton>
+            appearance={{
+              elements: {
+                modalBackdrop: "hidden",
+                rootBox: "flex justify-center items-center",
+                card: "shadow-2xl rounded-2xl bg-white",
+                formButtonPrimary:
+                  "bg-black hover:bg-gray-800 text-white rounded-lg",
+              },
+            }}
+          />
         )}
       </div>
     </div>
