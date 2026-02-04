@@ -5,11 +5,16 @@ export async function authMiddleware(req, res, next) {
   if (!userId) return res.status(401).json({ error: "unauthorized" });
   try {
     const clerkUser = await clerkClient.users.getUser(userId);
+    const role =
+      clerkUser.publicMetadata?.role ||
+      clerkUser.privateMetadata?.role ||
+      clerkUser.unsafeMetadata?.role ||
+      "user";
     req.user = {
       id: clerkUser.id,
       email: clerkUser.primaryEmailAddress?.emailAddress || null,
       name: clerkUser.fullName || clerkUser.firstName || null,
-      role: "user",
+      role,
     };
     return next();
   } catch (err) {

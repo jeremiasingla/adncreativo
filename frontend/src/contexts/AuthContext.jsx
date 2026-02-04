@@ -11,6 +11,11 @@ export function AuthProvider({ children }) {
         id: clerkUser.id,
         name: clerkUser.fullName || clerkUser.firstName || "",
         email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        role:
+          clerkUser.publicMetadata?.role ||
+          clerkUser.privateMetadata?.role ||
+          clerkUser.unsafeMetadata?.role ||
+          "user",
       }
     : null;
   const loading = !isLoaded;
