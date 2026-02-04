@@ -8,6 +8,7 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+import { UserAvatar } from "@clerk/clerk-react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FullScreenLoadingSpinner } from "./components/LoadingSpinner";
 import Home from "./pages/Home";
@@ -149,9 +150,10 @@ function Navigation({ onOpenSignIn }) {
         <nav style={navStyle} className="flex items-center gap-4">
           {user ? (
             <>
-              <span className="text-sm text-gray-600 truncate max-w-[180px]">
-                {user.name || user.email}
-              </span>
+              <UserAvatar
+                className="h-8 w-8"
+                aria-label="Avatar de usuario"
+              />
               <button
                 type="button"
                 onClick={logout}
