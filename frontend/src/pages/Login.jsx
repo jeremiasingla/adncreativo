@@ -24,30 +24,19 @@ const heroBackground = (
 );
 
 export default function Login({ onClose }) {
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const fromQuery = searchParams.get("from");
-  const fromStorage = (() => {
-    try {
-      return sessionStorage.getItem("auth_return_path");
-    } catch (_) {
-      return null;
-    }
-  })();
-  const returnTo =
-    location.state?.from?.pathname ?? fromQuery ?? fromStorage ?? "/";
-
   return (
-    <div className="w-full">
-      <div className="w-full flex flex-col items-center justify-center px-4">
-        <div className="w-full max-w-md mx-auto">
-          <SignIn
-            routing="virtual"
-            afterSignInUrl="/"
-            signUpUrl="javascript:void(0)"
-          />
-        </div>
-      </div>
-    </div>
+    <SignIn
+      mode="modal"
+      routing="virtual"
+      afterSignInUrl="/"
+      appearance={{
+        baseTheme: undefined,
+        elements: {
+          modalBackdrop: "hidden",
+          rootBox: "flex justify-center items-center",
+          card: "shadow-2xl rounded-2xl",
+        },
+      }}
+    />
   );
 }
