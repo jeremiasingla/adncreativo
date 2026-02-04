@@ -975,40 +975,42 @@ export default function Workspace() {
               </>
             ) : (
               <div className="flex items-center gap-3">
-                <nav aria-label="breadcrumb">
-                  <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
-                    <li className="inline-flex items-center gap-1.5">
-                      <Link
-                        to="/"
-                        className="transition-colors flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 cursor-pointer"
-                      >
-                        <IconHouse className="w-4 h-4" aria-hidden="true" />
-                        Inicio
-                      </Link>
-                    </li>
-                    <li
-                      role="presentation"
-                      aria-hidden="true"
-                      className="[&>svg]:size-3.5"
-                    >
-                      <IconChevronRight
-                        className="w-4 h-4"
+                {!isCreativeDetail && (
+                  <nav aria-label="breadcrumb">
+                    <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
+                      <li className="inline-flex items-center gap-1.5">
+                        <Link
+                          to="/"
+                          className="transition-colors flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 cursor-pointer"
+                        >
+                          <IconHouse className="w-4 h-4" aria-hidden="true" />
+                          Inicio
+                        </Link>
+                      </li>
+                      <li
+                        role="presentation"
                         aria-hidden="true"
-                      />
-                    </li>
-                    <li className="inline-flex items-center gap-1.5">
-                      <span
-                        role="link"
-                        aria-disabled="true"
-                        aria-current="page"
-                        className="flex items-center gap-1.5 text-neutral-900 font-medium"
+                        className="[&>svg]:size-3.5"
                       >
-                        <CurrentIcon className="w-4 h-4" aria-hidden="true" />
-                        {currentLabel}
-                      </span>
-                    </li>
-                  </ol>
-                </nav>
+                        <IconChevronRight
+                          className="w-4 h-4"
+                          aria-hidden="true"
+                        />
+                      </li>
+                      <li className="inline-flex items-center gap-1.5">
+                        <span
+                          role="link"
+                          aria-disabled="true"
+                          aria-current="page"
+                          className="flex items-center gap-1.5 text-neutral-900 font-medium"
+                        >
+                          <CurrentIcon className="w-4 h-4" aria-hidden="true" />
+                          {currentLabel}
+                        </span>
+                      </li>
+                    </ol>
+                  </nav>
+                )}
               </div>
             )}
           </div>
