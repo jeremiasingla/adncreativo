@@ -1,12 +1,6 @@
-import React, { useState } from "react";
-import {
-  useNavigate,
-  useLocation,
-  Link,
-  useSearchParams,
-} from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { apiUrl } from "../api/config.js";
+import React from "react";
+import { useLocation, Link, useSearchParams } from "react-router-dom";
+import { SignIn } from "@clerk/clerk-react";
 
 const heroBackground = (
   <>
@@ -29,17 +23,9 @@ const heroBackground = (
   </>
 );
 
-const inputClass =
-  "w-full rounded-lg border border-gray-200/80 bg-white/95 px-4 py-3 text-gray-900 placeholder:text-gray-500 outline-none transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/20";
-
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { setUser } = useAuth();
   const fromQuery = searchParams.get("from");
   const fromStorage = (() => {
     try {
@@ -50,40 +36,6 @@ export default function Login() {
   })();
   const returnTo =
     location.state?.from?.pathname ?? fromQuery ?? fromStorage ?? "/";
-
-  async function handle(e) {
-    e.preventDefault();
-    setError(null);
-    try {
-      const res = await fetch(apiUrl("/auth/login"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      const errorMsg =
-        data.error === "email and password required"
-          ? "Correo y contraseña son obligatorios"
-          : data.error === "invalid_email"
-          ? "El correo no es válido"
-          : data.error === "invalid_credentials"
-          ? "Correo o contraseña incorrectos"
-          : data.error === "too_many_requests"
-          ? "Demasiados intentos. Esperá unos minutos."
-          : data.error === "internal_error"
-          ? "Error del servidor. Intentá de nuevo más tarde."
-          : data.error || "Error al iniciar sesión";
-      if (!res.ok) return setError(errorMsg);
-      setUser(data.user);
-      try {
-        sessionStorage.removeItem("auth_return_path");
-      } catch (_) {}
-      navigate(returnTo, { replace: true });
-    } catch (err) {
-      setError("Error de conexión");
-    }
-  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -131,60 +83,12 @@ export default function Login() {
                   "0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)",
               }}
             >
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 font-serif mb-2">
-                Iniciar sesión
-              </h1>
-              <p className="text-gray-600 text-sm sm:text-base mb-6">
-                ¡Bienvenido de nuevo! Iniciá sesión para continuar.
-              </p>
-
-              <form onSubmit={handle} className="flex flex-col gap-4">
-                <label className="sr-only" htmlFor="login-email">
-                  Correo electrónico
-                </label>
-                <input
-                  id="login-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Correo electrónico"
-                  className={inputClass}
-                />
-                <label className="sr-only" htmlFor="login-password">
-                  Contraseña
-                </label>
-                <input
-                  id="login-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Contraseña"
-                  className={inputClass}
-                />
-                {error && (
-                  <div className="rounded-lg bg-red-50 border border-red-200/80 px-4 py-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  className="w-full py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold shadow-[0_4px_12px_rgba(30,157,241,0.35)] hover:shadow-[0_6px_16px_rgba(30,157,241,0.4)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-                >
-                  Iniciar sesión
-                </button>
-              </form>
-
-              <p className="text-center text-gray-600 text-sm mt-6">
-                ¿No tenés cuenta?{" "}
-                <Link
-                  to="/register"
-                  className="font-semibold text-primary hover:underline"
-                >
-                  Registrate
-                </Link>
-              </p>
+              <SignIn
+                routing="path"
+                path="/login"
+                signUpUrl="/register"
+                afterSignInUrl={returnTo}
+              />
             </div>
           </div>
         </div>

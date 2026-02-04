@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { clerkClient, verifyToken } from "@clerk/clerk-sdk-node";
 import { query, initPostgresUsers } from "../db/postgres.js";
 import { JWT_SECRET } from "../config/auth.config.js";
 
@@ -15,6 +16,30 @@ export async function authMiddleware(req, res, next) {
     (req.headers.authorization?.startsWith("Bearer ")
       ? req.headers.authorization.split(" ")[1]
       : null);
+
+  const bearerToken = req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.split(" ")[1]
+    : null;
+  const clerkSecret = process.env.CLERK_SECRET_KEY;
+
+  if (bearerToken && clerkSecret) {
+    try {
+      const payload = await verifyToken(bearerToken, {
+        secretKey: clerkSecret,
+      });
+      const clerkUser = await clerkClient.users.getUser(payload.sub);
+      req.user = {
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || null,
+        name: clerkUser.fullName || clerkUser.firstName || null,
+        role: "user",
+      };
+      return next();
+    } catch (err) {
+      console.error("❌ authMiddleware clerk:", err?.message);
+      return res.status(401).json({ error: "unauthorized" });
+    }
+  }
 
   if (!token) return res.status(401).json({ error: "unauthorized" });
 

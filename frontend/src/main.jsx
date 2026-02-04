@@ -1,7 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { ClerkProvider } from "@clerk/clerk-react";
 import App from "./App";
 import "./styles/tailwind.css";
+
+const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {
@@ -9,7 +12,9 @@ if (!rootEl) {
 } else {
   createRoot(rootEl).render(
     <React.StrictMode>
-      <App />
+      <ClerkProvider publishableKey={publishableKey}>
+        <App />
+      </ClerkProvider>
     </React.StrictMode>,
   );
 }

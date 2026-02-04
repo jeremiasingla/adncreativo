@@ -1,7 +1,6 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { apiUrl } from "../api/config.js";
+import React from "react";
+import { Link } from "react-router-dom";
+import { SignUp } from "@clerk/clerk-react";
 
 const heroBackground = (
   <>
@@ -24,50 +23,7 @@ const heroBackground = (
   </>
 );
 
-const inputClass =
-  "w-full rounded-lg border border-gray-200/80 bg-white/95 px-4 py-3 text-gray-900 placeholder:text-gray-500 outline-none transition-all focus:border-primary/50 focus:ring-2 focus:ring-primary/20";
-
 export default function Register() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
-  const { setUser } = useAuth();
-
-  async function handle(e) {
-    e.preventDefault();
-    setError(null);
-    try {
-      const res = await fetch(apiUrl("/auth/register"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password, name }),
-      });
-      const data = await res.json();
-      const errorMsg =
-        data.error === "email and password required"
-          ? "Correo y contraseña son obligatorios"
-          : data.error === "invalid_email"
-          ? "El correo no es válido"
-          : data.error === "password_too_short"
-          ? "La contraseña debe tener al menos 8 caracteres"
-          : data.error === "User already exists"
-          ? "Ya existe un usuario con ese correo"
-          : data.error === "too_many_requests"
-          ? "Demasiados intentos. Esperá unos minutos."
-          : data.error === "internal_error"
-          ? "Error del servidor. Intentá de nuevo más tarde."
-          : data.error || "Error al registrarse";
-      if (!res.ok) return setError(errorMsg);
-      setUser(data.user);
-      navigate("/");
-    } catch (err) {
-      setError("Error de conexión");
-    }
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <section className="relative w-full min-h-screen flex flex-col items-center justify-center isolate">
@@ -114,72 +70,12 @@ export default function Register() {
                   "0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)",
               }}
             >
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 font-serif mb-2">
-                Crear cuenta
-              </h1>
-              <p className="text-gray-600 text-sm sm:text-base mb-6">
-                Registrate y empezá a generar creativos con tu marca en minutos.
-              </p>
-
-              <form onSubmit={handle} className="flex flex-col gap-4">
-                <label className="sr-only" htmlFor="register-name">
-                  Nombre
-                </label>
-                <input
-                  id="register-name"
-                  type="text"
-                  autoComplete="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Nombre"
-                  className={inputClass}
-                />
-                <label className="sr-only" htmlFor="register-email">
-                  Correo electrónico
-                </label>
-                <input
-                  id="register-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Correo electrónico"
-                  className={inputClass}
-                />
-                <label className="sr-only" htmlFor="register-password">
-                  Contraseña
-                </label>
-                <input
-                  id="register-password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Contraseña"
-                  className={inputClass}
-                />
-                {error && (
-                  <div className="rounded-lg bg-red-50 border border-red-200/80 px-4 py-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  className="w-full py-3 px-4 rounded-xl bg-primary text-primary-foreground font-semibold shadow-[0_4px_12px_rgba(30,157,241,0.35)] hover:shadow-[0_6px_16px_rgba(30,157,241,0.4)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-                >
-                  Registrarse
-                </button>
-              </form>
-
-              <p className="text-center text-gray-600 text-sm mt-6">
-                ¿Ya tenés cuenta?{" "}
-                <Link
-                  to="/login"
-                  className="font-semibold text-primary hover:underline"
-                >
-                  Iniciar sesión
-                </Link>
-              </p>
+              <SignUp
+                routing="path"
+                path="/register"
+                signInUrl="/login"
+                afterSignUpUrl="/"
+              />
             </div>
           </div>
         </div>
