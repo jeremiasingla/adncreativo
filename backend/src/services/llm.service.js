@@ -1,4 +1,5 @@
 import axios from "axios";
+import { recordLLMRequest, recordImageGeneration } from "./metrics.service.js";
 import { recordImageGeneration } from "./metrics.service.js";
 
 export async function refineBrandingWithLLM(input) {
@@ -110,6 +111,7 @@ Example (structure only):
     screenshotPayloadBytes: screenshotLen || undefined,
   });
 
+  const startTime = Date.now();
   let response;
   try {
     response = await axios.post(
@@ -160,6 +162,23 @@ Example (structure only):
     "🧪 OpenRouter response:",
     JSON.stringify(response.data, null, 2),
   );
+
+  // Trackear métricas de costo
+  const usage = response.data?.usage;
+  if (usage) {
+    const promptTokens = usage.prompt_tokens || 0;
+    const completionTokens = usage.completion_tokens || 0;
+    const totalCost = usage.total_cost || 0;
+    recordLLMRequest({
+      model,
+      promptTokens,
+      completionTokens,
+      totalCost,
+      durationMs: Date.now() - startTime,
+      source: "branding",
+      workspaceSlug: input?.url ? new URL(input.url).hostname : null
+    });
+  }
 
   const content = response.data?.choices?.[0]?.message?.content;
   if (!content) {
