@@ -31,65 +31,12 @@ initPostgresWorkspaces().catch((err) =>
 
 const app = express();
 
-// CORS: permitir frontend en Vercel (y previews), custom domains y local dev.
-const DEFAULT_FRONTEND_ORIGIN = "https://adncreativo-frontend.vercel.app";
-const DEFAULT_ALLOWED_ORIGINS = [
-  DEFAULT_FRONTEND_ORIGIN,
-  "http://localhost:5173",
-  "http://localhost:4173",
-  "http://localhost:3000",
-];
-const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "")
-  .split(",")
-  .map((v) => v.trim())
-  .filter(Boolean)
-  .concat(DEFAULT_ALLOWED_ORIGINS);
-const DEFAULT_ORIGIN_REGEX = /^https:\/\/([a-z0-9-]+\.)*vercel\.app$/;
-const FRONTEND_ORIGIN_REGEX = process.env.CORS_ORIGIN_REGEX
-  ? new RegExp(process.env.CORS_ORIGIN_REGEX)
-  : DEFAULT_ORIGIN_REGEX;
-
-function getAllowedOrigin(origin) {
-  if (!origin) return DEFAULT_FRONTEND_ORIGIN; // Sin Origin (ej. servidor/proxy): permitir front principal
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  if (FRONTEND_ORIGIN_REGEX.test(origin)) return origin;
-  return null;
-}
-function setCorsHeaders(req, res) {
-  const allow = getAllowedOrigin(req.headers.origin);
-  if (allow) {
-    res.setHeader("Access-Control-Allow-Origin", allow);
-    res.setHeader("Vary", "Origin");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD"
-    );
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With"
-    );
-  }
-}
-// OPTIONS primero para que el preflight siempre reciba cabeceras CORS
-app.options("*", (req, res) => {
-  setCorsHeaders(req, res);
-  res.status(204).end();
-});
-const corsOptions = {
-  origin: (origin, cb) => {
-    const allowed = getAllowedOrigin(origin);
-    cb(null, allowed !== null);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  optionsSuccessStatus: 204,
-};
-app.use(cors(corsOptions));
-// Asegurar que todas las respuestas tengan cabeceras CORS (incl. errores 4xx/5xx)
+// CORS básico (útil si el form está en otro dominio)
 app.use((req, res, next) => {
-  setCorsHeaders(req, res);
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") return res.status(204).end();
   next();
 });
 app.use(express.json({ limit: "10mb" }));
