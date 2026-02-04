@@ -1,5 +1,5 @@
 import React from "react";
-import { SignIn, SignUp } from "@clerk/clerk-react";
+import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
 export default function Login({ onClose, isSignUp, setIsSignUp }) {
   const redirectUrl = window.location.pathname;
@@ -43,36 +43,19 @@ export default function Login({ onClose, isSignUp, setIsSignUp }) {
         onClick={(e) => e.stopPropagation()}
       >
         {isSignUp ? (
-          <SignUp
-            mode="modal"
-            routing="virtual"
+          <SignUpButton 
+            mode="modal" 
             forceRedirectUrl={redirectUrl}
-            appearance={{
-              elements: {
-                modalBackdrop: "hidden",
-                rootBox: "flex justify-center items-center",
-                card: "shadow-2xl rounded-2xl bg-white",
-                formButtonPrimary:
-                  "bg-black hover:bg-gray-800 text-white rounded-lg",
-                footerActionLink: "hidden",
-              },
-            }}
-          />
+          >
+            <div className="w-full" />
+          </SignUpButton>
         ) : (
-          <SignIn
-            mode="modal"
-            routing="virtual"
+          <SignInButton 
+            mode="modal" 
             forceRedirectUrl={redirectUrl}
-            appearance={{
-              elements: {
-                modalBackdrop: "hidden",
-                rootBox: "flex justify-center items-center",
-                card: "shadow-2xl rounded-2xl bg-white",
-                formButtonPrimary:
-                  "bg-black hover:bg-gray-800 text-white rounded-lg",
-              },
-            }}
-          />
+          >
+            <div className="w-full" />
+          </SignInButton>
         )}
       </div>
     </div>
