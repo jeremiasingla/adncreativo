@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { ClerkProvider } from "@clerk/clerk-react";
+import { ClerkProvider, esES } from "@clerk/clerk-react";
 import App from "./App";
 import "./styles/tailwind.css";
 
@@ -12,7 +12,7 @@ if (!rootEl) {
 } else {
   createRoot(rootEl).render(
     <React.StrictMode>
-      <ClerkProvider publishableKey={publishableKey}>
+      <ClerkProvider publishableKey={publishableKey} localization={esES}>
         <App />
       </ClerkProvider>
     </React.StrictMode>,
