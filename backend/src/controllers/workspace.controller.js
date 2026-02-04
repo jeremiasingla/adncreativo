@@ -1265,15 +1265,20 @@ async function continueWorkspaceCreationInBackground(params) {
         ogDescription: metadata.ogDescription,
       },
     });
+    await run("UPDATE workspaces SET knowledge_base = ? WHERE slug = ?", [
+      knowledgeBaseText,
+      slug,
+    ]);
   } catch (kbErr) {
     console.error("⚠️ Knowledge base generation failed:", kbErr.message);
-    return;
+    console.error("[Background] KB error details:", {
+      name: kbErr.name,
+      message: kbErr.message,
+      status: kbErr.response?.status,
+    });
+    // No retornar; continuar con perfiles y titulares sin KB
+    knowledgeBaseText = "";
   }
-
-  await run("UPDATE workspaces SET knowledge_base = ? WHERE slug = ?", [
-    knowledgeBaseText,
-    slug,
-  ]);
 
   let rawProfiles = [];
   try {
@@ -1285,10 +1290,21 @@ async function continueWorkspaceCreationInBackground(params) {
     });
   } catch (cpErr) {
     console.error("⚠️ Customer profiles (LLM) failed:", cpErr.message);
-    return;
+    console.error("[Background] Profiles error details:", {
+      name: cpErr.name,
+      message: cpErr.message,
+      status: cpErr.response?.status,
+    });
+    // No retornar; intentar generar headlines igual
+    rawProfiles = [];
   }
 
-  if (rawProfiles.length === 0) return;
+  if (rawProfiles.length === 0) {
+    console.log(
+      "[Background] No customer profiles generated, skipping profile images and headlines",
+    );
+    return;
+  }
 
   try {
     const now = new Date().toISOString();
