@@ -1916,7 +1916,37 @@ export async function createWorkspace(req, res) {
         : `/screenshots/${path.basename(screenshotPath)}`
       : null;
 
-    // Respuesta temprana: el frontend muestra el branding en "Generando tu ADN de negocio".
+    const backgroundParams = {
+      userId,
+      slug,
+      url: parsedUrl.href,
+      companyName,
+      headline,
+      personality: normalizedBranding.personality,
+      metadata: {
+        title: metadata.title,
+        ogTitle: metadata.ogTitle,
+        description: metadata.description,
+        ogDescription: metadata.ogDescription,
+      },
+    };
+
+    const shouldRunInline =
+      process.env.VERCEL === "1" ||
+      process.env.DISABLE_BACKGROUND_JOBS === "1";
+
+    if (shouldRunInline) {
+      try {
+        await continueWorkspaceCreationInBackground(backgroundParams);
+      } catch (err) {
+        console.error(
+          "❌ Error in workspace inline creation:",
+          err.message,
+        );
+      }
+    }
+
+    // Respuesta al cliente: branding y slug siempre disponibles.
     res.status(201).json({
       success: true,
       data: {
@@ -1926,28 +1956,17 @@ export async function createWorkspace(req, res) {
       },
     });
 
-    // En segundo plano: KB e ICP se generan ni bien hay branding, sin esperar confirmación del usuario.
-    setImmediate(() => {
-      continueWorkspaceCreationInBackground({
-        userId,
-        slug,
-        url: parsedUrl.href,
-        companyName,
-        headline,
-        personality: normalizedBranding.personality,
-        metadata: {
-          title: metadata.title,
-          ogTitle: metadata.ogTitle,
-          description: metadata.description,
-          ogDescription: metadata.ogDescription,
-        },
-      }).catch((err) => {
-        console.error(
-          "❌ Error in workspace background creation:",
-          err.message,
-        );
+    // En segundo plano cuando no estamos en serverless.
+    if (!shouldRunInline) {
+      setImmediate(() => {
+        continueWorkspaceCreationInBackground(backgroundParams).catch((err) => {
+          console.error(
+            "❌ Error in workspace background creation:",
+            err.message,
+          );
+        });
       });
-    });
+    }
   } catch (error) {
     console.error("❌ Error creating workspace:", error.message);
     return res.status(500).json({
