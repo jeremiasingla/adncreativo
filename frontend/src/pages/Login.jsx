@@ -23,7 +23,7 @@ const heroBackground = (
   </>
 );
 
-export default function Login() {
+export default function Login({ onClose }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const fromQuery = searchParams.get("from");
@@ -38,61 +38,16 @@ export default function Login() {
     location.state?.from?.pathname ?? fromQuery ?? fromStorage ?? "/";
 
   return (
-    <div className="min-h-screen bg-white">
-      <section className="relative w-full min-h-screen flex flex-col items-center justify-center isolate">
-        <div
-          className="absolute inset-0 z-0 w-full h-full min-h-full overflow-hidden"
-          aria-hidden
-        >
-          {heroBackground}
+    <div className="w-full">
+      <div className="w-full flex flex-col items-center justify-center px-4">
+        <div className="w-full max-w-md mx-auto">
+          <SignIn
+            routing="virtual"
+            afterSignInUrl="/"
+            signUpUrl="javascript:void(0)"
+          />
         </div>
-
-        <div
-          className="relative z-10 w-full flex flex-col items-center justify-center px-4"
-          style={{
-            paddingTop: "max(4rem, calc(env(safe-area-inset-top, 0px) + 4rem))",
-            paddingBottom:
-              "max(4rem, calc(env(safe-area-inset-bottom, 0px) + 4rem))",
-          }}
-        >
-          <div className="w-full max-w-md mx-auto">
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium mb-8 transition-colors"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Volver al inicio
-            </Link>
-
-            <div
-              className="rounded-2xl border border-gray-200/80 bg-white/95 p-6 sm:p-8 shadow-lg"
-              style={{
-                boxShadow:
-                  "0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)",
-              }}
-            >
-              <SignIn
-                routing="path"
-                path="/login"
-                signUpUrl="/register"
-                afterSignInUrl={returnTo}
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

@@ -11,7 +11,6 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { FullScreenLoadingSpinner } from "./components/LoadingSpinner";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import OnboardingValidate from "./pages/OnboardingValidate";
 import Workspace from "./pages/Workspace";
@@ -122,6 +121,7 @@ const navStyle = {
 function Navigation() {
   const { user, logout } = useAuth();
   const [scrolled, setScrolled] = React.useState(false);
+  const [showSignIn, setShowSignIn] = React.useState(false);
 
   React.useEffect(() => {
     function onScroll() {
@@ -162,23 +162,41 @@ function Navigation() {
               </button>
             </>
           ) : (
-            <>
-              <Link
-                to="/login"
-                className="px-6 py-2 rounded-full hover:bg-gray-100 transition text-sm font-medium"
-              >
-                Iniciar sesión
-              </Link>
-              <Link
-                to="/register"
-                className="px-6 py-2 rounded-full bg-black text-white hover:bg-gray-800 transition text-sm font-medium"
-              >
-                Registrarse
-              </Link>
-            </>
+            <button
+              type="button"
+              onClick={() => setShowSignIn(true)}
+              className="px-6 py-2 rounded-full bg-black text-white hover:bg-gray-800 transition text-sm font-medium"
+            >
+              Iniciar sesión
+            </button>
           )}
         </nav>
       </div>
+      {showSignIn && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowSignIn(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowSignIn(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
+              aria-label="Cerrar"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="p-8">
+              <Login onClose={() => setShowSignIn(false)} />
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -188,10 +206,7 @@ function AppLayout() {
   const pathname = location.pathname;
   const segments = pathname.split("/").filter(Boolean);
   const firstSegment = segments[0];
-  const isWorkspaceFirstSegment = !["login", "register", "onboarding"].includes(
-    firstSegment,
-  );
-  const isWorkspaceRoute = segments.length >= 1 && isWorkspaceFirstSegment;
+  const isWorkspaceRoute = !["onboarding"].includes(firstSegment) && segments.length >= 1;
   const hideHeader =
     pathname === "/onboarding/step/validate" || isWorkspaceRoute;
 
@@ -200,22 +215,6 @@ function AppLayout() {
       {!hideHeader && <Navigation />}
       <Routes>
         <Route path="/" element={<RootRoute />} />
-        <Route
-          path="/login"
-          element={
-            <GuestOnly>
-              <Login />
-            </GuestOnly>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <GuestOnly>
-              <Register />
-            </GuestOnly>
-          }
-        />
         <Route
           path="/onboarding/step/validate"
           element={
