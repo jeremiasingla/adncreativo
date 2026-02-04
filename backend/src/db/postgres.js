@@ -73,7 +73,7 @@ export async function initPostgresWorkspaces() {
     await query(`
       CREATE TABLE IF NOT EXISTS workspaces (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
+        user_id TEXT NOT NULL,
         slug TEXT UNIQUE NOT NULL,
         url TEXT NOT NULL,
         branding TEXT NOT NULL,
@@ -87,6 +87,19 @@ export async function initPostgresWorkspaces() {
         clerk_org_id TEXT
       )
     `);
+    
+    // Migración: cambiar user_id de INTEGER a TEXT si existe
+    try {
+      await query(`
+        ALTER TABLE workspaces 
+        ALTER COLUMN user_id DROP DEFAULT,
+        ALTER COLUMN user_id TYPE TEXT USING user_id::text
+      `);
+    } catch (migErr) {
+      // Si la migración falla, no es crítico (puede que ya esté en TEXT)
+      console.debug("[DEBUG] Migration skipped:", migErr.message);
+    }
+    
     workspacesTableInitialized = true;
   } catch (err) {
     console.warn("⚠️ initPostgresWorkspaces:", err.message);
