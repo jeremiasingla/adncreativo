@@ -14,6 +14,7 @@ import {
   getCreativeVersions,
   runFullWorkspaceGeneration,
 } from "../controllers/workspace.controller.js";
+  getCreativeVersionsByOrgId,
 import { createScreenshot } from "../controllers/screenshot.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
@@ -37,5 +38,6 @@ router.post("/workspaces/:slug/customer-profiles/:profileId/generate-images", au
 router.get("/workspaces/:slug/creatives/versions", authMiddleware, getCreativeVersions);
 router.post("/workspaces/:slug/creatives", authMiddleware, generateCreatives);
 router.post("/screenshot", createScreenshot);
+router.get("/creatives/versions", authMiddleware, getCreativeVersionsByOrgId);
 
 export default router;
