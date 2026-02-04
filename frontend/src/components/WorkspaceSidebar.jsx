@@ -1,5 +1,7 @@
 import React from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { OrganizationProfile } from "@clerk/clerk-react";
 import { useAuth } from "../contexts/AuthContext";
 
 const iconClass = "w-4 h-4 shrink-0";
@@ -197,6 +199,8 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
   const { user } = useAuth();
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();
+  const [showOrgModal, setShowOrgModal] = React.useState(false);
+
   const safeWorkspace = workspace ?? {};
   const { name: workspaceName = "Espacio", logoUrl, slug } = safeWorkspace;
   const displayName =
@@ -208,6 +212,14 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
   const basePath = workspaceSlug ? `/${workspaceSlug}` : "";
 
   const pxBar = collapsed ? "px-4" : "px-3";
+
+  const handleOpenOrgModal = () => {
+    setShowOrgModal(true);
+  };
+
+  const handleCloseOrgModal = () => {
+    setShowOrgModal(false);
+  };
 
   return (
     <aside
@@ -259,6 +271,7 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
               <span className="text-neutral-300 text-lg shrink-0">/</span>
               <button
                 type="button"
+                onClick={handleOpenOrgModal}
                 className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground group h-auto px-2 py-1.5 min-w-0"
                 aria-label="Cambiar espacio de trabajo"
               >
@@ -457,5 +470,48 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
         </div>
       </div>
     </aside>
+    {showOrgModal &&
+      createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={handleCloseOrgModal}
+        >
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={handleCloseOrgModal}
+            aria-hidden="true"
+          />
+          <div
+            className="relative bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto z-50"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={handleCloseOrgModal}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-50"
+              aria-label="Cerrar"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-6 h-6"
+              >
+                <path d="M18 6l-12 12" />
+                <path d="M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="p-6 pt-12">
+              <OrganizationProfile />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
   );
 }
