@@ -1,0 +1,147 @@
+{
+  "common": {
+    "signIn": "Iniciar sesión",
+    "signOut": "Cerrar sesión",
+    "manageAccount": "Gestionar cuenta",
+    "billing": "Facturación",
+    "retry": "Reintentar",
+    "user": "Usuario",
+    "basic": "Básico",
+    "admin": "ADMIN"
+  },
+  "errors": {
+    "loadError": "Error al cargar",
+    "unknownError": "Error desconocido"
+  },
+  "nav": {
+    "goHome": "Ir al inicio",
+    "userMenu": "Menú de usuario"
+  },
+  "sidebar": {
+    "expand": "Expandir barra lateral",
+    "collapse": "Colapsar barra lateral",
+    "home": "Inicio",
+    "create": "Crear",
+    "creatives": "Creativos",
+    "gallery": "Galería de Referencias",
+    "myBusiness": "Mi negocio",
+    "branding": "Branding",
+    "knowledgeBase": "Base de Conocimiento",
+    "customerProfiles": "Perfiles de Clientes"
+  },
+  "home": {
+    "hero": {
+      "title1": "Creativos que venden.",
+      "title2": "Sin diseñador.",
+      "phrase1": "Una URL. Creativos listos.",
+      "phrase2": "Menos costo. Más ventas.",
+      "phrase3": "Tu marca. Todas las redes.",
+      "inputSubtitle": "Sin tarjeta de crédito • Listo en 2 minutos"
+    },
+    "placeholderUrl": "tusitio.com",
+    "howItWorks": {
+      "title": "Cómo funciona",
+      "subtitle": "Tres pasos simples. Contenido con tu marca.",
+      "you": "Vos",
+      "card1Subtitle": "Una URL. Nosotros extraemos tu marca y generamos.",
+      "card2TitleDesktop": "Leemos tu marca",
+      "colors": "Colores",
+      "fonts": "Fuentes",
+      "step1Title": "Analizá tu marca",
+      "step1Desc": "Pegá la URL de tu sitio. Nuestra IA lee tu web y extrae logo, colores, fuentes y estilo en segundos. Sin subir archivos.",
+      "step2Title": "Generá creativos",
+      "step2Desc": "La IA genera creativos profesionales a la medida de tu marca. Desde Stories hasta banners, todos los formatos que necesitás.",
+      "step3Title": "Exportá y publicá",
+      "step3Desc": "Descargá tus creativos en cualquier formato. Listos para Instagram, Facebook, TikTok, LinkedIn y más.",
+      "analyzing": "Analizando tu marca...",
+      "readyToExport": "Listo para exportar",
+      "creativesGenerated": "Creativos generados",
+      "card1Title": "Pegá tu URL",
+      "card1Desc": "Logo, colores y fuentes. Todo desde tu web.",
+      "card2Title": "Creativos listos",
+      "card2Desc": "Imágenes, copy y formatos. Con tu marca, sin diseñador.",
+      "card3Title": "Exportá",
+      "card3Desc": "Descargá en todos los formatos. Todas las redes."
+    },
+    "oneBrand": {
+      "title": "Una marca. Todas las redes.",
+      "subtitle": "Un solo lugar. Todas tus redes. Menos trabajo, más reconocimiento."
+    },
+    "brandFirst": {
+      "title": "Marca primero. IA después.",
+      "imageAlt": "De anuncios genéricos a creativos con tu marca: Marca primero, IA después",
+      "subtitle1": "IA genérica no vende.",
+      "subtitle2": "La tuya sí.",
+      "body": "Leemos tu web primero. Colores, fuentes, tono. Todo lo que generamos sale con tu marca. Creativos que se reconocen = más conversión. Quien unifica primero, gana. Seguís con IA genérica y seguís tirando plata en anuncios que no se distinguen."
+    },
+    "faq": {
+      "title": "Preguntas frecuentes",
+      "subtitle": "Resolvemos tus dudas. Decidí con datos.",
+      "items": [
+        {
+          "question": "¿Qué es ADNCreativo?",
+          "answer": "Una herramienta que toma la URL de tu sitio, extrae tu marca (logo, colores, fuentes) y genera creativos listos para publicar. Sin briefs. Sin diseñador. Menos costo, más velocidad."
+        },
+        {
+          "question": "¿Quién lo usa?",
+          "answer": "Equipos de marketing, agencias y marcas que quieren sacar más creativos sin depender de un diseñador o de IA genérica que no convierte."
+        },
+        {
+          "question": "¿Genera texto e imágenes?",
+          "answer": "Sí. Imágenes, copy y formatos para redes. Todo alineado a tu marca porque la IA lee tu web primero."
+        },
+        {
+          "question": "¿En qué se diferencia de otras IAs?",
+          "answer": "Otras IAs te dan creativos genéricos. ADNCreativo aprende tu marca desde tu URL y genera todo coherente. Más reconocimiento = mejor performance."
+        },
+        {
+          "question": "¿Qué redes y formatos?",
+          "answer": "Instagram, Facebook, LinkedIn, X (Twitter), TikTok. Formatos listos para cada una. Un solo lugar, todas las redes."
+        },
+        {
+          "question": "¿Puedo usar varias marcas o clientes?",
+          "answer": "Sí. Una cuenta, múltiples sitios. Cambiás de URL y generás para otra marca al toque."
+        },
+        {
+          "question": "¿Dónde se guarda todo?",
+          "answer": "En nuestros servidores. No tenés que configurar nada. Entrás, pegás URL, generás."
+        },
+        {
+          "question": "¿Por qué usarlo ahora?",
+          "answer": "Cada día que publicás creativos que no se reconocen como tuyos, perdés ventas y reconocimiento. Quien unifica marca primero, gana. El costo de no actuar es seguir gastando en anuncios que no se distinguen."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Dejá de pagar por creativos que no convierten",
+      "subtitle": "Pegá tu URL y empezá hoy. Cada día que esperás es plata en anuncios que no se distinguen."
+    },
+    "footer": {
+      "ctaTitle": "¿Listo para contenido con IA ",
+      "ctaTitleBrand": "con tu marca",
+      "ctaTitleSuffix": "?",
+      "ctaSubtitle": "Dejá de conformarte con contenido genérico. Conseguí creativos que reflejen tu marca.",
+      "disclaimer": "Sin tarjeta de crédito • Listo en 2 minutos",
+      "privacy": "Privacidad",
+      "refundPolicy": "Política de reembolso",
+      "copyright": "© 2025 Vibiz Inc. Todos los derechos reservados."
+    }
+  },
+  "workspace": {
+    "home": "Inicio",
+    "creatives": "Creativos",
+    "gallery": "Galería de Referencias",
+    "branding": "Branding",
+    "knowledgeBase": "Base de Conocimiento",
+    "customerProfiles": "Perfiles de Clientes",
+    "noCreatives": "Aún no hay creativos. Usá el botón «Generar 1 creativo» para crear uno a partir de tus titulares (se generan imágenes en distintos formatos: 4:5, 1:1, 9:16, 3:4).",
+    "generateOne": "Generar 1 creativo",
+    "generating": "Generando…",
+    "unlock": "Unlock"
+  },
+  "gallery": {
+    "title": "Galería de Referencias",
+    "subtitle": "Anuncios ganadores que podés clonar con tu marca y producto.",
+    "empty": "No hay referencias cargadas."
+  }
+}

@@ -3,7 +3,7 @@
  * Uso: node scripts/regenerate-icp-images.js <workspace-slug>
  * Ejemplo: node scripts/regenerate-icp-images.js comidasenvueltas-s-workspace-1770049665
  *
- * Requiere OPENROUTER_API_KEY en .env (Seedream 4.5 vía OpenRouter).
+ * Requiere OPENROUTER_API_KEY en .env (FLUX vía OpenRouter).
  */
 import dotenv from "dotenv";
 import path from "path";

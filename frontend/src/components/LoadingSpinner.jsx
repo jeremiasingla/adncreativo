@@ -20,7 +20,7 @@ export function LoadingSpinner({ size = "medium", className = "" }) {
       aria-label="Cargando"
     >
       <div
-        className={`${sizeMap[size]} border-2 border-neutral-300 border-t-blue-600 rounded-full animate-spin`}
+        className={`${sizeMap[size]} border-2 border-border border-t-primary rounded-full animate-spin`}
         aria-hidden="true"
       />
     </div>
@@ -32,7 +32,7 @@ export function LoadingSpinner({ size = "medium", className = "" }) {
  */
 export function FullScreenLoadingSpinner() {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <LoadingSpinner size="large" />
     </div>
   );

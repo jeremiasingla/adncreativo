@@ -1,78 +1,58 @@
-import React, { useRef, useEffect } from "react";
+import React, { memo } from "react";
+import { GrainGradient } from "@paper-design/shaders-react";
 
 /**
- * Fondo hero idéntico al de la referencia (ADNCreativo):
- * fixed > paper shader (canvas ruido + resplandor azul) > gradiente to-background
+ * Fondo del hero con Paper Shaders: GrainGradient claro y celeste eléctrico.
+ * Memoizado para evitar re-renders cuando cambia estado del padre (typing, etc.).
+ * @see https://shaders.paper.design/
  */
-function drawPaperNoise(canvas, container) {
-  if (!canvas || !container) return;
-  const w = container.offsetWidth || 1024;
-  const h = container.offsetHeight || 1024;
-  const max = 1920;
-  const scale = Math.min(1, max / Math.max(w, h, 1));
-  const cw = Math.ceil(w * scale);
-  const ch = Math.ceil(h * scale);
-  canvas.width = cw;
-  canvas.height = ch;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const imageData = ctx.createImageData(cw, ch);
-  const data = imageData.data;
-  for (let i = 0; i < data.length; i += 4) {
-    const n = Math.random() * 14;
-    data[i] = 255;
-    data[i + 1] = 255;
-    data[i + 2] = 255;
-    data[i + 3] = Math.floor(250 + n);
-  }
-  ctx.putImageData(imageData, 0, 0);
-}
-
-export default function HeroBackground() {
-  const containerRef = useRef(null);
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !canvas) return;
-
-    const run = () => {
-      drawPaperNoise(canvas, container);
-    };
-
-    run();
-    const ro = new ResizeObserver(run);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, []);
-
+function HeroBackground() {
   return (
-    <div className="fixed inset-0 z-0" aria-hidden>
-      <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden">
-        <div className="w-full h-full">
-          <div
-            ref={containerRef}
-            style={{ width: "100%", height: "100%" }}
-            data-paper-shader=""
-          >
-            <canvas
-              ref={canvasRef}
-              className="block w-full h-full"
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          </div>
-        </div>
+    <div className="absolute inset-0 z-0" aria-hidden>
+      {/* Grain gradient: fondo claro + celeste eléctrico + grain */}
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{ width: "100%", height: "100%" }}
+      >
+        <GrainGradient
+          colorBack="#f0f9ff"
+          colors={["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9"]}
+          softness={0.7}
+          intensity={0.35}
+          noise={0.45}
+          shape="wave"
+          speed={0.15}
+          fit="cover"
+          width="100%"
+          height="100%"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+          }}
+        />
       </div>
-      {/* Resplandor azul desde abajo (como en la referencia) */}
+      {/* Capa para bajar opacidad del celeste (el grain queda debajo, sin tocar) */}
+      <div
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{
+          background: "rgba(240, 249, 255, 0.32)",
+          mixBlendMode: "normal",
+        }}
+      />
+      {/* Suave resplandor celeste desde abajo */}
       <div
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 120% 80% at 50% 100%, rgba(191,219,254,0.45) 0%, rgba(147,197,253,0.2) 35%, rgba(129,140,248,0.06) 55%, transparent 70%)",
+            "radial-gradient(ellipse 120% 80% at 50% 100%, rgba(56, 189, 248, 0.14) 0%, rgba(14, 165, 233, 0.07) 40%, transparent 65%)",
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background pointer-events-none" />
+      {/* Transición hacia el contenido */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white pointer-events-none" />
     </div>
   );
 }
+
+export default memo(HeroBackground);

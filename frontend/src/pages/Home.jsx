@@ -1,4 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
+import { useTranslation } from "react-i18next";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,13 +15,18 @@ import HeroBackground from "../components/HeroBackground";
 gsap.registerPlugin(ScrollTrigger);
 
 export default function Home() {
+  const { t } = useTranslation();
   const pageRef = useRef(null);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [openFaq, setOpenFaq] = useState(null);
-  const heroPhrases = [
-    "menos costo. más ventas.",
-    "una URL. creativos listos.",
-  ];
+  const heroPhrases = useMemo(
+    () => [
+      t("home.hero.phrase1"),
+      t("home.hero.phrase2"),
+      t("home.hero.phrase3"),
+    ],
+    [t],
+  );
   const [heroPhraseIndex, setHeroPhraseIndex] = useState(0);
   const [heroCharIndex, setHeroCharIndex] = useState(0);
   const [heroIsDeleting, setHeroIsDeleting] = useState(false);
@@ -44,111 +56,185 @@ export default function Home() {
       }
     }, delay);
     return () => clearTimeout(timeout);
-  }, [heroPhraseIndex, heroCharIndex, heroIsDeleting]);
+  }, [heroPhraseIndex, heroCharIndex, heroIsDeleting, heroPhrases]);
 
-  const faqs = [
-    {
-      question: "¿Qué es ADNCreativo?",
-      answer:
-        "Una herramienta que toma la URL de tu sitio, extrae tu marca (logo, colores, fuentes) y genera creativos listos para publicar. Sin briefs. Sin diseñador. Menos costo, más velocidad.",
-    },
-    {
-      question: "¿Quién lo usa?",
-      answer:
-        "Equipos de marketing, agencias y marcas que quieren sacar más creativos sin depender de un diseñador o de IA genérica que no convierte.",
-    },
-    {
-      question: "¿Genera texto e imágenes?",
-      answer:
-        "Sí. Imágenes, copy y formatos para redes. Todo alineado a tu marca porque la IA lee tu web primero.",
-    },
-    {
-      question: "¿En qué se diferencia de otras IAs?",
-      answer:
-        "Otras IAs te dan creativos genéricos. ADNCreativo aprende tu marca desde tu URL y genera todo coherente. Más reconocimiento = mejor performance.",
-    },
-    {
-      question: "¿Qué redes y formatos?",
-      answer:
-        "Instagram, Facebook, LinkedIn, X (Twitter), TikTok. Formatos listos para cada una. Un solo lugar, todas las redes.",
-    },
-    {
-      question: "¿Puedo usar varias marcas o clientes?",
-      answer:
-        "Sí. Una cuenta, múltiples sitios. Cambiás de URL y generás para otra marca al toque.",
-    },
-    {
-      question: "¿Dónde se guarda todo?",
-      answer:
-        "En nuestros servidores. No tenés que configurar nada. Entrás, pegás URL, generás.",
-    },
-    {
-      question: "¿Por qué usarlo ahora?",
-      answer:
-        "Cada día que publicás creativos que no se reconocen como tuyos, perdés ventas y reconocimiento. Quien unifica marca primero, gana. El costo de no actuar es seguir gastando en anuncios que no se distinguen.",
-    },
-  ];
+  // Beam animation for "Una marca. Todas las redes." diagram
+  const beamContainerRef = useRef(null);
+  const beamTimelineRef = useRef(null);
+  useEffect(() => {
+    const container = beamContainerRef.current;
+    if (!container) return;
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (prefersReducedMotion) return;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!websiteUrl?.trim()) return;
-    // TODO: enviar URL al backend cuando exista endpoint (ej. /workspaces/new o similar)
-  };
+    const runAnimation = () => {
+      // Incluir _r_ y _R_ por si el id se transforma (ej. build/hydration)
+      const gradients = container.querySelectorAll(
+        "linearGradient[id^='_r_'], linearGradient[id^='_R_']",
+      );
+      if (!gradients.length) return null;
 
-  const [cardTilts, setCardTilts] = useState([
-    { x: 0, y: 0 },
-    { x: 0, y: 0 },
-    { x: 0, y: 0 },
-  ]);
-  const CARD_TILT_MAX = 10;
+      const masterTimeline = gsap.timeline({ repeat: -1 });
+      gradients.forEach((grad) => {
+        const tl = gsap.timeline();
+        tl.fromTo(
+          grad,
+          { attr: { x1: "-20%", x2: "-30%" } },
+          {
+            attr: { x1: "120%", x2: "110%" },
+            duration: 2.5,
+            ease: "power1.inOut",
+          },
+        );
+        masterTimeline.add(tl, 0);
+      });
+      masterTimeline.to({}, { duration: 1.5 });
+      return masterTimeline;
+    };
 
-  function handleCardMouseMove(index, e) {
+    // En mobile el DOM puede no estar listo; dar un frame para que los SVG defs existan
+    const raf = requestAnimationFrame(() => {
+      beamTimelineRef.current = runAnimation();
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      if (beamTimelineRef.current) {
+        beamTimelineRef.current.kill();
+        beamTimelineRef.current = null;
+      }
+    };
+  }, []);
+
+  const faqs = useMemo(() => t("home.faq.items", { returnObjects: true }), [t]);
+
+  const heroMarqueeImages = useMemo(() => {
+    const base = [
+      {
+        src: "/images/hero-examples/v1-1766231845894.webp",
+        alt: "Website example 1",
+      },
+      {
+        src: "/images/hero-examples/v2-1766231020715.webp",
+        alt: "Website example 2",
+      },
+      {
+        src: "/images/hero-examples/v2-1766231047310.webp",
+        alt: "Website example 3",
+      },
+      {
+        src: "/images/hero-examples/v2-1766231111956.webp",
+        alt: "Website example 4",
+      },
+      {
+        src: "/images/hero-examples/v2-1766231142030.webp",
+        alt: "Website example 5",
+      },
+      {
+        src: "/images/hero-examples/v2-1766231305340.webp",
+        alt: "Website example 6",
+      },
+      {
+        src: "/images/hero-examples/v2-1766231471725.webp",
+        alt: "Website example 7",
+      },
+      {
+        src: "/images/hero-examples/v2-1766231571582.webp",
+        alt: "Website example 8",
+      },
+      {
+        src: "/images/hero-examples/v2-1766232398021.webp",
+        alt: "Website example 9",
+      },
+      {
+        src: "/images/hero-examples/v2-1766233335794.webp",
+        alt: "Website example 10",
+      },
+      {
+        src: "/images/hero-examples/v2-1766233443664.webp",
+        alt: "Website example 11",
+      },
+    ];
+    return [...base, ...base];
+  }, []);
+
+  const handleUrlChange = useCallback((e) => setWebsiteUrl(e.target.value), []);
+
+  const handleSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (!websiteUrl?.trim()) return;
+      // TODO: enviar URL al backend cuando exista endpoint (ej. /workspaces/new o similar)
+    },
+    [websiteUrl],
+  );
+
+  const toggleFaq = useCallback((index) => {
+    setOpenFaq((prev) => (prev === index ? null : index));
+  }, []);
+
+  const CARD_TILT_MAX = 8;
+  const tiltPendingRef = useRef(null);
+  const tiltRafRef = useRef(null);
+  const cardInnerRefs = useRef([null, null, null]);
+
+  const handleCardMouseMove = useCallback((index, e) => {
     const el = e.currentTarget;
     const rect = el.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
     const rotateY = (x - 0.5) * 2 * CARD_TILT_MAX;
     const rotateX = (0.5 - y) * 2 * CARD_TILT_MAX;
-    setCardTilts((prev) => {
-      const next = [...prev];
-      next[index] = { x: rotateX, y: rotateY };
-      return next;
+    tiltPendingRef.current = { index, x: rotateX, y: rotateY };
+    if (tiltRafRef.current != null) return;
+    tiltRafRef.current = requestAnimationFrame(() => {
+      tiltRafRef.current = null;
+      const p = tiltPendingRef.current;
+      if (p == null) return;
+      tiltPendingRef.current = null;
+      const cardEl = cardInnerRefs.current[p.index];
+      if (cardEl) {
+        cardEl.style.transform = `perspective(1000px) rotateX(${p.x}deg) rotateY(${p.y}deg)`;
+      }
     });
-  }
+  }, []);
 
-  function handleCardMouseLeave(index) {
-    setCardTilts((prev) => {
-      const next = [...prev];
-      next[index] = { x: 0, y: 0 };
-      return next;
-    });
-  }
+  const handleCardMouseLeave = useCallback((index) => {
+    const cardEl = cardInnerRefs.current[index];
+    if (cardEl) cardEl.style.transform = "";
+  }, []);
 
   useEffect(() => {
     if (!pageRef.current) return;
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     const ctx = gsap.context(() => {
       const sections = pageRef.current.querySelectorAll("section");
       const heroTitle = pageRef.current.querySelector(
-        "[data-gsap='hero-title']"
+        "[data-gsap='hero-title']",
       );
       const heroSubtitle = pageRef.current.querySelector(
-        "[data-gsap='hero-subtitle']"
+        "[data-gsap='hero-subtitle']",
       );
       const heroInput = pageRef.current.querySelector(
-        "[data-gsap='hero-input']"
+        "[data-gsap='hero-input']",
       );
-      if (heroTitle && heroSubtitle && heroInput) {
+      if (heroTitle && heroSubtitle && heroInput && !prefersReducedMotion) {
         gsap.from([heroTitle, heroSubtitle, heroInput], {
           opacity: 0,
-          y: 56,
-          duration: 0.9,
-          stagger: 0.15,
-          ease: "power3.out",
-          delay: 0.2,
+          y: 20,
+          duration: 0.6,
+          stagger: 0.2,
+          ease: "power2.out",
+          delay: 0.15,
         });
       }
       sections.forEach((section, index) => {
         if (index === 0) return;
+        if (prefersReducedMotion) return;
         const isCta = section.querySelector(".relative.z-10.max-w-4xl");
         const marcaBlock = section.querySelector("[class*='38rem']");
         const heading = section.querySelector("h2");
@@ -162,8 +248,8 @@ export default function Home() {
               end: "top 55%",
             },
             opacity: 0,
-            y: 50,
-            duration: 0.75,
+            y: 30,
+            duration: 0.6,
             stagger: 0.1,
             ease: "power2.out",
           });
@@ -173,8 +259,8 @@ export default function Home() {
           gsap.from(grid.children, {
             scrollTrigger: { trigger: grid, start: "top 90%" },
             opacity: 0,
-            y: 44,
-            duration: 0.65,
+            y: 30,
+            duration: 0.6,
             stagger: 0.1,
             ease: "power2.out",
           });
@@ -184,7 +270,7 @@ export default function Home() {
           gsap.from(faqList.children, {
             scrollTrigger: { trigger: faqList, start: "top 92%" },
             opacity: 0,
-            y: 28,
+            y: 20,
             duration: 0.5,
             stagger: 0.04,
             ease: "power2.out",
@@ -195,28 +281,35 @@ export default function Home() {
           gsap.from(diagramBox, {
             scrollTrigger: { trigger: diagramBox, start: "top 88%" },
             opacity: 0,
-            y: 40,
-            duration: 0.8,
+            y: 30,
+            duration: 0.6,
             ease: "power2.out",
           });
         }
         const ctaContent = section.querySelector(".relative.z-10.max-w-4xl");
         if (ctaContent && ctaContent.children.length) {
-          gsap.from(ctaContent.children, {
-            scrollTrigger: { trigger: ctaContent, start: "top 88%" },
-            opacity: 0,
-            y: 40,
-            duration: 0.6,
-            stagger: 0.12,
-            ease: "power2.out",
-          });
+          // Solo animar título y subtítulo; el input queda siempre visible
+          const ctaTexts = [
+            ctaContent.children[0],
+            ctaContent.children[1],
+          ].filter(Boolean);
+          if (ctaTexts.length) {
+            gsap.from(ctaTexts, {
+              scrollTrigger: { trigger: ctaContent, start: "top 88%" },
+              opacity: 0,
+              y: 30,
+              duration: 0.6,
+              stagger: 0.12,
+              ease: "power2.out",
+            });
+          }
         }
         if (marcaBlock && marcaBlock.children.length) {
           gsap.from(Array.from(marcaBlock.children), {
             scrollTrigger: { trigger: section, start: "top 85%" },
             opacity: 0,
-            x: -36,
-            duration: 0.8,
+            x: -24,
+            duration: 0.6,
             stagger: 0.1,
             ease: "power2.out",
           });
@@ -227,8 +320,8 @@ export default function Home() {
   }, []);
 
   return (
-    <div ref={pageRef} className="bg-white">
-      {/* Hero Section – paper shader exacto como referencia (fixed > canvas + gradiente to-background) */}
+    <div ref={pageRef}>
+      {/* Hero Section – solo fondo shader (sin bg white) */}
       <section className="relative min-h-screen w-full lg:min-h-0 lg:h-[100dvh]">
         <HeroBackground />
         <div
@@ -243,14 +336,16 @@ export default function Home() {
           <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center mt-8 sm:mt-12 lg:mt-0">
             <h1
               data-gsap="hero-title"
-              className="text-5xl sm:text-6xl md:text-7xl font-bold mb-3 sm:mb-4 text-black leading-tight font-serif text-center transition-[800ms] ease-out"
-              style={{ opacity: 1, transform: "translate(0px, 0px)" }}
+              className="text-5xl sm:text-6xl md:text-7xl font-bold mb-3 sm:mb-4 leading-tight font-instrument-serif bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-500 bg-clip-text text-transparent"
+              style={{
+                transition: "800ms ease-out",
+                opacity: 1,
+                transform: "translate(0px, 0px)",
+              }}
             >
-              <em>
-                Creativos que venden.
-                <br />
-                Sin diseñador.
-              </em>
+              {t("home.hero.title1")}
+              <br />
+              <span className="italic mr-1">{t("home.hero.title2")}</span>
             </h1>
             <div
               data-gsap="hero-subtitle"
@@ -268,34 +363,71 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Input form – mismo componente que "Dejá de pagar por creativos que no convierten" */}
+          {/* Input form – glass-prompt-wrap */}
           <div
             data-gsap="hero-input"
             className="w-full px-4 sm:px-6 mb-8 sm:mb-12 lg:mb-0"
           >
             <div
-              className="max-w-md mx-auto transition-[800ms] ease-out"
-              style={{ opacity: 1, transform: "translate(0px, 0px)" }}
+              className="max-w-md mx-auto"
+              style={{
+                transition: "800ms ease-out",
+                opacity: 1,
+                transform: "translate(0px, 0px)",
+              }}
             >
-              <WebsiteUrlInput
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                onSubmit={handleSubmit}
-                className="max-w-md mx-auto"
-              />
+              <div className="w-full max-w-2xl mx-auto relative rounded-xl p-1 transition-all duration-300 glass-prompt-wrap hover:scale-[1.005]">
+                <WebsiteUrlInput
+                  value={websiteUrl}
+                  onChange={handleUrlChange}
+                  onSubmit={handleSubmit}
+                  placeholder={t("home.placeholderUrl")}
+                />
+              </div>
+              <p className="text-black/60 text-sm mt-4 text-center">
+                {t("home.hero.inputSubtitle")}
+              </p>
+            </div>
+          </div>
+
+          {/* Mobile marquee carousel */}
+          <div className="w-full mt-8 lg:hidden">
+            <div className="opacity-100 transition-[800ms] ease-out">
+              <div className="relative w-full max-w-[100vw] overflow-x-clip">
+                <div className="relative overflow-hidden h-[230px]">
+                  <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
+                    {heroMarqueeImages.map((img, i) => (
+                      <div
+                        key={`marquee-${img.src}-${i}`}
+                        className="flex-shrink-0 px-2 w-[160px] h-[190px]"
+                      >
+                        <div className="relative w-full h-full rounded-lg overflow-hidden shadow-lg">
+                          <img
+                            alt={img.alt}
+                            loading="lazy"
+                            decoding="async"
+                            className="object-cover absolute inset-0 w-full h-full"
+                            src={img.src}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Cómo funciona */}
-      <section className="w-full bg-white py-12 md:py-24">
+      <section className="w-full bg-white py-12 md:py-24 contain-paint">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-3 sm:mb-4 text-gray-900 font-instrument-serif">
-            Cómo <span className="italic">funciona</span>
+            {t("home.howItWorks.title")}
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 text-center mb-8 sm:mb-12 max-w-2xl mx-auto">
-            Tres pasos simples para contenido con tu marca
+            {t("home.howItWorks.subtitle")}
           </p>
 
           {/* Mobile: pasos verticales (igual que referencia, en español) */}
@@ -306,11 +438,10 @@ export default function Home() {
                 1
               </span>
               <h3 className="text-2xl italic text-gray-900 font-instrument-serif mb-3">
-                Analizá tu marca
+                {t("home.howItWorks.step1Title")}
               </h3>
               <p className="text-gray-500 text-sm leading-relaxed mb-5 max-w-[280px]">
-                Pegá la URL de tu sitio. Nuestra IA lee tu web y extrae logo,
-                colores, fuentes y estilo en segundos. Sin subir archivos.
+                {t("home.howItWorks.step1Desc")}
               </p>
               <div className="flex flex-wrap justify-center gap-2 mb-8">
                 <span className="px-3 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-full border border-gray-200 shadow-sm">
@@ -326,7 +457,7 @@ export default function Home() {
                   Estilo
                 </span>
               </div>
-              <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100/80 w-full max-w-[220px]">
+              <div className="card-figma p-5 w-full max-w-[220px]">
                 <div className="w-14 h-14 mx-auto mb-4 bg-cyan-50 rounded-xl flex items-center justify-center">
                   <svg
                     className="w-7 h-7 text-cyan-500 animate-spin"
@@ -340,7 +471,7 @@ export default function Home() {
                   </svg>
                 </div>
                 <p className="text-sm font-semibold text-gray-900 mb-3">
-                  Analizando tu marca...
+                  {t("home.howItWorks.analyzing")}
                 </p>
                 <div className="w-full bg-gray-100 rounded-full h-1">
                   <div className="bg-black h-1 rounded-full w-2/3 transition-all duration-500" />
@@ -354,11 +485,10 @@ export default function Home() {
                 2
               </span>
               <h3 className="text-2xl italic text-gray-900 font-instrument-serif mb-3">
-                Generá creativos
+                {t("home.howItWorks.step2Title")}
               </h3>
               <p className="text-gray-500 text-sm leading-relaxed mb-5 max-w-[280px]">
-                La IA genera creativos profesionales a la medida de tu marca.
-                Desde Stories hasta banners, todos los formatos que necesitás.
+                {t("home.howItWorks.step2Desc")}
               </p>
               <div className="flex flex-wrap justify-center gap-2 mb-1">
                 <span className="px-3 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-full border border-gray-200 shadow-sm">
@@ -450,11 +580,10 @@ export default function Home() {
                 3
               </span>
               <h3 className="text-2xl italic text-gray-900 font-instrument-serif mb-3">
-                Exportá y publicá
+                {t("home.howItWorks.step3Title")}
               </h3>
               <p className="text-gray-500 text-sm leading-relaxed mb-5 max-w-[280px]">
-                Descargá tus creativos en cualquier formato. Listos para
-                Instagram, Facebook, TikTok, LinkedIn y más.
+                {t("home.howItWorks.step3Desc")}
               </p>
               <div className="flex flex-wrap justify-center gap-2 mb-8">
                 <span className="px-3 py-1.5 bg-white text-gray-600 text-xs font-medium rounded-full border border-gray-200 shadow-sm">
@@ -470,7 +599,7 @@ export default function Home() {
                   LinkedIn
                 </span>
               </div>
-              <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100/80 w-full max-w-[280px]">
+              <div className="card-figma p-5 w-full max-w-[280px]">
                 <div className="flex justify-center gap-2 mb-4">
                   <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center shadow-sm">
                     <svg
@@ -525,9 +654,11 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-sm font-semibold text-gray-900 mb-1">
-                  Listo para exportar
+                  {t("home.howItWorks.readyToExport")}
                 </p>
-                <p className="text-xs text-gray-400">Creativos generados</p>
+                <p className="text-xs text-gray-400">
+                  {t("home.howItWorks.creativesGenerated")}
+                </p>
               </div>
             </div>
           </div>
@@ -536,29 +667,34 @@ export default function Home() {
           <div className="hidden md:grid md:grid-cols-3 gap-4 sm:gap-6">
             {/* Card 1 */}
             <div
-              className="relative aspect-square"
-              style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
+              className="group/card relative aspect-square transition-[transform,box-shadow] duration-300 ease-out"
+              style={{
+                transformStyle: "preserve-3d",
+                perspective: "1000px",
+                background: "transparent",
+              }}
               onMouseMove={(e) => handleCardMouseMove(0, e)}
               onMouseLeave={() => handleCardMouseLeave(0)}
             >
               <div
                 className="relative h-full w-full"
-                style={{ transformStyle: "preserve-3d" }}
+                style={{
+                  transformStyle: "preserve-3d",
+                  background: "transparent",
+                }}
               >
-                <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
                 <div
-                  className="relative bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200 shadow-lg text-center h-full flex flex-col justify-between transition-shadow duration-300 hover:shadow-2xl"
-                  style={{
-                    transform: `perspective(1000px) rotateX(${cardTilts[0].x}deg) rotateY(${cardTilts[0].y}deg)`,
-                    transition: "transform 0.15s ease-out",
+                  ref={(el) => {
+                    cardInnerRefs.current[0] = el;
                   }}
+                  className="relative card-figma p-4 sm:p-6 text-center h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out will-change-transform group-hover/card:shadow-2xl"
                 >
                   <span className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-300 font-instrument-serif text-2xl sm:text-3xl italic">
                     1
                   </span>
                   <div>
                     <h3 className="italic text-gray-900 font-instrument-serif text-xl sm:text-2xl mb-3 sm:mb-4">
-                      Pegá tu URL
+                      {t("home.howItWorks.card1Title")}
                     </h3>
                     <div className="relative">
                       <div
@@ -571,7 +707,7 @@ export default function Home() {
                         <div className="flex items-center gap-1.5">
                           <div className="flex-1 bg-gray-50/80 rounded-lg px-3 py-2 text-left">
                             <span className="text-gray-800 text-xs">
-                              tusitio.com
+                              {t("home.placeholderUrl")}
                             </span>
                             <span className="inline-block w-0.5 h-3 bg-black animate-pulse ml-0.5 align-middle"></span>
                           </div>
@@ -602,13 +738,13 @@ export default function Home() {
                           <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87c.48 0 .72-.58.38-.92L6.35 2.86a.5.5 0 0 0-.85.35Z"></path>
                         </svg>
                         <span className="bg-black text-white text-[9px] px-1.5 py-0.5 rounded -mt-1 ml-4 font-medium">
-                          Vos
+                          {t("home.howItWorks.you")}
                         </span>
                       </div>
                     </div>
                   </div>
                   <p className="text-gray-500 text-xs leading-relaxed mt-4">
-                    Una URL. Extraemos tu marca y generamos.
+                    {t("home.howItWorks.card1Subtitle")}
                   </p>
                 </div>
               </div>
@@ -616,29 +752,34 @@ export default function Home() {
 
             {/* Card 2 */}
             <div
-              className="relative aspect-square"
-              style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
+              className="group/card relative aspect-square transition-[transform,box-shadow] duration-300 ease-out"
+              style={{
+                transformStyle: "preserve-3d",
+                perspective: "1000px",
+                background: "transparent",
+              }}
               onMouseMove={(e) => handleCardMouseMove(1, e)}
               onMouseLeave={() => handleCardMouseLeave(1)}
             >
               <div
                 className="relative h-full w-full"
-                style={{ transformStyle: "preserve-3d" }}
+                style={{
+                  transformStyle: "preserve-3d",
+                  background: "transparent",
+                }}
               >
-                <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
                 <div
-                  className="relative bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200 shadow-lg text-center h-full flex flex-col justify-between transition-shadow duration-300 hover:shadow-2xl"
-                  style={{
-                    transform: `perspective(1000px) rotateX(${cardTilts[1].x}deg) rotateY(${cardTilts[1].y}deg)`,
-                    transition: "transform 0.15s ease-out",
+                  ref={(el) => {
+                    cardInnerRefs.current[1] = el;
                   }}
+                  className="relative card-figma p-4 sm:p-6 text-center h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out will-change-transform group-hover/card:shadow-2xl"
                 >
                   <span className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-300 font-instrument-serif text-2xl sm:text-3xl italic">
                     2
                   </span>
                   <div>
                     <h3 className="italic text-gray-900 font-instrument-serif text-xl sm:text-2xl mb-3 sm:mb-4">
-                      Leemos tu marca
+                      {t("home.howItWorks.card2TitleDesktop")}
                     </h3>
                     <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                       <div className="flex justify-center mb-3">
@@ -651,7 +792,7 @@ export default function Home() {
                         </svg>
                       </div>
                       <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-1.5">
-                        Colores
+                        {t("home.howItWorks.colors")}
                       </p>
                       <div className="flex justify-center gap-1.5 mb-3">
                         <div
@@ -676,7 +817,7 @@ export default function Home() {
                         ></div>
                       </div>
                       <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-1">
-                        Fuentes
+                        {t("home.howItWorks.fonts")}
                       </p>
                       <div className="flex justify-center gap-2 text-[10px] text-gray-600">
                         <span>Myriad Set Pro</span>
@@ -686,7 +827,7 @@ export default function Home() {
                     </div>
                   </div>
                   <p className="text-gray-500 text-xs leading-relaxed mt-4">
-                    Logo, colores, fuentes. Todo desde tu web.
+                    {t("home.howItWorks.card1Desc")}
                   </p>
                 </div>
               </div>
@@ -694,29 +835,34 @@ export default function Home() {
 
             {/* Card 3 */}
             <div
-              className="relative aspect-square overflow-visible"
-              style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
+              className="group/card relative aspect-square overflow-visible transition-[transform,box-shadow] duration-300 ease-out"
+              style={{
+                transformStyle: "preserve-3d",
+                perspective: "1000px",
+                background: "transparent",
+              }}
               onMouseMove={(e) => handleCardMouseMove(2, e)}
               onMouseLeave={() => handleCardMouseLeave(2)}
             >
               <div
                 className="relative h-full w-full"
-                style={{ transformStyle: "preserve-3d" }}
+                style={{
+                  transformStyle: "preserve-3d",
+                  background: "transparent",
+                }}
               >
-                <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
                 <div
-                  className="relative bg-white/90 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-gray-200 shadow-lg text-center overflow-visible h-full flex flex-col justify-between transition-shadow duration-300 hover:shadow-2xl"
-                  style={{
-                    transform: `perspective(1000px) rotateX(${cardTilts[2].x}deg) rotateY(${cardTilts[2].y}deg)`,
-                    transition: "transform 0.15s ease-out",
+                  ref={(el) => {
+                    cardInnerRefs.current[2] = el;
                   }}
+                  className="relative card-figma p-4 sm:p-6 text-center overflow-visible h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out will-change-transform group-hover/card:shadow-2xl"
                 >
                   <span className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-300 font-instrument-serif text-2xl sm:text-3xl italic">
                     3
                   </span>
                   <div>
                     <h3 className="italic text-gray-900 font-instrument-serif text-xl sm:text-2xl mb-3 sm:mb-4">
-                      Creativos listos
+                      {t("home.howItWorks.card2Title")}
                     </h3>
                     <div className="relative h-[220px] sm:h-[130px] md:h-[160px] flex items-center justify-center overflow-visible">
                       <div
@@ -782,7 +928,7 @@ export default function Home() {
                     </div>
                   </div>
                   <p className="text-gray-500 text-xs leading-relaxed mt-4">
-                    Imágenes, copy y formatos. Tu marca. Sin diseñador.
+                    {t("home.howItWorks.card2Desc")}
                   </p>
                 </div>
               </div>
@@ -791,23 +937,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Una marca. Todas las redes. */}
-      <section className="py-20 px-6 bg-white">
+      {/* Una marca. Todas las redes. - WITH EXACT CIRCLE-FIGMA STYLES */}
+      <section className="py-20 px-6 bg-white contain-paint">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-4 sm:mb-6 text-gray-900 font-instrument-serif">
-            Una marca. <span className="italic">Todas las redes.</span>
+            {t("home.oneBrand.title")}
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 text-center mb-6 sm:mb-8 max-w-2xl mx-auto px-4">
-            Contenido coherente en todas tus redes desde una sola fuente. Menos
-            trabajo. Más reconocimiento.
+            {t("home.oneBrand.subtitle")}
           </p>
           <div
+            ref={beamContainerRef}
+            className="relative flex h-[400px] min-h-[320px] sm:h-[500px] md:h-[650px] w-full items-center justify-center overflow-hidden rounded-3xl card-figma"
             data-gsap="brand-diagram"
-            className="relative flex h-[400px] sm:h-[500px] md:h-[650px] w-full items-center justify-center overflow-hidden rounded-3xl backdrop-blur-sm"
           >
-            <div className="flex w-full h-full flex-row items-center justify-between px-4 sm:px-12 md:px-24 gap-2 sm:gap-4 md:gap-6">
+            <div className="flex w-full h-full min-w-0 flex-row items-center justify-between px-3 sm:px-12 md:px-24 gap-1 sm:gap-4 md:gap-6">
+              {/* User icon */}
               <div className="flex items-center">
-                <div className="z-10 flex items-center justify-center rounded-full border-2 border-gray-200 bg-white p-3 shadow-[0_0_20px_-12px_rgba(0,0,0,0.8)] size-12 sm:size-16 md:size-24">
+                <div className="z-10 flex items-center justify-center rounded-full circle-figma p-3 size-12 sm:size-16 md:size-24">
                   <svg
                     className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12"
                     viewBox="0 0 24 24"
@@ -821,22 +968,27 @@ export default function Home() {
                   </svg>
                 </div>
               </div>
-              <div className="flex items-center">
-                <div className="z-10 flex items-center justify-center rounded-full border-2 border-gray-200 bg-white shadow-[0_0_20px_-12px_rgba(0,0,0,0.8)] size-14 sm:size-20 md:size-28 p-2 sm:p-3 md:p-4">
+
+              {/* Vibiz logo */}
+              <div className="flex items-center -ml-4 sm:-ml-6 md:-ml-8">
+                <div className="z-10 flex items-center justify-center rounded-full circle-figma size-14 sm:size-20 md:size-28 p-2 sm:p-3 md:p-4">
                   <img
-                    alt="ADNCreativo"
+                    alt="Vibiz"
                     loading="lazy"
                     width="64"
                     height="64"
                     decoding="async"
                     className="w-full h-full object-contain"
                     style={{ color: "transparent" }}
-                    src="/images/logo-adncreativo.svg"
+                    src="/images/logo-vibiz-no-background.svg"
                   />
                 </div>
               </div>
+
+              {/* Social media icons column */}
               <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 md:gap-4">
-                <div className="z-10 flex items-center justify-center rounded-full border-2 border-gray-200 bg-white p-3 shadow-[0_0_20px_-12px_rgba(0,0,0,0.8)] size-10 sm:size-14 md:size-24">
+                {/* Instagram */}
+                <div className="z-10 flex items-center justify-center rounded-full circle-figma p-3 size-10 sm:size-14 md:size-24">
                   <svg
                     className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12"
                     viewBox="0 0 24 24"
@@ -845,7 +997,7 @@ export default function Home() {
                   >
                     <defs>
                       <linearGradient
-                        id="instagram-gradient-brand"
+                        id="instagram-gradient"
                         x1="0%"
                         y1="100%"
                         x2="100%"
@@ -860,11 +1012,13 @@ export default function Home() {
                     </defs>
                     <path
                       d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"
-                      fill="url(#instagram-gradient-brand)"
+                      fill="url(#instagram-gradient)"
                     />
                   </svg>
                 </div>
-                <div className="z-10 flex items-center justify-center rounded-full border-2 border-gray-200 bg-white p-3 shadow-[0_0_20px_-12px_rgba(0,0,0,0.8)] size-10 sm:size-14 md:size-24">
+
+                {/* Facebook */}
+                <div className="z-10 flex items-center justify-center rounded-full circle-figma p-3 size-10 sm:size-14 md:size-24">
                   <svg
                     className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12"
                     viewBox="0 0 24 24"
@@ -874,7 +1028,9 @@ export default function Home() {
                     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
                 </div>
-                <div className="z-10 flex items-center justify-center rounded-full border-2 border-gray-200 bg-white p-3 shadow-[0_0_20px_-12px_rgba(0,0,0,0.8)] size-10 sm:size-14 md:size-24">
+
+                {/* LinkedIn */}
+                <div className="z-10 flex items-center justify-center rounded-full circle-figma p-3 size-10 sm:size-14 md:size-24">
                   <svg
                     className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12"
                     viewBox="0 0 24 24"
@@ -884,7 +1040,9 @@ export default function Home() {
                     <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                   </svg>
                 </div>
-                <div className="z-10 flex items-center justify-center rounded-full border-2 border-gray-200 bg-white p-3 shadow-[0_0_20px_-12px_rgba(0,0,0,0.8)] size-10 sm:size-14 md:size-24">
+
+                {/* X/Twitter */}
+                <div className="z-10 flex items-center justify-center rounded-full circle-figma p-3 size-10 sm:size-14 md:size-24">
                   <svg
                     className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12"
                     viewBox="0 0 24 24"
@@ -894,7 +1052,9 @@ export default function Home() {
                     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                   </svg>
                 </div>
-                <div className="z-10 flex items-center justify-center rounded-full border-2 border-gray-200 bg-white p-3 shadow-[0_0_20px_-12px_rgba(0,0,0,0.8)] size-10 sm:size-14 md:size-24">
+
+                {/* TikTok */}
+                <div className="z-10 flex items-center justify-center rounded-full circle-figma p-3 size-10 sm:size-14 md:size-24">
                   <svg
                     className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12"
                     viewBox="0 0 24 24"
@@ -906,175 +1066,242 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            {/* Líneas de conexión con gradientes */}
+
+            {/* SVG beams - keeping all the existing beam paths */}
             <svg
               fill="none"
               width="100%"
               height="100%"
+              preserveAspectRatio="xMidYMid meet"
               xmlns="http://www.w3.org/2000/svg"
-              className="pointer-events-none absolute top-0 left-0 transform-gpu stroke-2"
+              className="pointer-events-none absolute inset-0 transform-gpu stroke-2 w-full h-full"
               viewBox="0 0 1232 650"
-              preserveAspectRatio="xMidYMid slice"
             >
               <path
-                d="M 144,325 Q 380,325 616,325"
+                d="M 144,325 Q 372,325 600,325"
                 stroke="gray"
                 strokeWidth="2"
                 strokeOpacity="0.2"
                 strokeLinecap="round"
               />
               <path
-                d="M 144,325 Q 380,325 616,325"
+                d="M 144,325 Q 372,325 600,325"
                 strokeWidth="2"
-                stroke="url(#gradLine1)"
-                strokeOpacity="1"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,101"
-                stroke="gray"
-                strokeWidth="2"
-                strokeOpacity="0.2"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,101"
-                strokeWidth="2"
-                stroke="url(#gradLine2)"
-                strokeOpacity="1"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,213"
-                stroke="gray"
-                strokeWidth="2"
-                strokeOpacity="0.2"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,213"
-                strokeWidth="2"
-                stroke="url(#gradLine3)"
-                strokeOpacity="1"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,325"
-                stroke="gray"
-                strokeWidth="2"
-                strokeOpacity="0.2"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,325"
-                strokeWidth="2"
-                stroke="url(#gradLine4)"
-                strokeOpacity="1"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,437"
-                stroke="gray"
-                strokeWidth="2"
-                strokeOpacity="0.2"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,437"
-                strokeWidth="2"
-                stroke="url(#gradLine5)"
-                strokeOpacity="1"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,549"
-                stroke="gray"
-                strokeWidth="2"
-                strokeOpacity="0.2"
-                strokeLinecap="round"
-              />
-              <path
-                d="M 616,325 Q 852,325 1088,549"
-                strokeWidth="2"
-                stroke="url(#gradLine6)"
+                stroke="url(#_r_u_)"
                 strokeOpacity="1"
                 strokeLinecap="round"
               />
               <defs>
                 <linearGradient
-                  id="gradLine1"
+                  className="transform-gpu"
+                  id="_r_u_"
                   gradientUnits="userSpaceOnUse"
-                  x1="83.31602%"
-                  x2="73.31602%"
+                  x1="109.33824%"
+                  x2="99.33824%"
                   y1="0%"
                   y2="0%"
                 >
-                  <stop stopColor="#6366f1" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0" />
                   <stop stopColor="#6366f1" />
                   <stop offset="32.5%" stopColor="#8b5cf6" />
                   <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
                 </linearGradient>
+              </defs>
+            </svg>
+            <svg
+              fill="none"
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid meet"
+              xmlns="http://www.w3.org/2000/svg"
+              className="pointer-events-none absolute inset-0 transform-gpu stroke-2 w-full h-full"
+              viewBox="0 0 1232 650"
+            >
+              <path
+                d="M 600,325 Q 844,325 1088,101"
+                stroke="gray"
+                strokeWidth="2"
+                strokeOpacity="0.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 600,325 Q 844,325 1088,101"
+                strokeWidth="2"
+                stroke="url(#_r_v_)"
+                strokeOpacity="1"
+                strokeLinecap="round"
+              />
+              <defs>
                 <linearGradient
-                  id="gradLine2"
+                  className="transform-gpu"
+                  id="_r_v_"
                   gradientUnits="userSpaceOnUse"
-                  x1="83.31602%"
-                  x2="73.31602%"
+                  x1="109.33824%"
+                  x2="99.33824%"
                   y1="0%"
                   y2="0%"
                 >
-                  <stop stopColor="#E4405F" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#E4405F" stopOpacity="0" />
                   <stop stopColor="#E4405F" />
                   <stop offset="32.5%" stopColor="#833AB4" />
                   <stop offset="100%" stopColor="#833AB4" stopOpacity="0" />
                 </linearGradient>
+              </defs>
+            </svg>
+            <svg
+              fill="none"
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid meet"
+              xmlns="http://www.w3.org/2000/svg"
+              className="pointer-events-none absolute inset-0 transform-gpu stroke-2 w-full h-full"
+              viewBox="0 0 1232 650"
+            >
+              <path
+                d="M 600,325 Q 844,325 1088,213"
+                stroke="gray"
+                strokeWidth="2"
+                strokeOpacity="0.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 600,325 Q 844,325 1088,213"
+                strokeWidth="2"
+                stroke="url(#_r_10_)"
+                strokeOpacity="1"
+                strokeLinecap="round"
+              />
+              <defs>
                 <linearGradient
-                  id="gradLine3"
+                  className="transform-gpu"
+                  id="_r_10_"
                   gradientUnits="userSpaceOnUse"
-                  x1="83.31602%"
-                  x2="73.31602%"
+                  x1="109.33824%"
+                  x2="99.33824%"
                   y1="0%"
                   y2="0%"
                 >
-                  <stop stopColor="#1877F2" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#1877F2" stopOpacity="0" />
                   <stop stopColor="#1877F2" />
                   <stop offset="32.5%" stopColor="#3B5998" />
                   <stop offset="100%" stopColor="#3B5998" stopOpacity="0" />
                 </linearGradient>
+              </defs>
+            </svg>
+            <svg
+              fill="none"
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid meet"
+              xmlns="http://www.w3.org/2000/svg"
+              className="pointer-events-none absolute inset-0 transform-gpu stroke-2 w-full h-full"
+              viewBox="0 0 1232 650"
+            >
+              <path
+                d="M 600,325 Q 844,325 1088,325"
+                stroke="gray"
+                strokeWidth="2"
+                strokeOpacity="0.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 600,325 Q 844,325 1088,325"
+                strokeWidth="2"
+                stroke="url(#_r_11_)"
+                strokeOpacity="1"
+                strokeLinecap="round"
+              />
+              <defs>
                 <linearGradient
-                  id="gradLine4"
+                  className="transform-gpu"
+                  id="_r_11_"
                   gradientUnits="userSpaceOnUse"
-                  x1="83.31602%"
-                  x2="73.31602%"
+                  x1="109.33824%"
+                  x2="99.33824%"
                   y1="0%"
                   y2="0%"
                 >
-                  <stop stopColor="#0A66C2" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#0A66C2" stopOpacity="0" />
                   <stop stopColor="#0A66C2" />
                   <stop offset="32.5%" stopColor="#0077B5" />
                   <stop offset="100%" stopColor="#0077B5" stopOpacity="0" />
                 </linearGradient>
+              </defs>
+            </svg>
+            <svg
+              fill="none"
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid meet"
+              xmlns="http://www.w3.org/2000/svg"
+              className="pointer-events-none absolute inset-0 transform-gpu stroke-2 w-full h-full"
+              viewBox="0 0 1232 650"
+            >
+              <path
+                d="M 600,325 Q 844,325 1088,437"
+                stroke="gray"
+                strokeWidth="2"
+                strokeOpacity="0.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 600,325 Q 844,325 1088,437"
+                strokeWidth="2"
+                stroke="url(#_r_12_)"
+                strokeOpacity="1"
+                strokeLinecap="round"
+              />
+              <defs>
                 <linearGradient
-                  id="gradLine5"
+                  className="transform-gpu"
+                  id="_r_12_"
                   gradientUnits="userSpaceOnUse"
-                  x1="83.31602%"
-                  x2="73.31602%"
+                  x1="109.33824%"
+                  x2="99.33824%"
                   y1="0%"
                   y2="0%"
                 >
-                  <stop stopColor="#1DA1F2" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#1DA1F2" stopOpacity="0" />
                   <stop stopColor="#1DA1F2" />
                   <stop offset="32.5%" stopColor="#14171A" />
                   <stop offset="100%" stopColor="#14171A" stopOpacity="0" />
                 </linearGradient>
+              </defs>
+            </svg>
+            <svg
+              fill="none"
+              width="100%"
+              height="100%"
+              preserveAspectRatio="xMidYMid meet"
+              xmlns="http://www.w3.org/2000/svg"
+              className="pointer-events-none absolute inset-0 transform-gpu stroke-2 w-full h-full"
+              viewBox="0 0 1232 650"
+            >
+              <path
+                d="M 600,325 Q 844,325 1088,549"
+                stroke="gray"
+                strokeWidth="2"
+                strokeOpacity="0.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 600,325 Q 844,325 1088,549"
+                strokeWidth="2"
+                stroke="url(#_r_13_)"
+                strokeOpacity="1"
+                strokeLinecap="round"
+              />
+              <defs>
                 <linearGradient
-                  id="gradLine6"
+                  className="transform-gpu"
+                  id="_r_13_"
                   gradientUnits="userSpaceOnUse"
-                  x1="83.31602%"
-                  x2="73.31602%"
+                  x1="109.33824%"
+                  x2="99.33824%"
                   y1="0%"
                   y2="0%"
                 >
-                  <stop stopColor="#00F2EA" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#00F2EA" stopOpacity="0" />
                   <stop stopColor="#00F2EA" />
                   <stop offset="32.5%" stopColor="#FF0050" />
                   <stop offset="100%" stopColor="#FF0050" stopOpacity="0" />
@@ -1086,39 +1313,34 @@ export default function Home() {
       </section>
 
       {/* Brand-first AI - sin animaciones para que siempre sea visible */}
-      <section
-        className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 bg-white"
-        style={{ opacity: 1, visibility: "visible" }}
-      >
+      <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 bg-white contain-paint">
         <div className="max-w-7xl mx-auto">
           <div className="relative w-full min-h-[300px] sm:min-h-[350px] md:min-h-[400px] flex items-center justify-start overflow-hidden rounded-2xl md:rounded-3xl">
-            {/* Background image con fondo de respaldo por si no carga */}
+            {/* Banner: pasado vs futuro, marca primero / IA después */}
             <div className="absolute inset-0 z-0">
               <img
-                alt="Cómo funciona ADNCreativo"
+                alt={t("home.brandFirst.imageAlt")}
                 loading="lazy"
                 decoding="async"
-                className="object-cover object-center w-full h-full"
-                src="/images/linkedin-example.webp"
+                className="object-cover object-bottom w-full h-full"
+                src="/images/Banner.png"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
             </div>
             {/* Content */}
             <div className="relative z-10 px-4 sm:px-6 md:px-8 lg:px-12 py-8 sm:py-12 md:py-16">
               <div className="max-w-[38rem]">
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-3 sm:mb-4 leading-tight font-serif">
-                  Marca primero. <em className="italic">IA después.</em>
+                  {t("home.brandFirst.title")}
                 </h2>
                 <p className="text-lg sm:text-xl md:text-2xl text-white mb-3 sm:mb-4 font-medium">
-                  IA genérica no vende.{" "}
-                  <span className="font-bold">La tuya sí.</span>
+                  {t("home.brandFirst.subtitle1")}{" "}
+                  <span className="font-bold">
+                    {t("home.brandFirst.subtitle2")}
+                  </span>
                 </p>
                 <p className="text-sm sm:text-base md:text-lg text-white/90 leading-relaxed max-w-2xl">
-                  Leemos tu web primero. Colores, fuentes, tono. Todo lo que
-                  generamos sale con tu marca. Creativos que se reconocen = más
-                  conversión. Quien unifica primero, gana. Seguís con IA
-                  genérica y seguís tirando plata en anuncios que no se
-                  distinguen.
+                  {t("home.brandFirst.body")}
                 </p>
               </div>
             </div>
@@ -1127,95 +1349,256 @@ export default function Home() {
       </section>
 
       {/* FAQs */}
-      <section className="py-20 px-6 bg-white">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-4xl font-serif text-center mb-4">
-            <em className="italic">Preguntas frecuentes</em>
+      <section className="w-full bg-white py-12 md:py-24 contain-paint">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-3 sm:mb-4 text-gray-900 font-instrument-serif">
+            {t("home.faq.title")}
           </h2>
-          <p className="text-center text-gray-600 mb-12">
-            Objeciones resueltas. Decidí con datos.
+          <p className="text-lg sm:text-xl text-gray-600 text-center mb-8 sm:mb-12 max-w-2xl mx-auto">
+            {t("home.faq.subtitle")}
           </p>
 
-          <div className="space-y-4">
+          <div
+            role="region"
+            data-slot="accordion"
+            data-orientation="vertical"
+            dir="ltr"
+            className="flex flex-col gap-3"
+          >
             {faqs.map((faq, index) => (
-              <motion.div
+              <div
                 key={index}
-                className="bg-white rounded-xl shadow-sm overflow-hidden"
-                initial={false}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
+                className="card-figma overflow-hidden"
+                data-slot="accordion-item-card"
+                data-orientation="vertical"
+                data-index={index}
+                data-open={openFaq === index ? "" : undefined}
+                data-closed={openFaq !== index ? "" : undefined}
               >
-                <motion.button
-                  type="button"
-                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-gray-50 transition-colors"
-                  whileHover={{ backgroundColor: "rgba(0,0,0,0.02)" }}
-                  whileTap={{ scale: 0.995 }}
+                <h3
+                  className="flex"
+                  data-orientation="vertical"
+                  data-index={index}
                 >
-                  <span className="font-medium text-gray-900">
-                    {faq.question}
-                  </span>
-                  <motion.svg
-                    className="w-5 h-5 text-gray-500 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    animate={{ rotate: openFaq === index ? 180 : 0 }}
-                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(index)}
+                    className="group flex flex-1 w-full cursor-pointer items-center justify-between gap-4 px-5 py-4 text-left text-base font-medium text-foreground font-sans outline-none transition-all duration-300 focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-64"
+                    aria-expanded={openFaq === index}
+                    data-slot="accordion-trigger-card"
+                    data-panel-open={openFaq === index ? "" : undefined}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </motion.svg>
-                </motion.button>
+                    <span>{faq.question}</span>
+                    <motion.div
+                      className="chevron-button shrink-0"
+                      animate={{ rotate: openFaq === index ? 180 : 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="size-4"
+                        aria-hidden
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </motion.div>
+                  </button>
+                </h3>
                 <AnimatePresence initial={false}>
                   {openFaq === index && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
                       className="overflow-hidden"
+                      role="region"
+                      data-slot="accordion-panel-card"
                     >
-                      <div className="px-6 pb-4 text-gray-600">
+                      <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">
                         {faq.answer}
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="relative py-32 px-6 bg-white overflow-hidden">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-300"></div>
+      {/* Footer con CTA, disclaimer e iconos sociales */}
+      <footer className="relative w-full overflow-hidden">
+        <div
+          className="absolute top-0 left-0 right-0 h-24 sm:h-36 md:h-48 bg-gradient-to-b from-white via-white/50 to-transparent pointer-events-none z-20"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/images/Footer.png')" }}
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-transparent to-black/20"
+          aria-hidden
+        />
+
+        <div className="relative z-10 pt-20 sm:pt-32 md:pt-40 pb-32 sm:pb-48 md:pb-64">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 text-black font-instrument-serif">
+              {t("home.cta.title")}
+            </h2>
+            <p className="text-lg sm:text-xl text-black mb-8 sm:mb-12">
+              {t("home.cta.subtitle")}
+            </p>
+            <div className="max-w-md mx-auto">
+              <div className="w-full max-w-2xl mx-auto relative rounded-xl p-1 transition-all duration-300 glass-prompt-wrap hover:scale-[1.005]">
+                <WebsiteUrlInput
+                  value={websiteUrl}
+                  onChange={handleUrlChange}
+                  onSubmit={handleSubmit}
+                  placeholder={t("home.placeholderUrl")}
+                />
+              </div>
+            </div>
+            <p className="text-black/80 text-xs sm:text-sm mt-4">
+              {t("home.footer.disclaimer")}
+            </p>
+          </div>
         </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <h2 className="text-5xl font-serif mb-6">
-            Dejá de pagar por creativos que{" "}
-            <em className="italic">no convierten</em>
-          </h2>
-          <p className="text-lg text-gray-700 mb-8">
-            Pegá tu URL. Empezá hoy. Cada día que esperás es plata en anuncios
-            que no se distinguen.
-          </p>
-
-          <WebsiteUrlInput
-            value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
-            onSubmit={handleSubmit}
-            className="max-w-md mx-auto"
-          />
+        <div className="relative z-10 py-8 sm:py-12 md:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="flex flex-col items-center gap-4 sm:gap-6">
+              <div className="flex items-center gap-4 sm:gap-6 flex-wrap justify-center">
+                <a
+                  href="https://discord.com/invite/N9dGY8gf3y"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
+                  aria-label="Discord"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden
+                  >
+                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z" />
+                  </svg>
+                </a>
+                <a
+                  href="https://www.instagram.com/vibiz.ai/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
+                  aria-label="Instagram"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+                  </svg>
+                </a>
+                <a
+                  href="https://www.tiktok.com/@vibiz.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
+                  aria-label="TikTok"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden
+                  >
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+                  </svg>
+                </a>
+                <a
+                  href="https://x.com/vibiz_ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
+                  aria-label="X (Twitter)"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </a>
+                <a
+                  href="https://www.linkedin.com/company/vibizai/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
+                  aria-label="LinkedIn"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                    <rect width="4" height="12" x="2" y="9" />
+                    <circle cx="4" cy="4" r="2" />
+                  </svg>
+                </a>
+                <div className="w-px h-5 bg-black/50" aria-hidden />
+                <a
+                  href="/privacy"
+                  className="text-black/90 hover:text-black transition-colors text-sm"
+                >
+                  {t("home.footer.privacy")}
+                </a>
+                <a
+                  href="/refund-policy"
+                  className="text-black/90 hover:text-black transition-colors text-sm"
+                >
+                  {t("home.footer.refundPolicy")}
+                </a>
+              </div>
+              <p className="text-black/90 text-sm">
+                {t("home.footer.copyright")}
+              </p>
+            </div>
+          </div>
         </div>
-      </section>
+      </footer>
     </div>
   );
 }

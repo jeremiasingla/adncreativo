@@ -1,24 +1,16 @@
-console.log("[DEBUG] Starting server.js import");
 import express from "express";
-console.log("[DEBUG] express imported");
 import cors from "cors";
 import { clerkMiddleware } from "@clerk/express";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
-console.log("[DEBUG] Basic imports OK");
 import workspaceRouter from "./routes/workspace.route.js";
-console.log("[DEBUG] workspaceRouter imported");
 import authRouter from "./routes/auth.route.js";
 import adminRouter from "./routes/admin.route.js";
+import visionRouter from "./routes/vision.route.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
-console.log("[DEBUG] Routers and middleware imported");
-// TEMPORALMENTE COMENTADO PARA DEBUG:
-// import { getCreativeVersionsByOrgId } from "./controllers/workspace.controller.js";
-console.log("[DEBUG] workspace.controller SKIPPED (commented for debug)");
 import fs from "fs";
 import { initPostgresWorkspaces } from "./db/postgres.js";
-console.log("[DEBUG] All imports complete");
 
 // Inicializar tablas users y workspaces en Postgres (Neon)
 initPostgresWorkspaces().catch((err) =>
@@ -76,6 +68,7 @@ app.use("/creatives", express.static(creativesDir));
 app.use("/", workspaceRouter);
 app.use("/", authRouter);
 app.use("/", adminRouter);
+app.use("/", visionRouter);
 
 // Serve frontend solo si existe (en Vercel el backend se despliega sin frontend/dist)
 const frontendDist = path.resolve(__dirname, "../../frontend/dist");

@@ -16,6 +16,15 @@
     />
   </head>
   <body>
+    <!-- Filtro SVG liquid glass (Apple-style) para header y elementos con backdrop-filter: url(#header-liquid-glass) -->
+    <svg aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden;">
+      <defs>
+        <filter id="header-liquid-glass" primitiveUnits="objectBoundingBox">
+          <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="0.04" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

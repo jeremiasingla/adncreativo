@@ -3,7 +3,8 @@ import {
   listWorkspaces,
   getWorkspaceBySlug,
   getWorkspaceCampaigns,
-  getWorkspaceHeadlines,
+  getWorkspaceSalesAngles,
+  generateWorkspaceSalesAngles,
   createWorkspace,
   deleteWorkspace,
   captureWorkspaceScreenshot,
@@ -14,6 +15,7 @@ import {
   getCreativeVersions,
   runFullWorkspaceGeneration,
   getCreativeVersionsByOrgId,
+  cloneReference,
 } from "../controllers/workspace.controller.js";
 import { createScreenshot } from "../controllers/screenshot.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
@@ -21,7 +23,8 @@ import { authMiddleware } from "../middleware/auth.middleware.js";
 const router = express.Router();
 
 router.get("/workspaces", authMiddleware, listWorkspaces);
-router.get("/workspaces/:slug/headlines", authMiddleware, getWorkspaceHeadlines);
+router.get("/workspaces/:slug/sales-angles", authMiddleware, getWorkspaceSalesAngles);
+router.post("/workspaces/:slug/sales-angles", authMiddleware, generateWorkspaceSalesAngles);
 router.get("/workspaces/:slug/campaigns", authMiddleware, getWorkspaceCampaigns);
 router.get("/workspaces/:slug", authMiddleware, getWorkspaceBySlug);
 router.post("/workspaces/screenshot", authMiddleware, captureWorkspaceScreenshot);
@@ -37,6 +40,7 @@ router.post("/workspaces/:slug/customer-profiles/regenerate-all-images", authMid
 router.post("/workspaces/:slug/customer-profiles/:profileId/generate-images", authMiddleware, generateCustomerProfileImages);
 router.get("/workspaces/:slug/creatives/versions", authMiddleware, getCreativeVersions);
 router.post("/workspaces/:slug/creatives", authMiddleware, generateCreatives);
+router.post("/workspaces/:slug/clone-reference", authMiddleware, cloneReference);
 router.post("/screenshot", createScreenshot);
 router.get("/creatives/versions", authMiddleware, getCreativeVersionsByOrgId);
 

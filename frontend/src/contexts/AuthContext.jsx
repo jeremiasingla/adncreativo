@@ -1,7 +1,9 @@
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo, useCallback } from "react";
 import { useClerk, useUser } from "@clerk/clerk-react";
 
 const AuthContext = createContext(null);
+
+const noop = () => {};
 
 export function AuthProvider({ children }) {
   const { isLoaded, user: clerkUser } = useUser();
@@ -11,6 +13,7 @@ export function AuthProvider({ children }) {
         id: clerkUser.id,
         name: clerkUser.fullName || clerkUser.firstName || "",
         email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        imageUrl: clerkUser.imageUrl || "",
         role:
           clerkUser.publicMetadata?.role ||
           clerkUser.privateMetadata?.role ||
@@ -20,14 +23,17 @@ export function AuthProvider({ children }) {
     : null;
   const loading = !isLoaded;
 
-  async function logout() {
+  const logout = useCallback(async () => {
     await signOut();
-  }
+  }, [signOut]);
+
+  const value = useMemo(
+    () => ({ user, loading, logout, setUser: noop }),
+    [user, loading, logout]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{ user, loading, logout, setUser: () => {} }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

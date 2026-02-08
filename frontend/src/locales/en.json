@@ -1,0 +1,147 @@
+{
+  "common": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "manageAccount": "Manage account",
+    "billing": "Billing",
+    "retry": "Retry",
+    "user": "User",
+    "basic": "Basic",
+    "admin": "ADMIN"
+  },
+  "errors": {
+    "loadError": "Load error",
+    "unknownError": "Unknown error"
+  },
+  "nav": {
+    "goHome": "Go to home",
+    "userMenu": "User menu"
+  },
+  "sidebar": {
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "home": "Home",
+    "create": "Create",
+    "creatives": "Creatives",
+    "gallery": "Reference Gallery",
+    "myBusiness": "My business",
+    "branding": "Branding",
+    "knowledgeBase": "Knowledge Base",
+    "customerProfiles": "Customer Profiles"
+  },
+  "home": {
+    "hero": {
+      "title1": "Creatives that sell.",
+      "title2": "No designer.",
+      "phrase1": "One URL. Creatives ready.",
+      "phrase2": "Less cost. More sales.",
+      "phrase3": "Your brand. All networks.",
+      "inputSubtitle": "No credit card required • Ready in 2 minutes"
+    },
+    "placeholderUrl": "yoursite.com",
+    "howItWorks": {
+      "title": "How it works",
+      "subtitle": "Three simple steps. Content with your brand.",
+      "you": "You",
+      "card1Subtitle": "One URL. We extract your brand and generate.",
+      "card2TitleDesktop": "We read your brand",
+      "colors": "Colors",
+      "fonts": "Fonts",
+      "step1Title": "Analyze your brand",
+      "step1Desc": "Paste your site URL. Our AI reads your web and extracts logo, colors, fonts and style in seconds. No file uploads.",
+      "step2Title": "Generate creatives",
+      "step2Desc": "AI generates professional creatives tailored to your brand. From Stories to banners, all the formats you need.",
+      "step3Title": "Export and publish",
+      "step3Desc": "Download your creatives in any format. Ready for Instagram, Facebook, TikTok, LinkedIn and more.",
+      "analyzing": "Analyzing your brand...",
+      "readyToExport": "Ready to export",
+      "creativesGenerated": "Creatives generated",
+      "card1Title": "Paste your URL",
+      "card1Desc": "Logo, colors and fonts. Everything from your web.",
+      "card2Title": "Creatives ready",
+      "card2Desc": "Images, copy and formats. With your brand, no designer.",
+      "card3Title": "Export",
+      "card3Desc": "Download in all formats. All networks."
+    },
+    "oneBrand": {
+      "title": "One brand. All networks.",
+      "subtitle": "One place. All your networks. Less work, more recognition."
+    },
+    "brandFirst": {
+      "title": "Brand first. AI after.",
+      "imageAlt": "From generic ads to creatives with your brand: Brand first, AI after",
+      "subtitle1": "Generic AI doesn't sell.",
+      "subtitle2": "Yours does.",
+      "body": "We read your web first. Colors, fonts, tone. Everything we generate comes from your brand. Creatives that get recognized = more conversion. Whoever unifies first, wins. Keep using generic AI and you keep wasting money on ads that don't stand out."
+    },
+    "faq": {
+      "title": "Frequently asked questions",
+      "subtitle": "We answer your questions. Decide with data.",
+      "items": [
+        {
+          "question": "What is ADNCreativo?",
+          "answer": "A tool that takes your site URL, extracts your brand (logo, colors, fonts) and generates creatives ready to publish. No briefs. No designer. Less cost, more speed."
+        },
+        {
+          "question": "Who uses it?",
+          "answer": "Marketing teams, agencies and brands that want to produce more creatives without depending on a designer or generic AI that doesn't convert."
+        },
+        {
+          "question": "Does it generate text and images?",
+          "answer": "Yes. Images, copy and formats for social. All aligned to your brand because the AI reads your web first."
+        },
+        {
+          "question": "How is it different from other AIs?",
+          "answer": "Other AIs give you generic creatives. ADNCreativo learns your brand from your URL and generates everything consistently. More recognition = better performance."
+        },
+        {
+          "question": "What networks and formats?",
+          "answer": "Instagram, Facebook, LinkedIn, X (Twitter), TikTok. Formats ready for each. One place, all networks."
+        },
+        {
+          "question": "Can I use multiple brands or clients?",
+          "answer": "Yes. One account, multiple sites. Change the URL and generate for another brand in a tap."
+        },
+        {
+          "question": "Where is everything stored?",
+          "answer": "On our servers. You don't have to configure anything. Log in, paste URL, generate."
+        },
+        {
+          "question": "Why use it now?",
+          "answer": "Every day you publish creatives that aren't recognized as yours, you lose sales and recognition. Whoever unifies brand first, wins. The cost of not acting is to keep spending on ads that don't stand out."
+        }
+      ]
+    },
+    "cta": {
+      "title": "Stop paying for creatives that don't convert",
+      "subtitle": "Paste your URL and start today. Every day you wait is money on ads that don't stand out."
+    },
+    "footer": {
+      "ctaTitle": "Ready for ",
+      "ctaTitleBrand": "on-brand",
+      "ctaTitleSuffix": " AI content?",
+      "ctaSubtitle": "Stop settling for generic content. Get creatives that match your brand.",
+      "disclaimer": "No credit card required • Ready in 2 minutes",
+      "privacy": "Privacy",
+      "refundPolicy": "Refund Policy",
+      "copyright": "© 2025 Vibiz Inc. All rights reserved."
+    }
+  },
+  "workspace": {
+    "home": "Home",
+    "creatives": "Creatives",
+    "gallery": "Reference Gallery",
+    "branding": "Branding",
+    "knowledgeBase": "Knowledge Base",
+    "customerProfiles": "Customer Profiles",
+    "noCreatives": "No creatives yet. Use the «Generate 1 creative» button to create one from your headlines (images are generated in different formats: 4:5, 1:1, 9:16, 3:4).",
+    "generateOne": "Generate 1 creative",
+    "generating": "Generating…",
+    "unlock": "Unlock"
+  },
+  "gallery": {
+    "title": "Reference Gallery",
+    "subtitle": "Winning ads you can clone with your brand and product.",
+    "empty": "No references loaded."
+  }
+}

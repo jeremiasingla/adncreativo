@@ -49,6 +49,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!pageRef.current) return;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const ctx = gsap.context(() => {
       const heroTitle = pageRef.current.querySelector(
         "[data-gsap='hero-title']"
@@ -59,14 +60,14 @@ export default function Dashboard() {
       const heroInput = pageRef.current.querySelector(
         "[data-gsap='hero-input']"
       );
-      if (heroTitle && heroSubtitle && heroInput) {
+      if (heroTitle && heroSubtitle && heroInput && !prefersReducedMotion) {
         gsap.from([heroTitle, heroSubtitle, heroInput], {
           opacity: 0,
-          y: 56,
-          duration: 0.9,
-          stagger: 0.15,
-          ease: "power3.out",
-          delay: 0.2,
+          y: 20,
+          duration: 0.6,
+          stagger: 0.2,
+          ease: "power2.out",
+          delay: 0.15,
         });
       }
     }, pageRef);
@@ -174,7 +175,7 @@ export default function Dashboard() {
                 {workspaces.map((ws) => (
                   <div key={ws.id} style={{ opacity: 1, transform: "none" }}>
                     <div
-                      className="group relative flex items-center gap-4 p-4 rounded-xl border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:-translate-y-px active:translate-y-px transition-all duration-200 cursor-pointer"
+                      className="group relative flex items-center gap-4 p-4 rounded-xl border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:-translate-y-1 active:translate-y-0.5 active:scale-[0.99] transition-[transform,box-shadow,background] duration-300 ease-out cursor-pointer"
                       role="button"
                       tabIndex={0}
                       onClick={() => navigate(`/${ws.slug}`)}
@@ -216,7 +217,7 @@ export default function Dashboard() {
                   {workspaces.map((ws) => (
                     <div key={ws.id} style={{ opacity: 1, transform: "none" }}>
                       <div
-                        className="group relative flex items-center gap-4 p-4 rounded-xl border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:-translate-y-px active:translate-y-px transition-all duration-200 cursor-pointer"
+                        className="group relative flex items-center gap-4 p-4 rounded-xl border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:-translate-y-1 active:translate-y-0.5 active:scale-[0.99] transition-[transform,box-shadow,background] duration-300 ease-out cursor-pointer"
                         role="button"
                         tabIndex={0}
                         onClick={() => navigate(`/${ws.slug}`)}

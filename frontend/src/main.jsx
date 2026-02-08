@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { esUY } from "@clerk/localizations";
+import "./i18n";
 import App from "./App";
 import "./styles/tailwind.css";
 

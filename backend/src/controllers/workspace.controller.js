@@ -11,10 +11,16 @@ import {
   generateKnowledgeBase,
   generateCustomerProfiles,
   generateHeadlines,
+  generateSalesAngles,
   generateCreativeImagePrompt,
+  getImagePromptFromStructured,
   generateCreativeImageSeedream,
   generateProfileImage,
+  expandAngleToVisualSpec,
+  analyzeImageToJson,
+  normalizeVisualDnaToCreativeSpec,
 } from "../services/llm.service.js";
+import { getReferenceById } from "../db/referenceGalleryDb.js";
 import {
   saveIcpImage,
   deleteIcpImagesForWorkspace,
@@ -32,6 +38,11 @@ function toAbsoluteImageUrl(url) {
   if (url.startsWith("http") || url.startsWith("data:")) return url;
   const base = process.env.API_BASE_URL || "http://localhost:3000";
   return url.startsWith("/") ? base + url : base + "/" + url;
+}
+
+/** Por el momento no generar avatar/hero en ICP. Activar con DISABLE_ICP_IMAGES=0 para volver a generar. */
+function skipIcpImageGeneration() {
+  return (process.env.DISABLE_ICP_IMAGES || "1") === "1";
 }
 
 /**
@@ -81,6 +92,24 @@ function buildIcpImagePrompts(profile) {
   return { avatarPrompt, heroPrompt };
 }
 
+/** True si la URL parece ser de una página de producto/landing de ventas. */
+function isProductOrLandingUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  try {
+    const path = new URL(url).pathname.toLowerCase();
+    return (
+      /\/products?\//.test(path) ||
+      /^\/p\//.test(path) ||
+      /\/landing/.test(path) ||
+      /\/lp\b/.test(path) ||
+      /\/oferta/.test(path) ||
+      /\/compra/.test(path)
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
 /** Normaliza hex a 6 caracteres minúsculos para comparar. */
 function normalizeHex(hex) {
   if (!hex || typeof hex !== "string") return null;
@@ -114,6 +143,18 @@ function getPlatformFromAspectRatio(aspectRatio) {
   return "instagram_portrait";
 }
 
+/**
+ * Plataformas para las que se generan creativos (Meta + LinkedIn + YouTube).
+ * Cada una tiene aspect ratio recomendado para ads.
+ */
+const CREATIVE_PLATFORMS = [
+  { platform: "instagram", aspectRatio: "4:5", label: "Instagram" },
+  { platform: "threads", aspectRatio: "1:1", label: "Threads" },
+  { platform: "linkedin", aspectRatio: "16:9", label: "LinkedIn" },
+  { platform: "youtube", aspectRatio: "16:9", label: "YouTube" },
+];
+const CREATIVE_PLATFORMS_LENGTH = CREATIVE_PLATFORMS.length;
+
 const WELCOME_AD_NAMES = [
   "Social Proof",
   "Value Proposition",
@@ -137,6 +178,7 @@ function creativeToAd(creative, branding, index, baseUrl) {
         : "/" + creative.imageUrl);
   const headline = creative.headline ?? "";
   const platform = getPlatformFromAspectRatio(creative.aspectRatio);
+  const platformLabel = creative.targetPlatformLabel || creative.targetPlatform || platform;
   const name = WELCOME_AD_NAMES[index] || `Creative ${index + 1}`;
   const companyName = branding?.companyName ?? "";
   const logoUrl = branding?.logo ?? null;
@@ -168,6 +210,8 @@ function creativeToAd(creative, branding, index, baseUrl) {
     ctaSize: 16,
     status: "succeeded",
     platform,
+    platformLabel,
+    targetPlatform: creative.targetPlatform ?? null,
     runId: null,
     accessToken: null,
     createdAt: creative.createdAt ?? new Date().toISOString(),
@@ -483,8 +527,8 @@ export async function runFullWorkspaceGeneration(req, res) {
   }
 }
 
-/** Devuelve todos los hooks/headlines generados para un workspace. GET /workspaces/:slug/headlines */
-export async function getWorkspaceHeadlines(req, res) {
+/** Devuelve los ángulos de venta del workspace. GET /workspaces/:slug/sales-angles */
+export async function getWorkspaceSalesAngles(req, res) {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -497,7 +541,7 @@ export async function getWorkspaceHeadlines(req, res) {
         .json({ success: false, error: "Slug is required" });
     }
     const row = await get(
-      `SELECT id, headlines FROM workspaces WHERE user_id = ? AND slug = ?`,
+      `SELECT id, sales_angles FROM workspaces WHERE user_id = ? AND slug = ?`,
       [userId, slug],
     );
     if (!row) {
@@ -505,23 +549,112 @@ export async function getWorkspaceHeadlines(req, res) {
         .status(404)
         .json({ success: false, error: "Workspace not found" });
     }
-    let headlines = [];
+    let angles = [];
     try {
-      if (row.headlines != null && row.headlines !== "") {
-        headlines = JSON.parse(row.headlines);
+      if (row.sales_angles != null && row.sales_angles !== "") {
+        angles = JSON.parse(row.sales_angles);
       }
     } catch (_) {}
-    if (!Array.isArray(headlines)) headlines = [];
+    if (!Array.isArray(angles)) angles = [];
     return res.status(200).json({
       success: true,
       data: {
         slug: row.slug,
-        headlines,
-        total: headlines.length,
+        angles,
+        total: angles.length,
       },
     });
   } catch (error) {
-    console.error("❌ Error getting workspace headlines:", error.message);
+    console.error("❌ Error getting sales angles:", error.message);
+    return res
+      .status(500)
+      .json({ success: false, error: "Internal server error" });
+  }
+}
+
+/** Genera y guarda ángulos de venta para el workspace. POST /workspaces/:slug/sales-angles */
+export async function generateWorkspaceSalesAngles(req, res) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+    const { slug } = req.params;
+    if (!slug) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Slug is required" });
+    }
+    const row = await get(
+      `SELECT id, branding, knowledge_base, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
+    if (!row) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Workspace not found" });
+    }
+    let branding = {};
+    let knowledgeBaseSummary = "";
+    let clientIdealSummary = "";
+    try {
+      if (row.branding != null && row.branding !== "")
+        branding = JSON.parse(row.branding);
+    } catch (_) {}
+    try {
+      if (row.knowledge_base != null && row.knowledge_base !== "") {
+        const kb = JSON.parse(row.knowledge_base);
+        knowledgeBaseSummary =
+          typeof kb.summary === "string"
+            ? kb.summary
+            : (kb.content && typeof kb.content === "string"
+                ? kb.content
+                : "") || "";
+      }
+    } catch (_) {}
+    try {
+      if (row.customer_profiles != null && row.customer_profiles !== "") {
+        const profiles = JSON.parse(row.customer_profiles);
+        const first = Array.isArray(profiles) && profiles[0] ? profiles[0] : null;
+        if (first) {
+          clientIdealSummary = [
+            first.name,
+            first.title,
+            first.description,
+            (first.goals || []).slice(0, 2).join("; "),
+            (first.painPoints || []).slice(0, 2).join("; "),
+          ]
+            .filter(Boolean)
+            .join(". ")
+            .slice(0, 800);
+        }
+      }
+    } catch (_) {}
+    const useVoseo = Boolean(branding?.useVoseo);
+    const angles = await generateSalesAngles({
+      companyName: branding?.companyName ?? "",
+      headline: branding?.headline ?? "",
+      knowledgeBaseSummary,
+      clientIdealSummary,
+      nicheOrSubniche: branding?.nicheOrSubniche ?? "",
+      useVoseo,
+      contentLanguage: branding?.language || "es-AR",
+      branding,
+    });
+    await run(
+      "UPDATE workspaces SET sales_angles = ? WHERE user_id = ? AND slug = ?",
+      [JSON.stringify(angles), userId, slug],
+    );
+    return res.status(200).json({
+      success: true,
+      data: {
+        slug,
+        angles,
+        total: angles.length,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Error generating sales angles:", error.message);
     return res
       .status(500)
       .json({ success: false, error: "Internal server error" });
@@ -564,6 +697,15 @@ export async function generateCustomerProfileImages(req, res) {
     const profile = profiles[index];
     let avatarUrl = profile.avatarUrl ?? null;
     let heroImageUrl = profile.heroImageUrl ?? null;
+
+    if (skipIcpImageGeneration()) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          profile: { ...profile, avatarUrl: toAbsoluteImageUrl(avatarUrl), heroImageUrl: toAbsoluteImageUrl(heroImageUrl) },
+        },
+      });
+    }
 
     const { avatarPrompt, heroPrompt } = buildIcpImagePrompts(profile);
 
@@ -633,7 +775,7 @@ export async function generateCustomerProfileImages(req, res) {
   }
 }
 
-/** Lógica compartida: elimina imágenes ICP del workspace y las regenera con Seedream 4.5. */
+/** Lógica compartida: elimina imágenes ICP del workspace y las regenera con FLUX (OpenRouter). */
 export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
   const row = await get(
     `SELECT id, customer_profiles FROM workspaces WHERE user_id = ? AND slug = ?`,
@@ -646,6 +788,10 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
     if (raw != null && raw !== "") profiles = JSON.parse(raw);
   } catch (_) {}
   if (profiles.length === 0) return { profiles: [], deleted: 0 };
+
+  if (skipIcpImageGeneration()) {
+    return { profiles, deleted: 0 };
+  }
 
   const { deleted } = deleteIcpImagesForWorkspace(slug);
 
@@ -714,7 +860,7 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
   return { profiles, deleted };
 }
 
-/** Elimina solo las imágenes (avatar/banner) de los perfiles del workspace y las regenera con Seedream 4.5. Los perfiles se mantienen. */
+/** Elimina solo las imágenes (avatar/banner) de los perfiles del workspace y las regenera con FLUX. Los perfiles se mantienen. */
 export async function regenerateAllCustomerProfileImages(req, res) {
   try {
     const userId = req.user?.id;
@@ -850,10 +996,11 @@ export async function generateCreatives(req, res) {
       return res.status(401).json({ success: false, error: "Unauthorized" });
     }
     const { slug } = req.params;
+    const forAllPlatforms = Boolean(req.body?.forAllPlatforms);
     let count = Math.min(Math.max(Number(req.body?.count) || 1, 1), 10);
 
     const row = await get(
-      `SELECT id, branding, headlines, customer_profiles, creatives FROM workspaces WHERE user_id = ? AND slug = ?`,
+      `SELECT id, branding, headlines, sales_angles, customer_profiles, creatives FROM workspaces WHERE user_id = ? AND slug = ?`,
       [userId, slug],
     );
 
@@ -869,11 +1016,38 @@ export async function generateCreatives(req, res) {
         headlinesList = JSON.parse(row.headlines);
       }
     } catch (_) {}
-    if (!Array.isArray(headlinesList) || headlinesList.length === 0) {
+    let anglesList = [];
+    try {
+      if (row.sales_angles != null && row.sales_angles !== "") {
+        anglesList = JSON.parse(row.sales_angles);
+      }
+    } catch (_) {}
+    if (!Array.isArray(anglesList)) anglesList = [];
+
+    const useAngles = Boolean(req.body?.useAngles) && anglesList.length > 0;
+    const angleIndices = Array.isArray(req.body?.angleIndices) ? req.body.angleIndices : null;
+    const selectedAngles = useAngles
+      ? angleIndices && angleIndices.length > 0
+        ? angleIndices.map((i) => anglesList[i]).filter(Boolean)
+        : anglesList
+      : [];
+    if (!useAngles && (!Array.isArray(headlinesList) || headlinesList.length === 0)) {
       return res.status(400).json({
         success: false,
         error:
-          "No hay headlines guardados en este workspace. Genera el workspace completo primero.",
+          "No hay headlines ni ángulos de venta. Genera el workspace completo o los ángulos (POST /workspaces/:slug/sales-angles) primero.",
+      });
+    }
+    if (useAngles && selectedAngles.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "angleIndices no contiene índices válidos o no hay ángulos.",
+      });
+    }
+    if (forAllPlatforms && !useAngles) {
+      return res.status(400).json({
+        success: false,
+        error: "forAllPlatforms requiere useAngles y ángulos de venta.",
       });
     }
 
@@ -888,21 +1062,31 @@ export async function generateCreatives(req, res) {
       .filter(Boolean)
       .join(". ")
       .slice(0, 500);
-    const hasLogoOrImages = !!(
-      branding?.logo ||
-      (Array.isArray(branding?.images) && branding.images.length > 0)
-    );
-    const referenceImages = [];
-    if (branding?.logo) {
-      const logoUrl = toAbsoluteImageUrl(branding.logo);
-      if (logoUrl) referenceImages.push({ url: logoUrl });
-    }
-    if (Array.isArray(branding?.images) && referenceImages.length < 2) {
-      for (const img of branding.images.slice(0, 2 - referenceImages.length)) {
+    const logoUrl = branding?.logo ? toAbsoluteImageUrl(branding.logo) : null;
+    const productUrl = branding?.productImage
+      ? toAbsoluteImageUrl(branding.productImage)
+      : null;
+    const otherUrls = [];
+    if (Array.isArray(branding?.images)) {
+      const seen = new Set([logoUrl, productUrl].filter(Boolean));
+      for (const img of branding.images) {
         const u = toAbsoluteImageUrl(typeof img === "string" ? img : img?.url);
-        if (u) referenceImages.push({ url: u });
+        if (u && !seen.has(u)) {
+          seen.add(u);
+          otherUrls.push(u);
+        }
       }
     }
+    const referenceAssets = {
+      logo: logoUrl || null,
+      product: productUrl || null,
+      other: otherUrls,
+    };
+    const hasLogoOrImages = !!(
+      referenceAssets.logo ||
+      referenceAssets.product ||
+      referenceAssets.other.length > 0
+    );
 
     let profiles = [];
     try {
@@ -912,6 +1096,115 @@ export async function generateCreatives(req, res) {
     } catch (_) {}
 
     const CREATIVE_ASPECT_RATIOS = ["4:5", "1:1", "9:16", "3:4"];
+
+    /** Genera un solo creativo para un ángulo y una plataforma (aspect ratio + targetPlatform). */
+    const generateOneCreativeForAngleAndPlatform = async (
+      angle,
+      platformConfig,
+      baseLength,
+    ) => {
+      const { platform: platformSlug, aspectRatio, label: platformLabel } = platformConfig;
+      if (!angle?.hook || !angle?.visual) return null;
+      try {
+        const spec = await expandAngleToVisualSpec(angle, aspectRatio, {
+          referenceAssets: hasLogoOrImages ? referenceAssets : null,
+          productDescription: branding?.headline || branding?.productDescription || "",
+        });
+        const promptForImage = getImagePromptFromStructured(spec);
+        const imageDataUrl = await generateCreativeImageSeedream(
+          promptForImage,
+          aspectRatio,
+          hasLogoOrImages ? referenceAssets : null,
+        );
+        if (!imageDataUrl) return null;
+        const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
+        if (!saved?.urlPath) return null;
+        const creativeId = crypto.randomUUID();
+        const campaignId = crypto.randomUUID();
+        const adsetId = crypto.randomUUID();
+        const imagePath = saved.urlPath.startsWith("http")
+          ? saved.urlPath.replace(/^https?:\/\//, "").replace(/^[^/]+\//, "")
+          : saved.urlPath;
+        const platform = getPlatformFromAspectRatio(aspectRatio);
+        return {
+          id: creativeId,
+          adsetId,
+          adset_id: adsetId,
+          campaignId,
+          campaign_id: campaignId,
+          orgId: slug,
+          org_id: slug,
+          baseAdId: creativeId,
+          base_ad_id: creativeId,
+          headline: angle.hook,
+          imagePrompt: spec,
+          generationPrompt: spec,
+          imageUrl: saved.urlPath,
+          image_url: saved.urlPath,
+          imagePath,
+          image_path: imagePath,
+          createdAt: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          model: modelUsed,
+          aspectRatio,
+          aspect_ratio: aspectRatio,
+          version: 1,
+          platform,
+          targetPlatform: platformSlug,
+          targetPlatformLabel: platformLabel,
+          parentAdId: null,
+          parent_ad_id: null,
+          isCurrent: false,
+          is_current: false,
+          name: null,
+          description: null,
+          body: angle.hook,
+          cta: "Inicia Ahora",
+          videoUrl: null,
+          video_url: null,
+          videoPath: null,
+          video_path: null,
+          referenceImageUrl: null,
+          reference_image_url: null,
+          status: "succeeded",
+          replicateJobId: null,
+          replicate_job_id: null,
+          errorMessage: null,
+          error_message: null,
+          impressions: 0,
+          clicks: 0,
+          conversions: 0,
+          metadata: { angleCategory: angle.category, angleTitle: angle.title, targetPlatform: platformSlug },
+          updatedAt: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          createdBy: userId || null,
+          created_by: userId || null,
+          triggerRunId: null,
+          trigger_run_id: null,
+          triggerAccessToken: null,
+          trigger_access_token: null,
+          hasViewed: false,
+          has_viewed: false,
+          carouselId: null,
+          carousel_id: null,
+          carouselPosition: null,
+          carousel_position: null,
+          carouselTotal: null,
+          carousel_total: null,
+          reminderSentAt: null,
+          reminder_sent_at: null,
+          metaAdId: null,
+          meta_ad_id: null,
+          metaCreativeId: null,
+          meta_creative_id: null,
+          metaStatus: null,
+          meta_status: null,
+        };
+      } catch (err) {
+        console.error("[Creative] Error for", platformSlug, err.message);
+        return null;
+      }
+    };
 
     let creativesList = [];
     try {
@@ -926,24 +1219,141 @@ export async function generateCreatives(req, res) {
         error: `Los usuarios gratuitos pueden tener como máximo ${MAX_CREATIVES_PER_WORKSPACE_FREE} creativos por workspace.`,
       });
     }
+    const maxSlotsFree = MAX_CREATIVES_PER_WORKSPACE_FREE - creativesList.length;
     if (!isAdmin) {
-      count = Math.min(
-        count,
-        MAX_CREATIVES_PER_WORKSPACE_FREE - creativesList.length,
-      );
+      count = forAllPlatforms
+        ? Math.min(count, Math.max(0, Math.floor(maxSlotsFree / CREATIVE_PLATFORMS_LENGTH)))
+        : Math.min(count, maxSlotsFree);
       if (count <= 0) {
         return res.status(403).json({
           success: false,
-          error: `Los usuarios gratuitos pueden tener como máximo ${MAX_CREATIVES_PER_WORKSPACE_FREE} creativos por workspace.`,
+          error: forAllPlatforms
+            ? `Límite de creativos alcanzado. Para generar para todas las plataformas necesitás al menos ${CREATIVE_PLATFORMS_LENGTH} slots (${maxSlotsFree} disponibles).`
+            : `Los usuarios gratuitos pueden tener como máximo ${MAX_CREATIVES_PER_WORKSPACE_FREE} creativos por workspace.`,
         });
       }
     }
 
-    const modelUsed = "dall-e-3";
+    /** Con forAllPlatforms: count = número de ángulos; total creativos = count × 4 plataformas. */
+    const totalToGenerate = forAllPlatforms ? count * CREATIVE_PLATFORMS_LENGTH : count;
+
+    const modelUsed =
+      process.env.OPENROUTER_IMAGE_MODEL || "black-forest-labs/flux.2-max";
     let generated = 0;
     const CREATIVE_CONCURRENCY = 3;
 
     const generateOneCreative = async (offsetIndex, baseLength) => {
+      const aspectRatio =
+        CREATIVE_ASPECT_RATIOS[
+          (baseLength + offsetIndex) % CREATIVE_ASPECT_RATIOS.length
+        ];
+      const platform = getPlatformFromAspectRatio(aspectRatio);
+      const version = ((baseLength + offsetIndex) % 3) + 1;
+
+      if (useAngles) {
+        const angleIndex = (baseLength + offsetIndex) % selectedAngles.length;
+        const angle = selectedAngles[angleIndex];
+        if (!angle || !angle.hook || !angle.visual) return null;
+        try {
+          const spec = await expandAngleToVisualSpec(angle, aspectRatio, {
+            referenceAssets: hasLogoOrImages ? referenceAssets : null,
+            productDescription: branding?.headline || branding?.productDescription || "",
+          });
+          const promptForImage = getImagePromptFromStructured(spec);
+          const imageDataUrl = await generateCreativeImageSeedream(
+            promptForImage,
+            aspectRatio,
+            hasLogoOrImages ? referenceAssets : null,
+          );
+          if (imageDataUrl) {
+            const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
+            if (saved?.urlPath) {
+              const creativeId = crypto.randomUUID();
+              const campaignId = crypto.randomUUID();
+              const adsetId = crypto.randomUUID();
+              const imagePath = saved.urlPath.startsWith("http")
+                ? saved.urlPath.replace(/^https?:\/\//, "").replace(/^[^/]+\//, "")
+                : saved.urlPath;
+              return {
+                id: creativeId,
+                adsetId,
+                adset_id: adsetId,
+                campaignId,
+                campaign_id: campaignId,
+                orgId: slug,
+                org_id: slug,
+                baseAdId: creativeId,
+                base_ad_id: creativeId,
+                headline: angle.hook,
+                imagePrompt: spec,
+                generationPrompt: spec,
+                imageUrl: saved.urlPath,
+                image_url: saved.urlPath,
+                imagePath,
+                image_path: imagePath,
+                createdAt: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+                model: modelUsed,
+                aspectRatio,
+                aspect_ratio: aspectRatio,
+                version,
+                platform,
+                parentAdId: null,
+                parent_ad_id: null,
+                isCurrent: false,
+                is_current: false,
+                name: null,
+                description: null,
+                body: angle.hook,
+                cta: "Inicia Ahora",
+                videoUrl: null,
+                video_url: null,
+                videoPath: null,
+                video_path: null,
+                referenceImageUrl: null,
+                reference_image_url: null,
+                status: "succeeded",
+                replicateJobId: null,
+                replicate_job_id: null,
+                errorMessage: null,
+                error_message: null,
+                impressions: 0,
+                clicks: 0,
+                conversions: 0,
+                metadata: { angleCategory: angle.category, angleTitle: angle.title },
+                updatedAt: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                createdBy: userId || null,
+                created_by: userId || null,
+                triggerRunId: null,
+                trigger_run_id: null,
+                triggerAccessToken: null,
+                trigger_access_token: null,
+                hasViewed: false,
+                has_viewed: false,
+                carouselId: null,
+                carousel_id: null,
+                carouselPosition: null,
+                carousel_position: null,
+                carouselTotal: null,
+                carousel_total: null,
+                reminderSentAt: null,
+                reminder_sent_at: null,
+                metaAdId: null,
+                meta_ad_id: null,
+                metaCreativeId: null,
+                meta_creative_id: null,
+                metaStatus: null,
+                meta_status: null,
+              };
+            }
+          }
+        } catch (err) {
+          console.error("[Creative] Error generating creative from angle:", err.message);
+        }
+        return null;
+      }
+
       const headlineIndex = (baseLength + offsetIndex) % headlinesList.length;
       const chosenHeadline = headlinesList[headlineIndex];
       const profileIndex =
@@ -963,29 +1373,27 @@ export async function generateCreatives(req, res) {
             .slice(0, 2)
             .join("; ")}`.slice(0, 800)
         : "";
-      const aspectRatio =
-        CREATIVE_ASPECT_RATIOS[
-          (baseLength + offsetIndex) % CREATIVE_ASPECT_RATIOS.length
-        ];
-      const platform = getPlatformFromAspectRatio(aspectRatio);
-      const version = ((baseLength + offsetIndex) % 3) + 1;
       const useLogoThisTime =
         hasLogoOrImages && (baseLength + offsetIndex) % 2 === 0;
-      const imagesForThisCreative = useLogoThisTime ? referenceImages : [];
+      const assetsForThisCreative = useLogoThisTime ? referenceAssets : null;
       try {
-        const imagePrompt = await generateCreativeImagePrompt({
+        const creativePromptPayload = await generateCreativeImagePrompt({
           headline: chosenHeadline,
           companyName,
           brandingSummary,
           clientIdealSummary,
           brandingColors: branding?.colors ?? {},
           hasLogoOrImages: useLogoThisTime,
+          referenceAssets: assetsForThisCreative,
           aspectRatio,
+          contentLanguage: branding?.language || "es-AR",
+          branding,
         });
+        const promptForImage = getImagePromptFromStructured(creativePromptPayload);
         const imageDataUrl = await generateCreativeImageSeedream(
-          imagePrompt,
+          promptForImage,
           aspectRatio,
-          imagesForThisCreative,
+          assetsForThisCreative,
         );
         if (imageDataUrl) {
           const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
@@ -1007,8 +1415,8 @@ export async function generateCreatives(req, res) {
               baseAdId: creativeId,
               base_ad_id: creativeId,
               headline: chosenHeadline,
-              imagePrompt,
-              generationPrompt: imagePrompt,
+              imagePrompt: creativePromptPayload,
+              generationPrompt: creativePromptPayload,
               imageUrl: saved.urlPath,
               image_url: saved.urlPath,
               imagePath,
@@ -1076,24 +1484,61 @@ export async function generateCreatives(req, res) {
       return null;
     };
 
-    for (let start = 0; start < count; start += CREATIVE_CONCURRENCY) {
-      const chunkSize = Math.min(CREATIVE_CONCURRENCY, count - start);
-      const baseLength = creativesList.length;
-      const results = await Promise.all(
-        Array.from({ length: chunkSize }, (_, j) =>
-          generateOneCreative(start + j, baseLength),
-        ),
-      );
-      for (const creative of results) {
-        if (creative) {
-          creativesList.push(creative);
-          generated++;
-          console.log(
-            "[Creative] Generated creative",
-            generated,
-            "for workspace",
-            slug,
-          );
+    if (forAllPlatforms) {
+      const anglesToUse = selectedAngles.slice(0, count);
+      const tasks = [];
+      for (const angle of anglesToUse) {
+        for (const platformConfig of CREATIVE_PLATFORMS) {
+          tasks.push({ angle, platformConfig });
+        }
+      }
+      const cappedTasks = tasks.slice(0, totalToGenerate);
+      for (let i = 0; i < cappedTasks.length; i += CREATIVE_CONCURRENCY) {
+        const chunk = cappedTasks.slice(i, i + CREATIVE_CONCURRENCY);
+        const results = await Promise.all(
+          chunk.map(({ angle, platformConfig }) =>
+            generateOneCreativeForAngleAndPlatform(
+              angle,
+              platformConfig,
+              creativesList.length,
+            ),
+          ),
+        );
+        for (const creative of results) {
+          if (creative) {
+            creativesList.push(creative);
+            generated++;
+            console.log(
+              "[Creative] Generated",
+              creative.targetPlatformLabel || creative.targetPlatform,
+              "creative",
+              generated,
+              "for workspace",
+              slug,
+            );
+          }
+        }
+      }
+    } else {
+      for (let start = 0; start < count; start += CREATIVE_CONCURRENCY) {
+        const chunkSize = Math.min(CREATIVE_CONCURRENCY, count - start);
+        const baseLength = creativesList.length;
+        const results = await Promise.all(
+          Array.from({ length: chunkSize }, (_, j) =>
+            generateOneCreative(start + j, baseLength),
+          ),
+        );
+        for (const creative of results) {
+          if (creative) {
+            creativesList.push(creative);
+            generated++;
+            console.log(
+              "[Creative] Generated creative",
+              generated,
+              "for workspace",
+              slug,
+            );
+          }
         }
       }
     }
@@ -1124,6 +1569,352 @@ export async function generateCreatives(req, res) {
     return res
       .status(500)
       .json({ success: false, error: "Internal server error" });
+  }
+}
+
+/**
+ * Clona un anuncio de referencia con la marca del workspace.
+ * POST /workspaces/:slug/clone-reference body: { referenceId: string }
+ * 1) Analiza la imagen de referencia (Visual DNA), 2) Genera un creativo con la misma composición pero logo/producto del workspace.
+ */
+export async function cloneReference(req, res) {
+  try {
+    const userId = req.user?.id;
+    const isAdmin = req.user?.role === "admin";
+    if (!userId) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+    const { slug } = req.params;
+    const { referenceId } = req.body || {};
+    if (!referenceId || typeof referenceId !== "string") {
+      return res
+        .status(400)
+        .json({ success: false, error: "Se requiere referenceId en el body." });
+    }
+    const reference = await getReferenceById(referenceId.trim());
+    if (!reference?.imageUrl) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Referencia no encontrada." });
+    }
+
+    const row = await get(
+      `SELECT id, user_id, branding, creatives FROM workspaces WHERE user_id = ? AND slug = ?`,
+      [userId, slug],
+    );
+    if (!row) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Workspace not found" });
+    }
+
+    let creativesList = [];
+    try {
+      if (row.creatives != null && row.creatives !== "")
+        creativesList = JSON.parse(row.creatives);
+    } catch (_) {}
+    if (!Array.isArray(creativesList)) creativesList = [];
+
+    const MAX_FREE = 3;
+    if (!isAdmin && creativesList.length >= MAX_FREE) {
+      return res.status(403).json({
+        success: false,
+        error: `Límite de creativos alcanzado (máx. ${MAX_FREE}). Cloná desde un workspace con menos creativos.`,
+      });
+    }
+
+    let branding = {};
+    try {
+      if (row.branding != null && row.branding !== "")
+        branding = JSON.parse(row.branding);
+    } catch (_) {}
+
+    const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
+    const logoUrl = branding?.logo ? toAbsoluteImageUrl(branding.logo) : null;
+    const productUrl = branding?.productImage
+      ? toAbsoluteImageUrl(branding.productImage)
+      : null;
+    const otherUrls = [];
+    if (Array.isArray(branding?.images)) {
+      const seen = new Set([logoUrl, productUrl].filter(Boolean));
+      for (const img of branding.images) {
+        const u = toAbsoluteImageUrl(
+          typeof img === "string" ? img : img?.url,
+        );
+        if (u && !seen.has(u)) {
+          seen.add(u);
+          otherUrls.push(u);
+        }
+      }
+    }
+    const referenceAssets = {
+      logo: logoUrl || null,
+      product: productUrl || null,
+      other: otherUrls.slice(0, 3),
+    };
+
+    let spec;
+    if (reference.generationPrompt && typeof reference.generationPrompt === "string") {
+      try {
+        const parsed = JSON.parse(reference.generationPrompt);
+        if (parsed && typeof parsed === "object" && parsed.meta_parameters) {
+          spec = JSON.parse(JSON.stringify(parsed));
+          if (!spec.generative_reconstruction) spec.generative_reconstruction = {};
+          const repl =
+            " CRITICAL: Replace any product or logo visible in the scene with the user's brand assets provided in the reference images (first reference = logo, second = product). Keep the same camera angle, materials, and mood.";
+          spec.generative_reconstruction.dalle_flux_natural_prompt =
+            (spec.generative_reconstruction.dalle_flux_natural_prompt || "").trim() + repl;
+          if (branding?.companyName)
+            spec.generative_reconstruction.dalle_flux_natural_prompt += ` Brand: ${branding.companyName}.`;
+          if (branding?.primary && /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", "")))
+            spec.generative_reconstruction.dalle_flux_natural_prompt += ` Use brand color ${branding.primary} for key accents.`;
+        } else {
+          spec = null;
+        }
+      } catch (_) {
+        spec = null;
+      }
+    }
+    if (!spec) {
+      const visualDna = await analyzeImageToJson(reference.imageUrl);
+      spec = normalizeVisualDnaToCreativeSpec(visualDna, {
+        companyName: branding?.companyName,
+        primary: branding?.primary,
+        headline: branding?.headline,
+      });
+    }
+    const aspectRatio = spec.meta_parameters?.aspect_ratio || "4:5";
+    const promptForImage = getImagePromptFromStructured(spec);
+    const imageDataUrl = await generateCreativeImageSeedream(
+      promptForImage,
+      aspectRatio,
+      referenceAssets.logo || referenceAssets.product || referenceAssets.other?.length
+        ? referenceAssets
+        : null,
+    );
+    if (!imageDataUrl) {
+      return res.status(502).json({
+        success: false,
+        error: "No se pudo generar la imagen. Reintentá más tarde.",
+      });
+    }
+    const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
+    if (!saved?.urlPath) {
+      return res.status(500).json({
+        success: false,
+        error: "Error al guardar la imagen.",
+      });
+    }
+
+    const creativeId = crypto.randomUUID();
+    const campaignId = crypto.randomUUID();
+    const adsetId = crypto.randomUUID();
+    const imagePath = saved.urlPath.startsWith("http")
+      ? saved.urlPath.replace(/^https?:\/\//, "").replace(/^[^/]+\//, "")
+      : saved.urlPath;
+    const modelUsed =
+      process.env.OPENROUTER_IMAGE_MODEL || "black-forest-labs/flux.2-max";
+    const creative = {
+      id: creativeId,
+      adsetId,
+      adset_id: adsetId,
+      campaignId,
+      campaign_id: campaignId,
+      orgId: slug,
+      org_id: slug,
+      baseAdId: creativeId,
+      base_ad_id: creativeId,
+      headline: reference.category || "Clonado de referencia",
+      imagePrompt: spec,
+      generationPrompt: spec,
+      imageUrl: saved.urlPath,
+      image_url: saved.urlPath,
+      imagePath,
+      image_path: imagePath,
+      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      model: modelUsed,
+      aspectRatio,
+      aspect_ratio: aspectRatio,
+      version: 1,
+      platform: getPlatformFromAspectRatio(aspectRatio),
+      parentAdId: null,
+      parent_ad_id: null,
+      isCurrent: false,
+      is_current: false,
+      referenceId: reference.id,
+      reference_image_url: reference.imageUrl,
+      metadata: { source: "reference_gallery", referenceCategory: reference.category },
+      status: "succeeded",
+    };
+    creativesList.push(creative);
+
+    await run("UPDATE workspaces SET creatives = ? WHERE slug = ?", [
+      JSON.stringify(creativesList),
+      slug,
+    ]);
+
+    return res.status(200).json({ success: true, data: creative });
+  } catch (error) {
+    console.error("❌ Error cloning reference:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Error al clonar la referencia.",
+    });
+  }
+}
+
+/**
+ * Genera un solo creativo a partir de un sales angle (por slug, para scripts).
+ * @param {string} slug - workspace slug
+ * @param {number} [angleIndex=0] - índice del ángulo en sales_angles
+ * @returns {Promise<{ ok: boolean, creative?: object, total?: number, error?: string }>}
+ */
+export async function generateOneCreativeFromAngleBySlug(slug, angleIndex = 0) {
+  const row = await get(
+    "SELECT user_id, branding, sales_angles, creatives FROM workspaces WHERE slug = ?",
+    [slug],
+  );
+  if (!row) return { ok: false, error: "Workspace not found" };
+  let anglesList = [];
+  try {
+    if (row.sales_angles != null && row.sales_angles !== "")
+      anglesList = JSON.parse(row.sales_angles);
+  } catch (_) {}
+  if (!Array.isArray(anglesList) || anglesList.length === 0)
+    return { ok: false, error: "No sales angles" };
+  const angle = anglesList[angleIndex] ?? anglesList[0];
+  if (!angle || !angle.hook || !angle.visual)
+    return { ok: false, error: "Invalid angle (hook and visual required)" };
+  let branding = {};
+  try {
+    if (row.branding != null && row.branding !== "") branding = JSON.parse(row.branding);
+  } catch (_) {}
+  const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
+  const logoUrl = branding?.logo ? toAbsoluteImageUrl(branding.logo) : null;
+  const productUrl = branding?.productImage ? toAbsoluteImageUrl(branding.productImage) : null;
+  const otherUrls = [];
+  if (Array.isArray(branding?.images)) {
+    const seen = new Set([logoUrl, productUrl].filter(Boolean));
+    for (const img of branding.images) {
+      const u = toAbsoluteImageUrl(typeof img === "string" ? img : img?.url);
+      if (u && !seen.has(u)) { seen.add(u); otherUrls.push(u); }
+    }
+  }
+  const referenceAssets = { logo: logoUrl || null, product: productUrl || null, other: otherUrls.slice(0, 3) };
+  const hasLogoOrImages = !!(referenceAssets.logo || referenceAssets.product || referenceAssets.other.length > 0);
+  const aspectRatio = "4:5";
+  const modelUsed = process.env.OPENROUTER_IMAGE_MODEL || "black-forest-labs/flux.2-max";
+  let creativesList = [];
+  try {
+    if (row.creatives != null && row.creatives !== "") creativesList = JSON.parse(row.creatives);
+  } catch (_) {}
+  if (!Array.isArray(creativesList)) creativesList = [];
+
+  try {
+    const spec = await expandAngleToVisualSpec(angle, aspectRatio, {
+      referenceAssets: hasLogoOrImages ? referenceAssets : null,
+      productDescription: branding?.headline || branding?.productDescription || "",
+    });
+    const promptForImage = getImagePromptFromStructured(spec);
+    const imageDataUrl = await generateCreativeImageSeedream(
+      promptForImage,
+      aspectRatio,
+      hasLogoOrImages ? referenceAssets : null,
+    );
+    if (!imageDataUrl) return { ok: false, error: "Image generation returned null" };
+    const saved = await saveCreativeImage(imageDataUrl, slug, "creativo");
+    if (!saved?.urlPath) return { ok: false, error: "saveCreativeImage returned null" };
+
+    const creativeId = crypto.randomUUID();
+    const campaignId = crypto.randomUUID();
+    const adsetId = crypto.randomUUID();
+    const imagePath = saved.urlPath.startsWith("http")
+      ? saved.urlPath.replace(/^https?:\/\//, "").replace(/^[^/]+\//, "")
+      : saved.urlPath;
+    const creative = {
+      id: creativeId,
+      adsetId,
+      adset_id: adsetId,
+      campaignId,
+      campaign_id: campaignId,
+      orgId: slug,
+      org_id: slug,
+      baseAdId: creativeId,
+      base_ad_id: creativeId,
+      headline: angle.hook,
+      imagePrompt: spec,
+      generationPrompt: spec,
+      imageUrl: saved.urlPath,
+      image_url: saved.urlPath,
+      imagePath,
+      image_path: imagePath,
+      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      model: modelUsed,
+      aspectRatio,
+      aspect_ratio: aspectRatio,
+      version: 1,
+      platform: getPlatformFromAspectRatio(aspectRatio),
+      parentAdId: null,
+      parent_ad_id: null,
+      isCurrent: false,
+      is_current: false,
+      name: null,
+      description: null,
+      body: angle.hook,
+      cta: "Inicia Ahora",
+      videoUrl: null,
+      video_url: null,
+      videoPath: null,
+      video_path: null,
+      referenceImageUrl: null,
+      reference_image_url: null,
+      status: "succeeded",
+      replicateJobId: null,
+      replicate_job_id: null,
+      errorMessage: null,
+      error_message: null,
+      impressions: 0,
+      clicks: 0,
+      conversions: 0,
+      metadata: { angleCategory: angle.category, angleTitle: angle.title },
+      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      createdBy: row.user_id,
+      created_by: row.user_id,
+      triggerRunId: null,
+      trigger_run_id: null,
+      triggerAccessToken: null,
+      trigger_access_token: null,
+      hasViewed: false,
+      has_viewed: false,
+      carouselId: null,
+      carousel_id: null,
+      carouselPosition: null,
+      carousel_position: null,
+      carouselTotal: null,
+      carousel_total: null,
+      reminderSentAt: null,
+      reminder_sent_at: null,
+      metaAdId: null,
+      meta_ad_id: null,
+      metaCreativeId: null,
+      meta_creative_id: null,
+      metaStatus: null,
+      meta_status: null,
+    };
+    creativesList.push(creative);
+    const campaignsPayload = buildCampaignsFromCreatives(creativesList, branding, slug, baseUrl);
+    await run("UPDATE workspaces SET creatives = ?, campaigns = ? WHERE slug = ?", [
+      JSON.stringify(creativesList),
+      JSON.stringify(campaignsPayload),
+      slug,
+    ]);
+    return { ok: true, creative, total: creativesList.length };
+  } catch (err) {
+    console.error("[generateOneCreativeFromAngleBySlug]", err.message);
+    return { ok: false, error: err.message };
   }
 }
 
@@ -1460,7 +2251,7 @@ async function continueWorkspaceCreationInBackground(params) {
 
   if (rawProfiles.length === 0) {
     console.log(
-      "[Background] No customer profiles generated, skipping profile images and headlines",
+      "[Background] No customer profiles generated, skipping sales angles and creatives",
     );
     return;
   }
@@ -1468,47 +2259,52 @@ async function continueWorkspaceCreationInBackground(params) {
   try {
     const now = new Date().toISOString();
     const workspaceOrgId = slug ? `ws_${slug}` : "";
+    const skipImages = skipIcpImageGeneration();
     const profileResults = await Promise.all(
       rawProfiles.map(async (p, order) => {
         const profileId = crypto.randomUUID();
-        const { avatarPrompt, heroPrompt } = buildIcpImagePrompts(p);
-        const [avatarDataUrl, heroDataUrl] = await Promise.all([
-          generateProfileImage(avatarPrompt, "1:1").catch((err) => {
-            console.warn(
-              "⚠️ Avatar generation failed for profile:",
-              p.name,
-              err.message,
-            );
-            return null;
-          }),
-          generateProfileImage(heroPrompt, "21:9").catch((err) => {
-            console.warn(
-              "⚠️ Hero/banner generation failed for profile:",
-              p.name,
-              err.message,
-            );
-            return null;
-          }),
-        ]);
-        const prefix = `${slug}-${profileId.slice(0, 8)}`;
-        const [avatarPath, heroPath] = await Promise.all([
-          avatarDataUrl
-            ? saveIcpImage(avatarDataUrl, prefix, "avatar")
-            : Promise.resolve(null),
-          heroDataUrl
-            ? saveIcpImage(heroDataUrl, prefix, "hero")
-            : Promise.resolve(null),
-        ]);
-        const avatarUrl = avatarPath
-          ? avatarPath.startsWith("http")
-            ? avatarPath
-            : `/icp-avatars/${path.basename(avatarPath)}`
-          : null;
-        const heroImageUrl = heroPath
-          ? heroPath.startsWith("http")
-            ? heroPath
-            : `/icp-heroes/${path.basename(heroPath)}`
-          : null;
+        let avatarUrl = null;
+        let heroImageUrl = null;
+        if (!skipImages) {
+          const { avatarPrompt, heroPrompt } = buildIcpImagePrompts(p);
+          const [avatarDataUrl, heroDataUrl] = await Promise.all([
+            generateProfileImage(avatarPrompt, "1:1").catch((err) => {
+              console.warn(
+                "⚠️ Avatar generation failed for profile:",
+                p.name,
+                err.message,
+              );
+              return null;
+            }),
+            generateProfileImage(heroPrompt, "21:9").catch((err) => {
+              console.warn(
+                "⚠️ Hero/banner generation failed for profile:",
+                p.name,
+                err.message,
+              );
+              return null;
+            }),
+          ]);
+          const prefix = `${slug}-${profileId.slice(0, 8)}`;
+          const [avatarPath, heroPath] = await Promise.all([
+            avatarDataUrl
+              ? saveIcpImage(avatarDataUrl, prefix, "avatar")
+              : Promise.resolve(null),
+            heroDataUrl
+              ? saveIcpImage(heroDataUrl, prefix, "hero")
+              : Promise.resolve(null),
+          ]);
+          avatarUrl = avatarPath
+            ? avatarPath.startsWith("http")
+              ? avatarPath
+              : `/icp-avatars/${path.basename(avatarPath)}`
+            : null;
+          heroImageUrl = heroPath
+            ? heroPath.startsWith("http")
+              ? heroPath
+              : `/icp-heroes/${path.basename(heroPath)}`
+            : null;
+        }
         return {
           id: profileId,
           workspaceOrgId,
@@ -1540,169 +2336,205 @@ async function continueWorkspaceCreationInBackground(params) {
       slug,
     ]);
 
-    // Generar 100 titulares/headlines para creativos (4U's de Mark Ford, 7-15 palabras).
-    let headlinesList = [];
-    try {
-      const firstProfile = profileResults[0];
-      const clientIdealSummary = firstProfile
-        ? `${firstProfile.name}, ${firstProfile.title}. ${
-            firstProfile.description || ""
-          }. Objetivos: ${(firstProfile.goals || [])
-            .slice(0, 2)
-            .join("; ")}. Dificultades: ${(firstProfile.painPoints || [])
-            .slice(0, 2)
-            .join("; ")}`.slice(0, 800)
-        : "";
-      const nicheOrSubniche = [params.companyName, params.headline]
-        .filter(Boolean)
-        .join(" / ")
-        .slice(0, 300);
-      const useVoseo =
-        profileResults.some((p) =>
-          /argentina|uruguay|buenos aires|córdoba|rosario|mendoza|montevideo/i.test(
-            String(p.demographics?.location ?? ""),
-          ),
-        ) ||
+    // Flujo: ICP → sales angles → creativos (sin headlines).
+    const firstProfile = profileResults[0];
+    const clientIdealSummary = firstProfile
+      ? `${firstProfile.name}, ${firstProfile.title}. ${
+          firstProfile.description || ""
+        }. Objetivos: ${(firstProfile.goals || [])
+          .slice(0, 2)
+          .join("; ")}. Dificultades: ${(firstProfile.painPoints || [])
+          .slice(0, 2)
+          .join("; ")}`.slice(0, 800)
+      : "";
+    const nicheOrSubniche = [params.companyName, params.headline]
+      .filter(Boolean)
+      .join(" / ")
+      .slice(0, 300);
+    const useVoseo =
+      profileResults.some((p) =>
         /argentina|uruguay|buenos aires|córdoba|rosario|mendoza|montevideo/i.test(
-          knowledgeBaseText.slice(0, 2000),
-        );
-      headlinesList = await generateHeadlines({
+          String(p.demographics?.location ?? ""),
+        ),
+      ) ||
+      /argentina|uruguay|buenos aires|córdoba|rosario|mendoza|montevideo/i.test(
+        knowledgeBaseText.slice(0, 2000),
+      );
+
+    // Ángulos de venta (sales angles).
+    let anglesList = [];
+    try {
+      anglesList = await generateSalesAngles({
         companyName: params.companyName,
         headline: params.headline,
-        knowledgeBaseSummary: knowledgeBaseText.slice(0, 3000),
+        knowledgeBaseSummary: knowledgeBaseText.slice(0, 2500),
         clientIdealSummary,
         nicheOrSubniche,
         useVoseo,
+        contentLanguage: params.branding?.language || "es-AR",
+        branding: params.branding,
       });
-      if (headlinesList.length > 0) {
-        await run("UPDATE workspaces SET headlines = ? WHERE slug = ?", [
-          JSON.stringify(headlinesList),
+      if (anglesList.length > 0) {
+        await run("UPDATE workspaces SET sales_angles = ? WHERE slug = ?", [
+          JSON.stringify(anglesList),
           slug,
         ]);
         console.log(
-          "[Headlines] Saved",
-          headlinesList.length,
-          "headlines for workspace",
+          "[Sales angles] Saved",
+          anglesList.length,
+          "angles for workspace",
           slug,
         );
+      }
+    } catch (anglesErr) {
+      console.warn("⚠️ Sales angles generation failed:", anglesErr.message);
+    }
 
-        // Campaña de bienvenida: generar 3 creativos automáticamente.
-        const brandingSummary = [
-          params.companyName,
-          params.headline,
-          params.personality,
-        ]
-          .filter(Boolean)
-          .join(". ")
-          .slice(0, 500);
-        let brandingColors = {};
-        let referenceImages = [];
-        let hasLogoOrImages = false;
-        let brandingForCampaigns = {};
-        try {
-          const brandingRow = await get(
-            "SELECT branding FROM workspaces WHERE slug = ?",
-            [slug],
-          );
-          if (brandingRow?.branding) {
-            const b = JSON.parse(brandingRow.branding);
-            brandingForCampaigns = b;
-            brandingColors = b?.colors ?? {};
-            hasLogoOrImages = !!(
-              b?.logo ||
-              (Array.isArray(b?.images) && b.images.length > 0)
-            );
-            if (b?.logo) {
-              const logoUrl = toAbsoluteImageUrl(b.logo);
-              if (logoUrl) referenceImages.push({ url: logoUrl });
-            }
-            if (Array.isArray(b?.images) && referenceImages.length < 2) {
-              for (const img of b.images.slice(0, 2 - referenceImages.length)) {
-                const u = toAbsoluteImageUrl(
-                  typeof img === "string" ? img : img?.url,
-                );
-                if (u) referenceImages.push({ url: u });
-              }
-            }
-          }
-        } catch (_) {}
-        const CREATIVE_ASPECT_RATIOS = ["4:5", "1:1", "9:16", "3:4"];
-        const WELCOME_CAMPAIGN_COUNT = 3;
-        let creativesList = [];
-        try {
-          const row = await get(
-            "SELECT creatives FROM workspaces WHERE slug = ?",
-            [slug],
-          );
-          if (row?.creatives != null && row.creatives !== "")
-            creativesList = JSON.parse(row.creatives);
-        } catch (_) {}
-        const modelUsed = "dall-e-3";
-        const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
-        const welcomeCreativePromises = [0, 1, 2].map(async (i) => {
-          const headlineIndex = i % headlinesList.length;
-          const chosenHeadline = headlinesList[headlineIndex];
-          const profileIndex =
-            profileResults.length > 0 ? i % profileResults.length : 0;
-          const profile = profileResults[profileIndex] || null;
-          const clientIdealSummary = profile
-            ? `${profile.name}, ${profile.title}. ${
-                profile.description || ""
-              }. Objetivos: ${(profile.goals || [])
-                .slice(0, 2)
-                .join("; ")}. Dificultades: ${(profile.painPoints || [])
-                .slice(0, 2)
-                .join("; ")}`.slice(0, 800)
-            : "";
-          const aspectRatio =
-            CREATIVE_ASPECT_RATIOS[i % CREATIVE_ASPECT_RATIOS.length];
-          const useLogoThisTime = hasLogoOrImages && i % 2 === 0;
-          const imagesForThisCreative = useLogoThisTime ? referenceImages : [];
-          try {
-            const imagePrompt = await generateCreativeImagePrompt({
-              headline: chosenHeadline,
-              companyName: params.companyName,
-              brandingSummary,
-              clientIdealSummary,
-              brandingColors,
-              hasLogoOrImages: useLogoThisTime,
-              aspectRatio,
-            });
-            const imageDataUrl = await generateCreativeImageSeedream(
-              imagePrompt,
-              aspectRatio,
-              imagesForThisCreative,
-              { source: "welcome" },
-            );
-            if (imageDataUrl) {
-              const saved = await saveCreativeImage(
-                imageDataUrl,
-                slug,
-                "creativo",
+    // Campaña de bienvenida: 3 creativos a partir de ángulos (angle.hook = headline del creativo).
+    if (anglesList.length > 0) {
+      const brandingSummary = [
+        params.companyName,
+        params.headline,
+        params.personality,
+      ]
+        .filter(Boolean)
+        .join(". ")
+        .slice(0, 500);
+      let brandingColors = {};
+      let referenceAssetsCampaign = { logo: null, product: null, other: [] };
+      let hasLogoOrImages = false;
+      let brandingForCampaigns = {};
+      try {
+        const brandingRow = await get(
+          "SELECT branding FROM workspaces WHERE slug = ?",
+          [slug],
+        );
+        if (brandingRow?.branding) {
+          const b = JSON.parse(brandingRow.branding);
+          brandingForCampaigns = b;
+          brandingColors = b?.colors ?? {};
+          const logoUrl = b?.logo ? toAbsoluteImageUrl(b.logo) : null;
+          const productUrl = b?.productImage
+            ? toAbsoluteImageUrl(b.productImage)
+            : null;
+          const otherUrls = [];
+          if (Array.isArray(b?.images)) {
+            const seen = new Set([logoUrl, productUrl].filter(Boolean));
+            for (const img of b.images) {
+              const u = toAbsoluteImageUrl(
+                typeof img === "string" ? img : img?.url,
               );
-              if (saved?.urlPath) {
-                return {
-                  id: crypto.randomUUID(),
-                  headline: chosenHeadline,
-                  imagePrompt,
-                  generationPrompt: imagePrompt,
-                  imageUrl: saved.urlPath,
-                  createdAt: new Date().toISOString(),
-                  model: modelUsed,
-                  aspectRatio,
-                };
+              if (u && !seen.has(u)) {
+                seen.add(u);
+                otherUrls.push(u);
               }
             }
-          } catch (creativeErr) {
-            console.error(
-              "⚠️ Welcome creative",
-              i + 1,
-              "failed:",
-              creativeErr.message,
-            );
           }
-          return null;
-        });
+          const otherCapped = (otherUrls || []).slice(0, 3);
+          referenceAssetsCampaign = {
+            logo: logoUrl || null,
+            product: productUrl || null,
+            other: otherCapped,
+          };
+          hasLogoOrImages = !!(
+            referenceAssetsCampaign.logo ||
+            referenceAssetsCampaign.product ||
+            referenceAssetsCampaign.other.length > 0
+          );
+        }
+      } catch (_) {}
+      const CREATIVE_ASPECT_RATIOS = ["4:5", "1:1", "9:16", "3:4"];
+      let creativesList = [];
+      try {
+        const row = await get(
+          "SELECT creatives FROM workspaces WHERE slug = ?",
+          [slug],
+        );
+        if (row?.creatives != null && row.creatives !== "")
+          creativesList = JSON.parse(row.creatives);
+      } catch (_) {}
+      const modelUsed =
+        process.env.OPENROUTER_IMAGE_MODEL ||
+        "black-forest-labs/flux.2-max";
+      const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
+      const welcomeCreativePromises = [0, 1, 2].map(async (i) => {
+        const angle = anglesList[i % anglesList.length];
+        const chosenHeadline = angle?.hook ?? "";
+        if (!chosenHeadline) return null;
+        const profileIndex =
+          profileResults.length > 0 ? i % profileResults.length : 0;
+        const profile = profileResults[profileIndex] || null;
+        const clientIdealSummaryForCreative = profile
+          ? `${profile.name}, ${profile.title}. ${
+              profile.description || ""
+            }. Objetivos: ${(profile.goals || [])
+              .slice(0, 2)
+              .join("; ")}. Dificultades: ${(profile.painPoints || [])
+              .slice(0, 2)
+              .join("; ")}`.slice(0, 800)
+          : "";
+        const aspectRatio =
+          CREATIVE_ASPECT_RATIOS[i % CREATIVE_ASPECT_RATIOS.length];
+        const useLogoThisTime = hasLogoOrImages && i % 2 === 0;
+        const assetsForThisCreative = useLogoThisTime
+          ? referenceAssetsCampaign
+          : null;
+        try {
+          const creativePromptPayload = await generateCreativeImagePrompt({
+            headline: chosenHeadline,
+            companyName: params.companyName,
+            brandingSummary,
+            clientIdealSummary: clientIdealSummaryForCreative,
+            brandingColors,
+            hasLogoOrImages: useLogoThisTime,
+            referenceAssets: assetsForThisCreative,
+            aspectRatio,
+            contentLanguage: params.branding?.language || "es-AR",
+            branding: params.branding,
+          });
+          const promptForImage = getImagePromptFromStructured(creativePromptPayload);
+          const imageDataUrl = await generateCreativeImageSeedream(
+            promptForImage,
+            aspectRatio,
+            assetsForThisCreative,
+            { source: "welcome" },
+          );
+          if (imageDataUrl) {
+            const saved = await saveCreativeImage(
+              imageDataUrl,
+              slug,
+              "creativo",
+            );
+            if (saved?.urlPath) {
+              return {
+                id: crypto.randomUUID(),
+                headline: chosenHeadline,
+                imagePrompt: creativePromptPayload,
+                generationPrompt: creativePromptPayload,
+                imageUrl: saved.urlPath,
+                createdAt: new Date().toISOString(),
+                model: modelUsed,
+                aspectRatio,
+              };
+            }
+            console.warn(
+              "[Welcome campaign] Creative",
+              i + 1,
+              "image generated but saveCreativeImage returned null",
+            );
+          } else {
+            console.warn("[Welcome campaign] Creative", i + 1, "image generation returned null");
+          }
+        } catch (creativeErr) {
+          console.error(
+            "⚠️ Welcome creative",
+            i + 1,
+            "failed:",
+            creativeErr.message,
+          );
+        }
+        return null;
+      });
         const welcomeCreatives = (
           await Promise.all(welcomeCreativePromises)
         ).filter(Boolean);
@@ -1710,30 +2542,39 @@ async function continueWorkspaceCreationInBackground(params) {
           creativesList.push(c);
         }
         if (welcomeCreatives.length > 0) {
-          await run("UPDATE workspaces SET creatives = ? WHERE slug = ?", [
-            JSON.stringify(creativesList),
-            slug,
-          ]);
-          const campaignsPayload = buildCampaignsFromCreatives(
-            creativesList,
-            brandingForCampaigns,
-            slug,
-            baseUrl,
-          );
-          await run("UPDATE workspaces SET campaigns = ? WHERE slug = ?", [
-            JSON.stringify(campaignsPayload),
-            slug,
-          ]);
-          console.log(
-            "[Welcome campaign]",
-            welcomeCreatives.length,
-            "creatives saved for workspace",
+          try {
+            await run("UPDATE workspaces SET creatives = ? WHERE slug = ?", [
+              JSON.stringify(creativesList),
+              slug,
+            ]);
+            const campaignsPayload = buildCampaignsFromCreatives(
+              creativesList,
+              brandingForCampaigns,
+              slug,
+              baseUrl,
+            );
+            await run("UPDATE workspaces SET campaigns = ? WHERE slug = ?", [
+              JSON.stringify(campaignsPayload),
+              slug,
+            ]);
+            console.log(
+              "[Welcome campaign]",
+              welcomeCreatives.length,
+              "creatives saved for workspace",
+              slug,
+            );
+          } catch (dbErr) {
+            console.error(
+              "⚠️ Failed to persist creatives/campaigns to DB:",
+              dbErr.message,
+            );
+          }
+        } else {
+          console.warn(
+            "[Welcome campaign] No creatives to save for workspace",
             slug,
           );
         }
-      }
-    } catch (hlErr) {
-      console.error("⚠️ Headlines generation failed:", hlErr.message);
     }
   } catch (cpErr) {
     console.error("⚠️ Customer profiles generation failed:", cpErr.message);
@@ -1814,15 +2655,10 @@ export async function createWorkspace(req, res) {
       screenshotPath = await saveScreenshot(screenshot, slug);
     }
 
-    const brandingPromise = scrapeWithFirecrawl(url, ["branding"]);
-    const imagesPromise = scrapeWithFirecrawl(url, ["images"]);
-
-    const brandingData = await brandingPromise;
-    const branding = brandingData.branding || {};
-    const brandingMetadata = brandingData.metadata || {};
-
-    const imagesData = await imagesPromise;
-    const allImages = imagesData.images || [];
+    const scrapeData = await scrapeWithFirecrawl(url, ["branding", "images"]);
+    const branding = scrapeData.branding || {};
+    const brandingMetadata = scrapeData.metadata || {};
+    const allImages = scrapeData.images || [];
 
     const logo = branding?.images?.logo || null;
     const favicon = branding?.images?.favicon || null;
@@ -1841,6 +2677,15 @@ export async function createWorkspace(req, res) {
         ),
       ),
     );
+
+    // En páginas de producto/landing: identificar imagen del producto (para mockups y creativos)
+    let productImage = null;
+    if (isProductOrLandingUrl(parsedUrl.href)) {
+      productImage = ogImage || (images.length > 0 ? images[0] : null);
+      if (productImage) {
+        console.log("[createWorkspace] Product/landing URL: using product image for reference", productImage.slice(0, 80) + "...");
+      }
+    }
 
     // Guardar URLs de Firecrawl tal cual; el front las carga/lee directamente
     if (branding.images) {
@@ -2068,13 +2913,14 @@ export async function createWorkspace(req, res) {
         heading: fontHeading,
       },
       logo,
+      productImage: productImage || null,
       personality: branding.personality || null,
       buttons: {
         primary: branding?.components?.buttonPrimary || null,
         secondary: branding?.components?.buttonSecondary || null,
       },
       images,
-      language: branding?.language || "es",
+      language: llmRefined?.language ?? branding?.language ?? "es-AR",
       formality: branding?.formality || "neutral",
     };
 
@@ -2109,6 +2955,7 @@ export async function createWorkspace(req, res) {
       companyName,
       headline,
       personality: normalizedBranding.personality,
+      branding: normalizedBranding,
       metadata: {
         title: metadata.title,
         ogTitle: metadata.ogTitle,
@@ -2146,18 +2993,37 @@ export async function createWorkspace(req, res) {
     if (!shouldRunInline) {
       setImmediate(() => {
         continueWorkspaceCreationInBackground(backgroundParams).catch((err) => {
-          console.error(
-            "❌ Error in workspace background creation:",
-            err.message,
-          );
+          console.error("❌ Error in workspace background creation:", err.message);
+          if (err.response) {
+            console.error("[debug] Response status:", err.response.status);
+            console.error("[debug] Response data:", JSON.stringify(err.response.data, null, 2));
+          }
+          if (err.stack) console.error("[debug] Stack:", err.stack);
         });
       });
     }
   } catch (error) {
+    // Debug: detalle completo del error
     console.error("❌ Error creating workspace:", error.message);
+    if (error.response) {
+      console.error("[debug] Response status:", error.response.status);
+      console.error("[debug] Response data:", JSON.stringify(error.response.data, null, 2));
+    }
+    if (error.stack) {
+      console.error("[debug] Stack:", error.stack);
+    }
     return res.status(500).json({
       success: false,
       error: "Internal server error",
+      ...(process.env.NODE_ENV !== "production" && {
+        debug: {
+          message: error.message,
+          ...(error.response && {
+            status: error.response.status,
+            data: error.response.data,
+          }),
+        },
+      }),
     });
   }
 }

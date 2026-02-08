@@ -11,11 +11,11 @@ export default function Login({ onClose, isSignUp, setIsSignUp }) {
     const handleLinkClick = (e) => {
       const target = e.target;
       const link = target.closest("a");
-      
+
       if (!link) return;
 
       const href = link.getAttribute("href");
-      
+
       // Si es un link de sign up, cambiar a SignUp
       if (href && href.includes("/sign-up")) {
         e.preventDefault();
@@ -32,7 +32,7 @@ export default function Login({ onClose, isSignUp, setIsSignUp }) {
 
     const container = containerRef.current;
     container.addEventListener("click", handleLinkClick, true);
-    
+
     return () => {
       container.removeEventListener("click", handleLinkClick, true);
     };
@@ -40,12 +40,12 @@ export default function Login({ onClose, isSignUp, setIsSignUp }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center liquid-glass-backdrop modal-backdrop"
       onClick={onClose}
     >
       <div
         ref={containerRef}
-        className="relative max-w-md w-full mx-4"
+        className="relative max-w-md w-full mx-4 modal-panel"
         onClick={(e) => e.stopPropagation()}
       >
         {isSignUp ? (

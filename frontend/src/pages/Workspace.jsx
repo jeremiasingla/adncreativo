@@ -1,551 +1,56 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import WorkspaceSidebar from "../components/WorkspaceSidebar";
 import BrandingView from "../components/BrandingView";
+import ReferenceGalleryView from "../components/ReferenceGalleryView";
 import { CenteredLoadingSpinner } from "../components/LoadingSpinner";
 import { fetchWithAuth } from "../api/fetchWithAuth";
+import {
+  IconHouse,
+  IconChevronRight,
+  IconChevronLeft,
+  IconCopy,
+  IconChevronDown,
+  IconRatio,
+  IconCheck,
+  IconImage,
+  IconDownload,
+  IconLock,
+  IconPalette,
+  IconUsers,
+  IconBookOpen,
+  IconPencil,
+  IconX,
+  IconSave,
+  IconInfo,
+  IconPlus,
+  IconUser,
+  IconArrowLeft,
+  IconMapPin,
+  IconDollarSign,
+  IconGraduationCap,
+  IconTarget,
+  IconTrendingUp,
+  IconSparkles,
+  IconMessageSquare,
+} from "../components/icons";
 
-function IconHouse({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
-      <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    </svg>
-  );
-}
-function IconChevronRight({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="m9 18 6-6-6-6" />
-    </svg>
-  );
-}
-function IconChevronLeft({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  );
-}
-function IconCopy({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-    </svg>
-  );
-}
-function IconChevronDown({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-function IconRatio({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect width="12" height="20" x="6" y="2" rx="2" />
-      <rect width="20" height="12" x="2" y="6" rx="2" />
-    </svg>
-  );
-}
-function IconCheck({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-function IconImage({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-      <circle cx="9" cy="9" r="2" />
-      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-    </svg>
-  );
-}
-function IconDownload({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M12 15V3" />
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <path d="m7 10 5 5 5-5" />
-    </svg>
-  );
-}
-function IconPalette({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
-      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-    </svg>
-  );
-}
-function IconUsers({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <path d="M16 3.128a4 4 0 0 1 0 7.744" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <circle cx="9" cy="7" r="4" />
-    </svg>
-  );
-}
-function IconBookOpen({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M12 7v14" />
-      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-    </svg>
-  );
-}
-function IconPencil({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
-      <path d="m15 5 4 4" />
-    </svg>
-  );
-}
-function IconX({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  );
-}
-function IconSave({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-      <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" />
-      <path d="M7 3v4a1 1 0 0 0 1 1h7" />
-    </svg>
-  );
-}
-function IconInfo({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-      <path d="M12 17h.01" />
-    </svg>
-  );
-}
-function IconPlus({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M5 12h14" />
-      <path d="M12 5v14" />
-    </svg>
-  );
-}
-function IconUser({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  );
-}
-
-function IconArrowLeft({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="m12 19-7-7 7-7" />
-      <path d="M19 12H5" />
-    </svg>
-  );
-}
-function IconMapPin({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  );
-}
-function IconDollarSign({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <line x1="12" x2="12" y1="2" y2="22" />
-      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-    </svg>
-  );
-}
-function IconGraduationCap({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
-      <path d="M22 10v6" />
-      <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
-    </svg>
-  );
-}
-function IconTarget({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </svg>
-  );
-}
-function IconTrendingUp({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M16 7h6v6" />
-      <path d="m22 7-8.5 8.5-5-5L2 17" />
-    </svg>
-  );
-}
-function IconSparkles({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
-      <path d="M20 2v4" />
-      <path d="M22 4h-4" />
-      <circle cx="4" cy="20" r="2" />
-    </svg>
-  );
-}
-function IconMessageSquare({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M12 8V4H8" />
-      <rect width="16" height="12" x="4" y="8" rx="2" />
-      <path d="M2 14h2" />
-      <path d="M20 14h2" />
-      <path d="M15 13v2" />
-      <path d="M9 13v2" />
-    </svg>
-  );
-}
-
-const BREADCRUMB_SEGMENTS = {
-  "": { label: "Inicio", Icon: IconHouse },
-  creatives: { label: "Creativos", Icon: IconImage },
-  branding: { label: "Branding", Icon: IconPalette },
-  "base-de-conocimiento": { label: "Base de Conocimiento", Icon: IconBookOpen },
-  "customer-profiles": { label: "Perfiles de Clientes", Icon: IconUsers },
+const SEGMENT_ICONS = {
+  "": IconHouse,
+  creatives: IconImage,
+  galeria: IconSparkles,
+  branding: IconPalette,
+  "base-de-conocimiento": IconBookOpen,
+  "customer-profiles": IconUsers,
+};
+const SEGMENT_I18N_KEYS = {
+  "": "workspace.home",
+  creatives: "workspace.creatives",
+  galeria: "workspace.gallery",
+  branding: "workspace.branding",
+  "base-de-conocimiento": "workspace.knowledgeBase",
+  "customer-profiles": "workspace.customerProfiles",
 };
 
 function normalizeApiProfileToUI(p) {
@@ -568,6 +73,7 @@ function normalizeApiProfileToUI(p) {
 }
 
 export default function Workspace() {
+  const { t } = useTranslation();
   const params = useParams();
   const workspaceSlug = params.workspaceSlug;
   const splat = params["*"] ?? "";
@@ -587,13 +93,19 @@ export default function Workspace() {
   const knowledgeBaseContentBeforeEdit = useRef("");
   const [customerProfilesFromApi, setCustomerProfilesFromApi] = useState([]);
   const [creativesList, setCreativesList] = useState([]);
-  const [creativesLoading, setCreativesLoading] = useState(false);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [creativesGenerating, setCreativesGenerating] = useState(false);
   const [aspectRatioMenuOpen, setAspectRatioMenuOpen] = useState(false);
   const aspectRatioMenuRef = useRef(null);
-  const [brandingLoading, setBrandingLoading] = useState(false);
-  const [knowledgeBaseLoading, setKnowledgeBaseLoading] = useState(false);
-  const [customerProfilesLoading, setCustomerProfilesLoading] = useState(false);
+  const [profileEditing, setProfileEditing] = useState(false);
+  const [profileEditDraft, setProfileEditDraft] = useState({
+    name: "",
+    title: "",
+    description: "",
+  });
+  const [referenceGallery, setReferenceGallery] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [cloningReferenceId, setCloningReferenceId] = useState(null);
 
   /** Id estable para un creativo (para la ruta /workspace/creative/:id). */
   const getCreativeId = (creative, index) => {
@@ -639,8 +151,8 @@ export default function Workspace() {
     segment === "creative" ? "creatives" : segment || "creatives";
   const isCreativeDetail = Boolean(segment === "creative" && creativeId);
 
-  /** Refetch creatives from API (para mostrar nuevos ni bien estén disponibles). */
-  const refetchCreatives = React.useCallback(async () => {
+  /** Fetch completo del workspace (un solo GET). Actualiza workspace, branding, knowledgeBase, profiles, creatives. */
+  const refetchWorkspace = useCallback(async () => {
     if (!workspaceSlug) return;
     try {
       const res = await fetchWithAuth(
@@ -648,20 +160,44 @@ export default function Workspace() {
       );
       if (!res) return;
       const json = await res.json().catch(() => ({}));
-      if (json.success && json.data) {
-        const raw = json.data.creatives ?? [];
-        setCreativesList(Array.isArray(raw) ? raw : []);
-      }
+      if (!json.success || !json.data) return;
+      const data = json.data;
+      setWorkspace({
+        id: data.id,
+        slug: data.slug,
+        url: data.url,
+        name: data.name,
+        logoUrl: data.logoUrl ?? null,
+      });
+      setWorkspaceBranding(data.branding ?? null);
+      const kb = data.knowledgeBase ?? "";
+      setKnowledgeBaseContent(kb);
+      knowledgeBaseContentBeforeEdit.current = kb;
+      const rawProfiles = data.customerProfiles ?? [];
+      setCustomerProfilesFromApi(
+        Array.isArray(rawProfiles) ? rawProfiles.map(normalizeApiProfileToUI) : []
+      );
+      const rawCreatives = data.creatives ?? [];
+      setCreativesList(Array.isArray(rawCreatives) ? rawCreatives : []);
     } catch (_) {}
   }, [workspaceSlug]);
 
+  /** Refetch creatives (reutiliza el mismo GET y actualiza toda la data del workspace). */
+  const refetchCreatives = useCallback(() => refetchWorkspace(), [refetchWorkspace]);
+
+  /** Un solo fetch al montar o cambiar workspaceSlug. */
   useEffect(() => {
-    if (segmentForDisplay !== "creatives" || !workspaceSlug) {
+    if (!workspaceSlug) {
+      setWorkspace(null);
+      setWorkspaceBranding(null);
+      setKnowledgeBaseContent("");
+      setCustomerProfilesFromApi([]);
       setCreativesList([]);
+      setWorkspaceLoading(false);
       return;
     }
     let cancelled = false;
-    setCreativesLoading(true);
+    setWorkspaceLoading(true);
     (async () => {
       try {
         const res = await fetchWithAuth(
@@ -669,35 +205,86 @@ export default function Workspace() {
         );
         if (!res) return;
         const json = await res.json().catch(() => ({}));
-        if (!cancelled && json.success && json.data) {
-          const raw = json.data.creatives ?? [];
-          setCreativesList(Array.isArray(raw) ? raw : []);
-        } else if (!cancelled) {
+        if (cancelled) return;
+        if (!json.success || !json.data) {
+          setWorkspace({ name: workspaceSlug, slug: workspaceSlug });
+          setWorkspaceBranding(null);
+          setKnowledgeBaseContent("");
+          setCustomerProfilesFromApi([]);
+          setCreativesList([]);
+          setWorkspaceLoading(false);
+          return;
+        }
+        const data = json.data;
+        setWorkspace({
+          id: data.id,
+          slug: data.slug,
+          url: data.url,
+          name: data.name,
+          logoUrl: data.logoUrl ?? null,
+        });
+        setWorkspaceBranding(data.branding ?? null);
+        const kb = data.knowledgeBase ?? "";
+        setKnowledgeBaseContent(kb);
+        knowledgeBaseContentBeforeEdit.current = kb;
+        const rawProfiles = data.customerProfiles ?? [];
+        setCustomerProfilesFromApi(
+          Array.isArray(rawProfiles) ? rawProfiles.map(normalizeApiProfileToUI) : []
+        );
+        const rawCreatives = data.creatives ?? [];
+        setCreativesList(Array.isArray(rawCreatives) ? rawCreatives : []);
+      } catch (_) {
+        if (!cancelled) {
+          setWorkspace({ name: workspaceSlug, slug: workspaceSlug });
           setCreativesList([]);
         }
-      } catch (_) {
-        if (!cancelled) setCreativesList([]);
       } finally {
-        if (!cancelled) setCreativesLoading(false);
+        if (!cancelled) setWorkspaceLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug, segmentForDisplay]);
+  }, [workspaceSlug]);
 
-  /** Al volver a la pestaña, refrescar creativos para mostrar los que se hayan agregado. */
+  /** Al volver a la pestaña, refrescar workspace (creativos, etc.). */
   useEffect(() => {
     if (segmentForDisplay !== "creatives" || !workspaceSlug) return;
     const onVisibility = () => {
-      if (document.visibilityState === "visible") refetchCreatives();
+      if (document.visibilityState === "visible") refetchWorkspace();
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [workspaceSlug, segmentForDisplay, refetchCreatives]);
+  }, [workspaceSlug, segmentForDisplay, refetchWorkspace]);
 
-  /** Polling mientras el welcome campaign puede estar generando (0–2 creativos): actualizar lista sin recargar. */
-  const welcomePollStartRef = React.useRef(null);
+  /** Cargar galería de referencias al entrar al segmento galeria. */
+  useEffect(() => {
+    if (segmentForDisplay !== "galeria") return;
+    let cancelled = false;
+    setGalleryLoading(true);
+    (async () => {
+      try {
+        const res = await fetchWithAuth("/vision/reference-gallery");
+        if (cancelled) return;
+        const json = await res?.json().catch(() => ({}));
+        if (json?.success && Array.isArray(json?.data)) {
+          setReferenceGallery(json.data);
+        } else {
+          setReferenceGallery([]);
+        }
+      } catch (_) {
+        if (!cancelled) setReferenceGallery([]);
+      } finally {
+        if (!cancelled) setGalleryLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [segmentForDisplay]);
+
+  /** Polling mientras el welcome campaign puede estar generando (0–2 creativos). */
+  const welcomePollStartRef = useRef(null);
   useEffect(() => {
     if (
       segmentForDisplay !== "creatives" ||
@@ -716,20 +303,11 @@ export default function Workspace() {
         clearInterval(id);
         return;
       }
-      refetchCreatives();
+      refetchWorkspace();
     }, POLL_MS);
-    refetchCreatives();
-    return () => {
-      clearInterval(id);
-    };
-  }, [
-    workspaceSlug,
-    segmentForDisplay,
-    refetchCreatives,
-    creativesList.length,
-  ]);
+    return () => clearInterval(id);
+  }, [workspaceSlug, segmentForDisplay, refetchWorkspace, creativesList.length]);
 
-  /** Cerrar menú de aspect ratio al cambiar de creativo o al hacer clic fuera. */
   useEffect(() => {
     setAspectRatioMenuOpen(false);
   }, [creativeId]);
@@ -748,135 +326,17 @@ export default function Workspace() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [aspectRatioMenuOpen]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetchWithAuth("/workspaces");
-        if (!res) return;
-        const json = await res.json().catch(() => ({}));
-        if (!cancelled && json.success && Array.isArray(json.data)) {
-          const found = json.data.find((ws) => ws.slug === workspaceSlug);
-          setWorkspace(found || { name: workspaceSlug, slug: workspaceSlug });
-        } else if (!cancelled) {
-          setWorkspace({ name: workspaceSlug, slug: workspaceSlug });
-        }
-      } catch (_) {
-        if (!cancelled)
-          setWorkspace({ name: workspaceSlug, slug: workspaceSlug });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug]);
-
-  useEffect(() => {
-    if (segmentForDisplay !== "branding" || !workspaceSlug) {
-      setWorkspaceBranding(null);
-      setBrandingLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setBrandingLoading(true);
-    (async () => {
-      try {
-        const res = await fetchWithAuth(
-          `/workspaces/${encodeURIComponent(workspaceSlug)}`,
-        );
-        if (!res) return;
-        const json = await res.json().catch(() => ({}));
-        if (!cancelled && json.success && json.data?.branding) {
-          setWorkspaceBranding(json.data.branding);
-        } else {
-          setWorkspaceBranding(null);
-        }
-      } catch (_) {
-        if (!cancelled) setWorkspaceBranding(null);
-      } finally {
-        if (!cancelled) setBrandingLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug, segmentForDisplay]);
-
-  useEffect(() => {
-    if (segmentForDisplay !== "base-de-conocimiento" || !workspaceSlug) {
-      setKnowledgeBaseLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setKnowledgeBaseLoading(true);
-    (async () => {
-      try {
-        const res = await fetchWithAuth(
-          `/workspaces/${encodeURIComponent(workspaceSlug)}`,
-        );
-        if (!res) return;
-        const json = await res.json().catch(() => ({}));
-        if (!cancelled && json.success && json.data) {
-          const content = json.data.knowledgeBase ?? "";
-          setKnowledgeBaseContent(content);
-          knowledgeBaseContentBeforeEdit.current = content;
-        }
-      } catch (_) {
-      } finally {
-        if (!cancelled) setKnowledgeBaseLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug, segmentForDisplay]);
-
-  useEffect(() => {
-    if (
-      (segmentForDisplay !== "customer-profiles" && !profileId) ||
-      !workspaceSlug
-    ) {
-      setCustomerProfilesFromApi([]);
-      setCustomerProfilesLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setCustomerProfilesLoading(true);
-    (async () => {
-      try {
-        const res = await fetchWithAuth(
-          `/workspaces/${encodeURIComponent(workspaceSlug)}`,
-        );
-        if (!res) return;
-        const json = await res.json().catch(() => ({}));
-        if (!cancelled && json.success && json.data) {
-          const raw = json.data.customerProfiles ?? [];
-          const normalized = Array.isArray(raw)
-            ? raw.map(normalizeApiProfileToUI)
-            : [];
-          setCustomerProfilesFromApi(normalized);
-        } else {
-          setCustomerProfilesFromApi([]);
-        }
-      } catch (_) {
-        if (!cancelled) setCustomerProfilesFromApi([]);
-      } finally {
-        if (!cancelled) setCustomerProfilesLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [workspaceSlug, segmentForDisplay, profileId]);
-
   const customerProfilesList = customerProfilesFromApi;
   const profile = profileId
     ? (customerProfilesList.find((p) => p.id === profileId) ?? null)
     : null;
 
-  const currentSegment =
-    BREADCRUMB_SEGMENTS[segmentForDisplay] ?? BREADCRUMB_SEGMENTS[""];
-  const { label: currentLabel, Icon: CurrentIcon } = currentSegment;
+  useEffect(() => {
+    if (!profileId || !profile) setProfileEditing(false);
+  }, [profileId, profile]);
+
+  const CurrentIcon = SEGMENT_ICONS[segmentForDisplay] ?? SEGMENT_ICONS[""];
+  const currentLabel = t(SEGMENT_I18N_KEYS[segmentForDisplay] ?? SEGMENT_I18N_KEYS[""]);
   const isProfileDetail = Boolean(profileId && profile);
 
   return (
@@ -1014,21 +474,66 @@ export default function Workspace() {
           </div>
           {isProfileDetail && (
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 h-8 rounded-lg px-3 text-sm font-semibold border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:translate-y-[-1px] transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&_svg]:w-4 [&_svg]:h-4"
-              >
-                <IconPencil className="w-4 h-4" aria-hidden="true" />
-                Editar
-              </button>
-              <button
-                type="button"
-                title="Chat con IA"
-                className="inline-flex items-center justify-center gap-2 h-8 rounded-lg px-3 text-sm font-semibold border bg-muted/50 hover:bg-muted transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&_svg]:w-4 [&_svg]:h-4"
-              >
-                <IconMessageSquare className="w-4 h-4" aria-hidden="true" />
-                Agente
-              </button>
+              {profileEditing ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setProfileEditing(false)}
+                    className="inline-flex items-center justify-center gap-2 h-8 rounded-lg px-3 text-sm font-semibold border bg-white text-[rgb(15,20,25)] hover:bg-neutral-50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&_svg]:w-4 [&_svg]:h-4"
+                  >
+                    <IconX className="w-4 h-4" aria-hidden="true" />
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (profile) {
+                        const name = profileEditDraft.name ?? "";
+                        setCustomerProfilesFromApi((prev) =>
+                          prev.map((p) =>
+                            p.id === profile.id
+                              ? {
+                                  ...p,
+                                  name,
+                                  shortName: name.split(",")[0]?.trim() || name,
+                                  subtitle: profileEditDraft.title,
+                                  description: profileEditDraft.description,
+                                }
+                              : p,
+                          ),
+                        );
+                      }
+                      setProfileEditing(false);
+                    }}
+                    className="inline-flex items-center justify-center gap-2 h-8 rounded-lg px-3 text-sm font-semibold border bg-white text-[rgb(15,20,25)] hover:bg-neutral-50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&_svg]:w-4 [&_svg]:h-4"
+                  >
+                    <IconCheck className="w-4 h-4" aria-hidden="true" />
+                    Save
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (profile) {
+                      setProfileEditDraft({
+                        name: profile.name ?? "",
+                        title: profile.subtitle ?? "",
+                        description: profile.description ?? "",
+                      });
+                      setProfileEditing(true);
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 h-8 rounded-lg px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 [&_svg]:w-4 [&_svg]:h-4 bg-[rgb(229,229,230)] text-[rgb(15,20,25)] hover:bg-[rgb(215,215,216)]"
+                  style={{
+                    letterSpacing: "-0.16px",
+                    lineHeight: "20px",
+                  }}
+                >
+                  <IconPencil className="w-4 h-4" aria-hidden="true" />
+                  Edit
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1082,13 +587,46 @@ export default function Workspace() {
                           decoding="async"
                         />
                       </div>
-                      <div className="pb-1">
-                        <h1 className="text-2xl font-bold text-white drop-shadow-md">
-                          {profile.name}
-                        </h1>
-                        <p className="text-white/90 text-sm drop-shadow">
-                          {profile.subtitle}
-                        </p>
+                      <div className="pb-1 min-w-0 flex-1">
+                        {profileEditing ? (
+                          <div className="space-y-0.5 w-full min-w-0" data-editing="name-title">
+                            <input
+                              type="text"
+                              value={profileEditDraft.name}
+                              onChange={(e) =>
+                                setProfileEditDraft((d) => ({
+                                  ...d,
+                                  name: e.target.value,
+                                }))
+                              }
+                              className="block w-full min-w-0 rounded border-2 border-white bg-black/50 px-2 py-0.5 text-2xl font-bold leading-tight text-white placeholder-white/70 shadow focus:border-white focus:outline-none focus:ring-2 focus:ring-white/50"
+                              placeholder="Nombre del perfil"
+                              aria-label="Nombre del perfil"
+                            />
+                            <input
+                              type="text"
+                              value={profileEditDraft.title}
+                              onChange={(e) =>
+                                setProfileEditDraft((d) => ({
+                                  ...d,
+                                  title: e.target.value,
+                                }))
+                              }
+                              className="block w-full min-w-0 rounded border-2 border-white bg-black/50 px-2 py-0.5 text-sm leading-relaxed text-white/90 placeholder-white/60 shadow focus:border-white focus:outline-none focus:ring-2 focus:ring-white/50"
+                              placeholder="Título / rol"
+                              aria-label="Título del perfil"
+                            />
+                          </div>
+                        ) : (
+                          <>
+                            <h1 className="text-2xl font-bold text-white drop-shadow-md">
+                              {profile.name}
+                            </h1>
+                            <p className="text-white/90 text-sm drop-shadow">
+                              {profile.subtitle}
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1096,9 +634,37 @@ export default function Workspace() {
                     <h2 className="text-lg font-semibold text-foreground mb-2">
                       Sobre Este Perfil
                     </h2>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      {profile.description}
-                    </p>
+                    {profileEditing ? (
+                      <textarea
+                        value={profileEditDraft.description}
+                        onChange={(e) =>
+                          setProfileEditDraft((d) => ({
+                            ...d,
+                            description: e.target.value,
+                          }))
+                        }
+                        rows={Math.min(
+                          20,
+                          Math.max(
+                            3,
+                            (profileEditDraft.description || "").split("\n")
+                              .length +
+                              Math.ceil(
+                                (profileEditDraft.description || "").length /
+                                  70,
+                              ),
+                          ),
+                        )}
+                        className="block w-full rounded border-2 border-neutral-300 bg-white px-2 py-1.5 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="Descripción del perfil"
+                        aria-label="Descripción del perfil"
+                        data-editing="description"
+                      />
+                    ) : (
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        {profile.description}
+                      </p>
+                    )}
                   </section>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                     <div className="space-y-6">
@@ -1259,16 +825,28 @@ export default function Workspace() {
           )}
           {!isProfileDetail && segmentForDisplay === "branding" && (
             <div className="flex-1 min-h-0 flex flex-col overflow-auto">
-              {brandingLoading ? (
+              {workspaceLoading ? (
                 <CenteredLoadingSpinner />
               ) : (
                 <BrandingView branding={workspaceBranding} />
               )}
             </div>
           )}
+          {!isProfileDetail && segmentForDisplay === "galeria" && (
+            <ReferenceGalleryView
+              workspaceSlug={workspaceSlug}
+              referenceGallery={referenceGallery}
+              galleryLoading={galleryLoading}
+              cloningReferenceId={cloningReferenceId}
+              setCloningReferenceId={setCloningReferenceId}
+              refetchWorkspace={refetchWorkspace}
+              navigate={navigate}
+              fetchWithAuth={fetchWithAuth}
+            />
+          )}
           {!isProfileDetail && segmentForDisplay === "base-de-conocimiento" && (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden font-sans">
-              {knowledgeBaseLoading ? (
+              {workspaceLoading ? (
                 <CenteredLoadingSpinner />
               ) : (
                 <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-6">
@@ -1461,7 +1039,10 @@ export default function Workspace() {
                   };
                   return (
                     <div className="flex h-full overflow-hidden flex-1">
-                      <div className="flex flex-col overflow-hidden min-h-0 bg-white md:rounded-xl md:border md:border-neutral-200/60 md:shadow-sm transition-all ease-out duration-300" style={{ width: "100%" }}>
+                      <div
+                        className="flex flex-col overflow-hidden min-h-0 bg-white md:rounded-xl md:border md:border-neutral-200/60 md:shadow-sm transition-all ease-out duration-300"
+                        style={{ width: "100%" }}
+                      >
                         <div className="h-full w-full flex relative">
                           <div className="flex-1 flex flex-col min-w-0">
                             <div className="shrink-0 h-14 flex items-center justify-between px-4 md:px-6 relative">
@@ -1494,39 +1075,110 @@ export default function Workspace() {
                                   <path d="M19 12H5" />
                                 </svg>
                               </button>
-                              <nav aria-label="breadcrumb" className="hidden md:flex">
+                              <nav
+                                aria-label="breadcrumb"
+                                className="hidden md:flex"
+                              >
                                 <ol className="flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5">
                                   <li className="inline-flex items-center gap-1.5">
                                     <a className="transition-colors flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 cursor-pointer">
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="w-4 h-4"
+                                        aria-hidden="true"
+                                      >
                                         <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
                                         <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                                       </svg>
                                       <span>Inicio</span>
                                     </a>
                                   </li>
-                                  <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right" aria-hidden="true">
+                                  <li
+                                    role="presentation"
+                                    aria-hidden="true"
+                                    className="[&>svg]:size-3.5"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="24"
+                                      height="24"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="lucide lucide-chevron-right"
+                                      aria-hidden="true"
+                                    >
                                       <path d="m9 18 6-6-6-6"></path>
                                     </svg>
                                   </li>
                                   <li className="inline-flex items-center gap-1.5">
                                     <a className="transition-colors flex items-center gap-1.5 text-neutral-500 hover:text-neutral-900 cursor-pointer">
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
-                                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="w-4 h-4"
+                                        aria-hidden="true"
+                                      >
+                                        <rect
+                                          width="18"
+                                          height="18"
+                                          x="3"
+                                          y="3"
+                                          rx="2"
+                                          ry="2"
+                                        ></rect>
                                         <circle cx="9" cy="9" r="2"></circle>
                                         <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
                                       </svg>
                                       <span>Creativos</span>
                                     </a>
                                   </li>
-                                  <li role="presentation" aria-hidden="true" className="[&>svg]:size-3.5">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-right" aria-hidden="true">
+                                  <li
+                                    role="presentation"
+                                    aria-hidden="true"
+                                    className="[&>svg]:size-3.5"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="24"
+                                      height="24"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="lucide lucide-chevron-right"
+                                      aria-hidden="true"
+                                    >
                                       <path d="m9 18 6-6-6-6"></path>
                                     </svg>
                                   </li>
                                   <li className="inline-flex items-center gap-1.5">
-                                    <span role="link" aria-disabled="true" aria-current="page" className="flex items-center gap-1.5 text-neutral-900 font-medium">
+                                    <span
+                                      role="link"
+                                      aria-disabled="true"
+                                      aria-current="page"
+                                      className="flex items-center gap-1.5 text-neutral-900 font-medium"
+                                    >
                                       {displayName}
                                     </span>
                                   </li>
@@ -1597,7 +1249,19 @@ export default function Workspace() {
                                   className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground h-10 w-10 rounded-xl md:hidden"
                                   aria-label="Publicar en redes sociales"
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="h-5 w-5"
+                                    aria-hidden="true"
+                                  >
                                     <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path>
                                     <path d="m21.854 2.147-10.94 10.939"></path>
                                   </svg>
@@ -1605,17 +1269,28 @@ export default function Workspace() {
                               </div>
                             </div>
                             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                              <div className="md:hidden px-4 pt-3 pb-2 flex-shrink-0" data-prompt-sidebar="true">
+                              <div
+                                className="md:hidden px-4 pt-3 pb-2 flex-shrink-0"
+                                data-prompt-sidebar="true"
+                              >
                                 <div className="bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2">
-                                  <div role="button" tabIndex={0} className="w-full text-left cursor-pointer">
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className="w-full text-left cursor-pointer"
+                                  >
                                     <div className="flex items-center gap-2">
                                       <IconMessageSquare
                                         className="h-3.5 w-3.5 text-neutral-500 flex-shrink-0"
                                         aria-hidden="true"
                                       />
                                       <span className="text-xs font-medium text-neutral-700 truncate flex-1">
-                                        "{(selectedCreative.headline || "").slice(0, 50)}
-                                        {(selectedCreative.headline || "").length > 50
+                                        "
+                                        {(
+                                          selectedCreative.headline || ""
+                                        ).slice(0, 50)}
+                                        {(selectedCreative.headline || "")
+                                          .length > 50
                                           ? "…"
                                           : ""}
                                         "
@@ -1631,31 +1306,60 @@ export default function Workspace() {
                                           aria-hidden="true"
                                         />
                                       </button>
-                                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform duration-200" aria-hidden="true">
+                                      <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="h-4 w-4 text-neutral-400 flex-shrink-0 transition-transform duration-200"
+                                        aria-hidden="true"
+                                      >
                                         <path d="m6 9 6 6 6-6"></path>
                                       </svg>
                                     </div>
                                   </div>
                                 </div>
                               </div>
-                              <div className="flex-1 flex items-center justify-center p-4 md:p-8 min-h-0 overflow-auto relative" data-image-container="true">
+                              <div
+                                className="flex-1 flex items-center justify-center p-4 md:p-8 min-h-0 overflow-auto relative"
+                                data-image-container="true"
+                              >
                                 <div className="relative max-w-full max-h-full">
                                   <img
                                     alt="Ad creative"
                                     className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-lg"
                                     src={selectedCreative.imageUrl}
-                                    style={{ maxHeight: "calc(-300px + 100vh)" }}
+                                    style={{
+                                      maxHeight: "calc(-300px + 100vh)",
+                                    }}
                                   />
                                 </div>
                               </div>
                               <div className="shrink-0 px-4 md:px-6 py-3 bg-white">
                                 <div className="max-w-3xl mx-auto">
-                                  <div className="w-full max-w-2xl mx-auto relative rounded-xl p-1 transition-all duration-300 glass-prompt-wrap glass-prompt-wrap-dark">
+                                  <div className="w-full max-w-2xl mx-auto relative rounded-xl p-1 transition-all duration-300 liquid-glass liquid-glass-dark">
                                     <div className="rounded-lg bg-white border border-neutral-200/50 transition-all duration-300">
-                                      <span aria-hidden="true" className="hidden"></span>
-                                      <input aria-label="Upload files" className="hidden" title="Upload files" type="file" />
+                                      <span
+                                        aria-hidden="true"
+                                        className="hidden"
+                                      ></span>
+                                      <input
+                                        aria-label="Upload files"
+                                        className="hidden"
+                                        title="Upload files"
+                                        type="file"
+                                      />
                                       <form className="w-full">
-                                        <div data-slot="input-group" role="group" className="group/input-group relative flex w-full items-center border-neutral-200 transition-all outline-none min-w-0 has-[>textarea]:h-auto has-[>[data-align=inline-start]]:[&>input]:pl-2 has-[>[data-align=inline-end]]:[&>input]:pr-2 has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-2 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-2 has-[[data-slot][aria-invalid=true]]:ring-destructive/20 has-[[data-slot][aria-invalid=true]]:border-destructive dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40 border-0 shadow-none rounded-lg bg-background">
+                                        <div
+                                          data-slot="input-group"
+                                          role="group"
+                                          className="group/input-group relative flex w-full items-center border-neutral-200 transition-all outline-none min-w-0 has-[>textarea]:h-auto has-[>[data-align=inline-start]]:[&>input]:pl-2 has-[>[data-align=inline-end]]:[&>input]:pr-2 has-[>[data-align=block-start]]:h-auto has-[>[data-align=block-start]]:flex-col has-[>[data-align=block-start]]:[&>input]:pb-2 has-[>[data-align=block-end]]:h-auto has-[>[data-align=block-end]]:flex-col has-[>[data-align=block-end]]:[&>input]:pt-2 has-[[data-slot][aria-invalid=true]]:ring-destructive/20 has-[[data-slot][aria-invalid=true]]:border-destructive dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40 border-0 shadow-none rounded-lg bg-background"
+                                        >
                                           <div className="contents">
                                             <textarea
                                               data-slot="input-group-control"
@@ -1663,33 +1367,125 @@ export default function Workspace() {
                                               name="message"
                                               placeholder="Describí cambios para una nueva versión..."
                                             ></textarea>
-                                            <sider-quick-compose-btn dir="ltr" data-gpts-theme="light" data-ext-text-inserter="no" style={{ display: "contents" }}></sider-quick-compose-btn>
+                                            <sider-quick-compose-btn
+                                              dir="ltr"
+                                              data-gpts-theme="light"
+                                              data-ext-text-inserter="no"
+                                              style={{ display: "contents" }}
+                                            ></sider-quick-compose-btn>
                                           </div>
-                                          <div role="group" data-slot="input-group-addon" data-align="block-end" className="text-muted-foreground flex h-auto cursor-text py-1 text-sm font-medium select-none [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-[calc(var(--radius)-5px)] group-data-[disabled=true]/input-group:opacity-50 order-last w-full px-3 pb-2 [.border-t]:pt-2 group-has-[>input]/input-group:pb-2 gap-1 justify-between items-center">
+                                          <div
+                                            role="group"
+                                            data-slot="input-group-addon"
+                                            data-align="block-end"
+                                            className="text-muted-foreground flex h-auto cursor-text py-1 text-sm font-medium select-none [&>svg:not([class*='size-'])]:size-4 [&>kbd]:rounded-[calc(var(--radius)-5px)] group-data-[disabled=true]/input-group:opacity-50 order-last w-full px-3 pb-2 [.border-t]:pt-2 group-has-[>input]/input-group:pb-2 gap-1 justify-between items-center"
+                                          >
                                             <div className="flex items-center gap-2">
-                                              <button data-slot="button" className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 relative rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 text-sm font-normal text-neutral-600" type="button" disabled>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden="true">
-                                                  <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
-                                                  <circle cx="9" cy="9" r="2"></circle>
+                                              <button
+                                                data-slot="button"
+                                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 relative rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 text-sm font-normal text-neutral-600"
+                                                type="button"
+                                                disabled
+                                              >
+                                                <svg
+                                                  xmlns="http://www.w3.org/2000/svg"
+                                                  width="24"
+                                                  height="24"
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth="2"
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  className="w-4 h-4"
+                                                  aria-hidden="true"
+                                                >
+                                                  <rect
+                                                    width="18"
+                                                    height="18"
+                                                    x="3"
+                                                    y="3"
+                                                    rx="2"
+                                                    ry="2"
+                                                  ></rect>
+                                                  <circle
+                                                    cx="9"
+                                                    cy="9"
+                                                    r="2"
+                                                  ></circle>
                                                   <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
                                                 </svg>
-                                                <span className="hidden sm:inline">Imágenes</span>
+                                                <span className="hidden sm:inline">
+                                                  Imágenes
+                                                </span>
                                               </button>
-                                              <button data-slot="dropdown-menu-trigger" className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 text-sm font-normal text-neutral-600" type="button" disabled aria-haspopup="menu" aria-expanded="false">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
+                                              <button
+                                                data-slot="dropdown-menu-trigger"
+                                                className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 text-sm font-normal text-neutral-600"
+                                                type="button"
+                                                disabled
+                                                aria-haspopup="menu"
+                                                aria-expanded="false"
+                                              >
+                                                <svg
+                                                  xmlns="http://www.w3.org/2000/svg"
+                                                  width="24"
+                                                  height="24"
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth="2"
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  className="size-4"
+                                                  aria-hidden="true"
+                                                >
                                                   <path d="M11 6a13 13 0 0 0 8.4-2.8A1 1 0 0 1 21 4v12a1 1 0 0 1-1.6.8A13 13 0 0 0 11 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
                                                   <path d="M6 14a12 12 0 0 0 2.4 7.2 2 2 0 0 0 3.2-2.4A8 8 0 0 1 10 14"></path>
                                                   <path d="M8 6v8"></path>
                                                 </svg>
-                                                <span className="hidden sm:inline">Anuncio</span>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-3 opacity-60 hidden sm:inline" aria-hidden="true">
+                                                <span className="hidden sm:inline">
+                                                  Anuncio
+                                                </span>
+                                                <svg
+                                                  xmlns="http://www.w3.org/2000/svg"
+                                                  width="24"
+                                                  height="24"
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth="2"
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  className="size-3 opacity-60 hidden sm:inline"
+                                                  aria-hidden="true"
+                                                >
                                                   <path d="m6 9 6 6 6-6"></path>
                                                 </svg>
                                               </button>
                                             </div>
                                             <span className="cursor-default">
-                                              <button data-slot="button" className="justify-center whitespace-nowrap font-semibold transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-gradient-to-b from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:translate-y-[-1px] active:translate-y-[1px] active:shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)] border border-primary/50 text-sm flex gap-2 items-center size-8 p-0 has-[>svg]:p-0 rounded-full" type="submit" data-size="icon-sm" aria-label="Submit" disabled>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-up" aria-hidden="true">
+                                              <button
+                                                data-slot="button"
+                                                className="justify-center whitespace-nowrap font-semibold transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-gradient-to-b from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:translate-y-[-1px] active:translate-y-[1px] active:shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)] border border-primary/50 text-sm flex gap-2 items-center size-8 p-0 has-[>svg]:p-0 rounded-full"
+                                                type="submit"
+                                                data-size="icon-sm"
+                                                aria-label="Submit"
+                                                disabled
+                                              >
+                                                <svg
+                                                  xmlns="http://www.w3.org/2000/svg"
+                                                  width="16"
+                                                  height="16"
+                                                  viewBox="0 0 24 24"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth="2"
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  className="lucide lucide-arrow-up"
+                                                  aria-hidden="true"
+                                                >
                                                   <path d="m5 12 7-7 7 7"></path>
                                                   <path d="M12 19V5"></path>
                                                 </svg>
@@ -1728,14 +1524,54 @@ export default function Workspace() {
                                     className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 font-normal text-neutral-600 h-7 text-xs"
                                     aria-haspopup="menu"
                                     aria-expanded={aspectRatioMenuOpen}
-                                    data-state={aspectRatioMenuOpen ? "open" : "closed"}
+                                    data-state={
+                                      aspectRatioMenuOpen ? "open" : "closed"
+                                    }
                                   >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-                                      <rect width="12" height="20" x="6" y="2" rx="2"></rect>
-                                      <rect width="20" height="12" x="2" y="6" rx="2"></rect>
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="24"
+                                      height="24"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="size-4"
+                                      aria-hidden="true"
+                                    >
+                                      <rect
+                                        width="12"
+                                        height="20"
+                                        x="6"
+                                        y="2"
+                                        rx="2"
+                                      ></rect>
+                                      <rect
+                                        width="20"
+                                        height="12"
+                                        x="2"
+                                        y="6"
+                                        rx="2"
+                                      ></rect>
                                     </svg>
-                                    <span className="hidden sm:inline">{aspectRatio}</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-3 opacity-60 hidden sm:inline" aria-hidden="true">
+                                    <span className="hidden sm:inline">
+                                      {aspectRatio}
+                                    </span>
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="24"
+                                      height="24"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="size-3 opacity-60 hidden sm:inline"
+                                      aria-hidden="true"
+                                    >
                                       <path d="m6 9 6 6 6-6"></path>
                                     </svg>
                                   </button>
@@ -1746,59 +1582,76 @@ export default function Workspace() {
                                       aria-orientation="vertical"
                                       data-slot="dropdown-menu-content"
                                     >
-                                      {ASPECT_RATIO_MENU_OPTIONS.map((opt, idx) => (
-                                        <React.Fragment key={opt.ratio}>
-                                          {idx === ASPECT_RATIO_PORTRAIT_COUNT && (
-                                            <div
-                                              role="separator"
-                                              aria-orientation="horizontal"
-                                              className="my-1 h-px bg-neutral-200"
-                                              data-slot="dropdown-menu-separator"
-                                            />
-                                          )}
-                                          <button
-                                            type="button"
-                                            role="menuitem"
-                                            data-slot="dropdown-menu-item"
-                                            onClick={() => {
-                                              setCreativesList((prev) => {
-                                                const i = prev.findIndex(
-                                                  (c, j) =>
-                                                    getCreativeId(c, j) ===
-                                                    creativeId,
-                                                );
-                                                if (i < 0) return prev;
-                                                const next = [...prev];
-                                                next[i] = {
-                                                  ...next[i],
-                                                  aspectRatio: opt.ratio,
-                                                };
-                                                return next;
-                                              });
-                                              setAspectRatioMenuOpen(false);
-                                            }}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
-                                          >
-                                            <div className="shrink-0 flex items-center justify-center w-5">
-                                              {aspectRatio === opt.ratio ? (
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-primary" aria-hidden="true">
-                                                  <path d="M20 6 9 17l-5-5"></path>
-                                                </svg>
-                                              ) : (
-                                                <div
-                                                  className="border border-current rounded-sm bg-transparent opacity-70"
-                                                  style={{
-                                                    width: opt.w,
-                                                    height: opt.h,
-                                                  }}
-                                                  aria-hidden="true"
-                                                />
-                                              )}
-                                            </div>
-                                            <span className="flex-1">{opt.label}</span>
-                                          </button>
-                                        </React.Fragment>
-                                      ))}
+                                      {ASPECT_RATIO_MENU_OPTIONS.map(
+                                        (opt, idx) => (
+                                          <React.Fragment key={opt.ratio}>
+                                            {idx ===
+                                              ASPECT_RATIO_PORTRAIT_COUNT && (
+                                              <div
+                                                role="separator"
+                                                aria-orientation="horizontal"
+                                                className="my-1 h-px bg-neutral-200"
+                                                data-slot="dropdown-menu-separator"
+                                              />
+                                            )}
+                                            <button
+                                              type="button"
+                                              role="menuitem"
+                                              data-slot="dropdown-menu-item"
+                                              onClick={() => {
+                                                setCreativesList((prev) => {
+                                                  const i = prev.findIndex(
+                                                    (c, j) =>
+                                                      getCreativeId(c, j) ===
+                                                      creativeId,
+                                                  );
+                                                  if (i < 0) return prev;
+                                                  const next = [...prev];
+                                                  next[i] = {
+                                                    ...next[i],
+                                                    aspectRatio: opt.ratio,
+                                                  };
+                                                  return next;
+                                                });
+                                                setAspectRatioMenuOpen(false);
+                                              }}
+                                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-neutral-700 hover:bg-accent hover:text-accent-foreground cursor-pointer text-left"
+                                            >
+                                              <div className="shrink-0 flex items-center justify-center w-5">
+                                                {aspectRatio === opt.ratio ? (
+                                                  <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="24"
+                                                    height="24"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    className="w-4 h-4 text-primary"
+                                                    aria-hidden="true"
+                                                  >
+                                                    <path d="M20 6 9 17l-5-5"></path>
+                                                  </svg>
+                                                ) : (
+                                                  <div
+                                                    className="border border-current rounded-sm bg-transparent opacity-70"
+                                                    style={{
+                                                      width: opt.w,
+                                                      height: opt.h,
+                                                    }}
+                                                    aria-hidden="true"
+                                                  />
+                                                )}
+                                              </div>
+                                              <span className="flex-1">
+                                                {opt.label}
+                                              </span>
+                                            </button>
+                                          </React.Fragment>
+                                        ),
+                                      )}
                                       <div
                                         role="separator"
                                         aria-orientation="horizontal"
@@ -1870,14 +1723,6 @@ export default function Workspace() {
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h2 className="text-xl font-semibold text-foreground">
-                          Creativos generados
-                          {creativesList.length > 0 && (
-                            <span className="text-muted-foreground font-normal ml-1">
-                              ({creativesList.length})
-                            </span>
-                          )}
-                        </h2>
                         <button
                           type="button"
                           disabled={creativesGenerating}
@@ -1916,7 +1761,7 @@ export default function Workspace() {
                                 className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
                                 aria-hidden="true"
                               />
-                              Generando…
+                              {t("workspace.generating")}
                             </>
                           ) : (
                             <>
@@ -1924,20 +1769,17 @@ export default function Workspace() {
                                 className="w-4 h-4"
                                 aria-hidden="true"
                               />
-                              Generar 1 creativo
+                              {t("workspace.generateOne")}
                             </>
                           )}
                         </button>
                       </div>
-                      {creativesLoading ? (
+                      {workspaceLoading ? (
                         <CenteredLoadingSpinner />
                       ) : creativesList.length === 0 ? (
                         <div className="py-12 text-center text-muted-foreground">
                           <p className="text-sm">
-                            Aún no hay creativos. Usá el botón «Generar 1
-                            creativo» para crear uno a partir de tus titulares
-                            (se generan imágenes en distintos formatos: 4:5,
-                            1:1, 9:16, 3:4).
+                            {t("workspace.noCreatives")}
                           </p>
                         </div>
                       ) : (
@@ -2028,6 +1870,71 @@ export default function Workspace() {
                               </div>
                             );
                           })}
+                          {creativesList.length > 0 &&
+                            Array.from({ length: 20 }, (_, i) => {
+                              const creative =
+                                creativesList[i % creativesList.length];
+                              const aspectRatio =
+                                creative.aspectRatio || "4:5";
+                              const platform =
+                                getPlatformFromAspectRatio(aspectRatio);
+                              const aspectClass =
+                                aspectRatio === "16:9"
+                                  ? "aspect-[16/9]"
+                                  : aspectRatio === "3:4"
+                                    ? "aspect-[3/4]"
+                                    : aspectRatio === "1:1"
+                                      ? "aspect-square"
+                                      : aspectRatio === "9:16"
+                                        ? "aspect-[9/16]"
+                                        : aspectRatio === "4:3"
+                                          ? "aspect-[4/3]"
+                                          : aspectRatio === "3:2"
+                                            ? "aspect-[3/2]"
+                                            : "aspect-[4/5]";
+                              return (
+                                <div
+                                  key={`locked-${i}`}
+                                  className="break-inside-avoid"
+                                  style={{ marginBottom: 16 }}
+                                >
+                                  <div
+                                    data-platform={platform}
+                                    data-columns="4"
+                                    className={`group/card relative w-full rounded-xl overflow-hidden border border-gray-300 bg-white ${aspectClass}`}
+                                    style={{
+                                      boxShadow:
+                                        "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px 0 rgba(0,0,0,0.06)",
+                                    }}
+                                  >
+                                    <img
+                                      src={creative.imageUrl}
+                                      alt="Creativo bloqueado"
+                                      className="block w-full h-full object-cover pointer-events-none rounded-xl blur-md"
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/20">
+                                      <button
+                                        type="button"
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-colors hover:opacity-90"
+                                        style={{
+                                          backgroundColor:
+                                            "oklab(0.999994 0.0000455678 0.0000200868 / 0.2)",
+                                          color: "rgb(15, 20, 25)",
+                                          fontSize: 16,
+                                          lineHeight: 24,
+                                          letterSpacing: "-0.16px",
+                                        }}
+                                      >
+                                        <IconLock className="w-6 h-6 shrink-0" />
+                                        <span>{t("workspace.unlock")}</span>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                         </div>
                       )}
                     </div>
@@ -2044,7 +1951,7 @@ export default function Workspace() {
                 fontFamily: "var(--font-sans)",
               }}
             >
-              {customerProfilesLoading ? (
+              {workspaceLoading ? (
                 <CenteredLoadingSpinner />
               ) : (
                 <div className="p-4 md:p-6">

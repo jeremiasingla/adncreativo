@@ -9,7 +9,7 @@ const imageEvents = [];
 /** Eventos de llamadas LLM (en memoria). */
 const llmEvents = [];
 
-/** Estimación USD por tamaño (OpenAI DALL·E 3 / gpt-image; standard quality). */
+/** Estimación USD por tamaño (FLUX / OpenRouter; fallback cuando no viene cost en usage). */
 const SIZE_TO_ESTIMATED_USD = {
   "1024x1024": 0.04,
   "1024x1536": 0.08,
@@ -49,16 +49,18 @@ export function recordLLMRequest({
     workspaceSlug,
     timestamp: new Date().toISOString(),
   });
-  console.log(
-    `[Metrics] LLM Request - ${source} | Model: ${model} | Tokens: ${promptTokens + completionTokens} | Cost: $${totalCost.toFixed(4)} | Duration: ${durationMs}ms`,
-  );
+  if (process.env.NODE_ENV !== "production" || process.env.LOG_METRICS === "1") {
+    console.log(
+      `[Metrics] LLM Request - ${source} | Model: ${model} | Tokens: ${promptTokens + completionTokens} | Cost: $${totalCost.toFixed(4)} | Duration: ${durationMs}ms`,
+    );
+  }
 }
 
 /**
  * Registra una generación de imagen.
  * @param {object} opts
- * @param {string} opts.model - Modelo usado (ej. gpt-image-1.5, dall-e-3).
- * @param {string} opts.size - Tamaño devuelto por la API (ej. 1024x1536).
+ * @param {string} opts.model - Modelo usado (ej. black-forest-labs/flux.2-max).
+ * @param {string} opts.size - Tamaño o aspect ratio (ej. 1024x1536, 4:5, 1:1).
  * @param {string} [opts.aspectRatio] - Aspect ratio solicitado (ej. 4:5).
  * @param {number} opts.durationMs - Tiempo de generación en ms.
  * @param {string} [opts.source] - Origen: "creative" | "welcome" | "profile".
@@ -181,7 +183,7 @@ export function getImageMetrics() {
   }
 
   return {
-    note: "Modelos de imagen (DALL·E / gpt-image) no usan tokens; se registra tamaño, tiempo y costo estimado USD por imagen.",
+    note: "Modelos de imagen (FLUX / OpenRouter) no usan tokens; se registra tamaño, tiempo y costo estimado USD por imagen.",
     summary: {
       totalImages,
       totalEstimatedUsd: Math.round(totalEstimatedUsd * 100) / 100,

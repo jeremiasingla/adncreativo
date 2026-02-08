@@ -1,9 +1,228 @@
+import crypto from "crypto";
 import axios from "axios";
 import { recordLLMRequest, recordImageGeneration } from "./metrics.service.js";
 
+/**
+ * Quita bloques markdown ```json ... ``` o ``` ... ``` del texto antes de parsear JSON.
+ * @param {string} raw
+ * @returns {string}
+ */
+function stripMarkdownJson(raw) {
+  if (!raw || typeof raw !== "string") return raw;
+  let s = raw.trim();
+  s = s.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "");
+  return s.trim();
+}
+
+/**
+ * Reemplaza caracteres de control (U+0000–U+001F) que aparecen dentro de strings JSON por espacio,
+ * para evitar "Bad control character in string literal" al hacer JSON.parse.
+ * @param {string} str - JSON en texto (p. ej. después de stripMarkdownJson)
+ * @returns {string}
+ */
+function sanitizeJsonControlChars(str) {
+  if (!str || typeof str !== "string") return str;
+  let out = "";
+  let inString = false;
+  let escape = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    const code = c.charCodeAt(0);
+    if (escape) {
+      out += c;
+      escape = false;
+      continue;
+    }
+    if (c === "\\" && inString) {
+      out += c;
+      escape = true;
+      continue;
+    }
+    if (c === '"' && !escape) {
+      inString = !inString;
+      out += c;
+      continue;
+    }
+    if (inString && code >= 0 && code <= 31) {
+      out += " ";
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+
+/**
+ * Gemma (Google) no admite role "system" ("developer instruction").
+ * Para modelos Gemma, fusiona el system en el primer mensaje user.
+ * @param {string} model - id del modelo (ej. google/gemma-3-12b-it:free)
+ * @param {string} systemText - contenido del system message (opcional)
+ * @param {string|Array} userContent - contenido user: string o array multimodal [{ type, text }, { type: "image_url", ... }]
+ */
+function messagesForModel(model, systemText, userContent) {
+  const isGemma = /gemma/i.test(String(model || ""));
+  if (isGemma && systemText) {
+    if (Array.isArray(userContent)) {
+      const textPart = userContent.find((p) => p.type === "text");
+      const otherParts = userContent.filter((p) => p.type !== "text");
+      const combinedText =
+        systemText + "\n\n---\n\nInput:\n" + (textPart?.text ?? "");
+      return [
+        {
+          role: "user",
+          content: [{ type: "text", text: combinedText }, ...otherParts],
+        },
+      ];
+    }
+    return [
+      {
+        role: "user",
+        content: systemText + "\n\n---\n\nInput:\n" + userContent,
+      },
+    ];
+  }
+  const messages = [];
+  if (systemText) messages.push({ role: "system", content: systemText });
+  messages.push({ role: "user", content: userContent });
+  return messages;
+}
+
+/**
+ * Convierte mensajes construidos para otro modelo a formato válido para `model`.
+ * Si model es Gemma y hay rol system, lo fusiona en el primer user (Gemma no admite system).
+ */
+function normalizeMessagesForModel(messages, model) {
+  if (!Array.isArray(messages) || messages.length === 0) return messages;
+  const isGemma = /gemma/i.test(String(model || ""));
+  if (!isGemma) return messages;
+  const systemMsg = messages.find((m) => m.role === "system");
+  const userMsg = messages.find((m) => m.role === "user");
+  if (!systemMsg || !userMsg) return messages;
+  const combined =
+    (typeof systemMsg.content === "string" ? systemMsg.content : "") +
+    "\n\n---\n\nInput:\n" +
+    (Array.isArray(userMsg.content)
+      ? (userMsg.content.find((p) => p.type === "text")?.text ?? "")
+      : String(userMsg.content ?? ""));
+  return [
+    {
+      role: "user",
+      content:
+        typeof userMsg.content === "object" && Array.isArray(userMsg.content)
+          ? [
+              { type: "text", text: combined },
+              ...userMsg.content.filter((p) => p.type !== "text"),
+            ]
+          : combined,
+    },
+  ];
+}
+
+/**
+ * Modelo único para texto/visión (branding, knowledge, perfiles, headlines, ángulos, creativos).
+ * Variable: OPENROUTER_MODEL. Por defecto: google/gemini-3-flash-preview
+ */
+function getTextModel() {
+  return process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
+}
+
+function getKnowledgeBaseModel() {
+  return getTextModel();
+}
+
+function getProfilesModel() {
+  return getTextModel();
+}
+
+function getHeadlinesModel() {
+  return getTextModel();
+}
+
+/**
+ * Modelo para tareas creativas: sales angles y prompts de imagen (visual spec).
+ * Por defecto: Gemini 3 Pro (thinking). Variable: OPENROUTER_CREATIVE_MODEL.
+ */
+function getCreativeModel() {
+  return (
+    process.env.OPENROUTER_CREATIVE_MODEL ||
+    "google/gemini-3-pro-preview"
+  );
+}
+
+/** True si el modelo soporta entrada multimodal (imagen). */
+function modelSupportsVision(model) {
+  const m = String(model || "").toLowerCase();
+  return /gemma|gpt-4|claude|vision|multimodal/i.test(m);
+}
+
+/**
+ * Content language for ad copy: main language of the website.
+ * Fallback: Spanish (Argentina). Used so visible ad text is never in the wrong language.
+ * @param {{ language?: string } | string} brandingOrLang - branding object with .language or a language code string
+ * @returns {string} - e.g. "es-AR", "es", "en"
+ */
+export function getContentLanguage(brandingOrLang) {
+  const raw =
+    typeof brandingOrLang === "string"
+      ? brandingOrLang
+      : brandingOrLang?.language;
+  const code = (raw && String(raw).trim()) || "";
+  if (code) return code;
+  return "es-AR";
+}
+
+/** Modelo de respaldo en caso de 429 (rate limit). Debe ser gratuito. */
+function getTextModelFallback() {
+  return process.env.OPENROUTER_MODEL_FALLBACK || "google/gemma-3-4b-it:free";
+}
+
+const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+/**
+ * POST a OpenRouter chat/completions. En 429 (rate limit) o 402 (créditos) reintenta una vez con OPENROUTER_MODEL_FALLBACK.
+ * Si el fallback es Gemma, normaliza mensajes (sin system) y quita response_format.
+ * @returns {{ response: import("axios").AxiosResponse, modelUsed: string }}
+ */
+async function openRouterChatPost(requestBody, headers) {
+  const fallback = getTextModelFallback();
+  try {
+    const response = await axios.post(OPENROUTER_CHAT_URL, requestBody, {
+      headers,
+    });
+    return { response, modelUsed: requestBody.model };
+  } catch (err) {
+    const status = err.response?.status;
+    const useFallback =
+      (status === 429 || status === 402) &&
+      fallback &&
+      requestBody.model !== fallback;
+    if (useFallback) {
+      console.log(
+        "[LLM]",
+        status === 402 ? "402 insufficient credits" : "429 rate limit",
+        ", retrying with fallback model:",
+        fallback,
+      );
+      const fallbackBody = { ...requestBody, model: fallback };
+      delete fallbackBody.response_format;
+      if (Array.isArray(fallbackBody.messages)) {
+        fallbackBody.messages = normalizeMessagesForModel(
+          fallbackBody.messages,
+          fallback,
+        );
+      }
+      const response = await axios.post(OPENROUTER_CHAT_URL, fallbackBody, {
+        headers,
+      });
+      return { response, modelUsed: fallback };
+    }
+    throw err;
+  }
+}
+
 export async function refineBrandingWithLLM(input) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-nano";
+  const model = getTextModel();
 
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing");
@@ -22,15 +241,7 @@ export async function refineBrandingWithLLM(input) {
     return content;
   };
 
-  const requestBody = (includeScreenshot) => ({
-    model,
-    temperature: 0,
-    max_tokens: 600,
-    response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content: `You are a prompt engineer and branding expert. Use the Firecrawl extraction data (see Firecrawl LLM Extract patterns) and the screenshot image to reliably EXTRACT the site's palette and key text. Use XML-style tags in your reasoning/examples to clarify fields, but return ONLY the required JSON as the final output.
+  const brandingSystemPrompt = `You are a prompt engineer and branding expert. Use the Firecrawl extraction data (see Firecrawl LLM Extract patterns) and the screenshot image to reliably EXTRACT the site's palette and key text. Use XML-style tags in your reasoning/examples to clarify fields, but return ONLY the required JSON as the final output.
 
 IMPORTANT RULES:
 - Do not invent or hardcode colors. Return only colors you can identify from the site's HTML/CSS or the screenshot image.
@@ -83,13 +294,18 @@ Return ONLY a JSON object with this exact structure (no XML, no extra text):
 
 Example (structure only):
 {"companyName":"<original language>","headline":"<original language>","colors":{"primary":"#HEX or null","secondary":"#HEX or null","accent":"#HEX or null","background":"#HEX or null","textPrimary":"#HEX or null","textSecondary":null}}
-`,
-      },
-      {
-        role: "user",
-        content: buildUserContent(includeScreenshot),
-      },
-    ],
+`;
+
+  const requestBody = (includeScreenshot) => ({
+    model,
+    temperature: 0,
+    max_tokens: 600,
+    response_format: { type: "json_object" },
+    messages: messagesForModel(
+      model,
+      brandingSystemPrompt,
+      buildUserContent(includeScreenshot),
+    ),
   });
 
   const headers = {
@@ -103,57 +319,45 @@ Example (structure only):
   const textPayloadLen = textPayload.length;
   const screenshotLen = input?.screenshot ? String(input.screenshot).length : 0;
 
-  console.log("[LLM debug] Request:", {
-    model,
-    hasScreenshot,
-    textPayloadBytes: textPayloadLen,
-    screenshotPayloadBytes: screenshotLen || undefined,
-  });
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[LLM] Request:", {
+      model,
+      hasScreenshot,
+      textPayloadBytes: textPayloadLen,
+      screenshotPayloadBytes: screenshotLen || undefined,
+    });
+  }
 
   const startTime = Date.now();
   let response;
+  let modelUsed = model;
+  const includeScreenshot =
+    Boolean(input?.screenshot) && modelSupportsVision(model);
+
   try {
-    response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      requestBody(true),
-      { headers },
+    const result = await openRouterChatPost(
+      requestBody(includeScreenshot),
+      headers,
     );
-    console.log("[LLM debug] OpenRouter OK, status:", response.status);
+    response = result.response;
+    modelUsed = result.modelUsed;
   } catch (err) {
     const status = err.response?.status;
-    const body = err.response?.data;
-    console.error("[LLM debug] OpenRouter error:", {
-      message: err.message,
-      status,
-      statusText: err.response?.statusText,
-      body: body ? JSON.stringify(body, null, 2) : "(no body)",
-    });
-    if (status === 400 && body) {
-      console.error(
-        "⚠️ OpenRouter 400 details:",
-        JSON.stringify(body, null, 2),
-      );
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[LLM] OpenRouter error:", err.message, "status:", status);
     }
-    if (status === 400 && input?.screenshot) {
-      console.log("[LLM debug] Retrying without screenshot...");
+    if (status === 400 && includeScreenshot) {
       try {
-        response = await axios.post(
-          "https://openrouter.ai/api/v1/chat/completions",
-          requestBody(false),
-          { headers },
-        );
-        console.log(
-          "[LLM debug] Retry without screenshot OK, status:",
-          response?.status,
-        );
+        const result = await openRouterChatPost(requestBody(false), headers);
+        response = result.response;
+        modelUsed = result.modelUsed;
       } catch (retryErr) {
-        console.error("[LLM debug] Retry failed:", {
-          message: retryErr.message,
-          status: retryErr.response?.status,
-          body: retryErr.response?.data
-            ? JSON.stringify(retryErr.response.data, null, 2)
-            : "(no body)",
-        });
+        if (process.env.NODE_ENV !== "production") {
+          console.error(
+            "[LLM] Retry without screenshot failed:",
+            retryErr.message,
+          );
+        }
         throw retryErr;
       }
     } else {
@@ -165,11 +369,6 @@ Example (structure only):
     throw new Error("LLM request failed");
   }
 
-  console.log(
-    "🧪 OpenRouter response:",
-    JSON.stringify(response.data, null, 2),
-  );
-
   // Trackear métricas de costo
   const usage = response.data?.usage;
   if (usage) {
@@ -177,7 +376,7 @@ Example (structure only):
     const completionTokens = usage.completion_tokens || 0;
     const totalCost = usage.total_cost || 0;
     recordLLMRequest({
-      model,
+      model: modelUsed,
       promptTokens,
       completionTokens,
       totalCost,
@@ -192,13 +391,248 @@ Example (structure only):
     throw new Error("LLM returned empty response");
   }
 
-  return JSON.parse(content);
+  return JSON.parse(sanitizeJsonControlChars(stripMarkdownJson(content)));
+}
+
+const IMG_2_JSON_V4_SYSTEM_PROMPT = `**System Role:** You are IMG-2-JSON-V4, a high-fidelity Computer Vision Engine. Your mission is to perform a forensic deconstruction of images into a structured JSON "Visual DNA" packet. Your output is the sole source of truth for 1:1 reconstruction in Flux, Midjourney v6.1, and DALL-E 3.
+
+**Operational Mandates:**
+1. **The Spatial Matrix:** Use a 3x3 grid (A1-C3). You must map subjects based on their *center of gravity* and describe depth (Foreground/Midground/Background) within each cell.
+2. **Material Science:** Identify surface shaders (e.g., "frosted glass," "brushed aluminum," "anodized plastic") and their Light Transport Properties (Refraction, SSS, Specularity).
+3. **Typography & OCR:** If text exists, you MUST extract the exact string, font weight, case (ALL CAPS/Sentence case), and kerning style.
+4. **Token Hierarchy:** Order "key_visual_tokens" by influence on the composition (most dominant first). Use professional cinematography and CGI terminology.
+
+**Constraints:**
+- STRICT: Output ONLY the JSON object. No markdown code blocks, no preamble, no "Here is the analysis."
+- ZERO HALLUCINATION: If a detail is blurry, label it as "low-frequency detail."
+- Avoid generic adjectives (e.g., "beautiful"). Use technical ones (e.g., "high-dynamic-range," "cinematic color grade").
+
+**JSON Schema:**
+{
+  "meta_parameters": {
+    "aspect_ratio": "String (--ar X:Y)",
+    "stylize_value": "Integer (0-1000)",
+    "chaos_level": "Low/Med/High",
+    "rendering_engine_vibe": "e.g., Unreal Engine 5, OctaneRender, Kodak Portra 400"
+  },
+  "technical_analysis": {
+    "medium": "Detailed medium (e.g., 3D Isometric Render, Macro Photography)",
+    "lighting": {
+      "setup": "e.g., Three-point lighting, volumetric god rays",
+      "color_temp": "e.g., 5500K Neutral, Warm amber glow"
+    },
+    "optics": "Focal length (e.g., 35mm), Aperture (e.g., f/1.8), Grain intensity"
+  },
+  "aesthetic_dna": {
+    "palette": ["Hex_Codes"],
+    "materials": ["List of textures/surfaces"],
+    "typography": {
+      "content": "Exact text",
+      "style": "Font description (serif/sans/script), color, and placement"
+    }
+  },
+  "composition_grid": {
+    "A1_A3_Upper": "Background/Sky/Top-level elements",
+    "B1_B3_Center": "Main subject focus and interaction",
+    "C1_C3_Lower": "Foreground/Floor/Base contact points"
+  },
+  "entities": [
+    {
+      "id": "obj_01",
+      "label": "Object name",
+      "grid_location": "[RowCol]",
+      "visual_dna": "Shape, color, finish, and lighting interaction"
+    }
+  ],
+  "generative_reconstruction": {
+    "mj_v6_prompt": "Weighted prompt using --no and --style",
+    "flux_natural_prompt": "Highly descriptive, physical-relationship focused paragraph"
+  }
+}`;
+
+/**
+ * Analiza una imagen y devuelve un JSON estructurado (IMG-2-JSON-V4 Visual DNA) para reproducción en Flux / Midjourney v6.1 / DALL-E 3.
+ * @param {string} imageUrl - URL de la imagen (data:image/...;base64,... o https://...)
+ * @returns {Promise<object>} - Objeto JSON con meta_parameters, technical_analysis, aesthetic_dna, composition_grid, entities, generative_reconstruction
+ */
+export async function analyzeImageToJson(imageUrl) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = getCreativeModel();
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing");
+  if (!imageUrl || typeof imageUrl !== "string") throw new Error("imageUrl is required (data URL or https URL)");
+
+  const userContent = [
+    { type: "text", text: "Analyze this image and output exactly one valid JSON object following the schema. No markdown, no preamble, no explanation." },
+    { type: "image_url", image_url: { url: imageUrl } },
+  ];
+  const messages = messagesForModel(model, IMG_2_JSON_V4_SYSTEM_PROMPT, userContent);
+  const requestBody = {
+    model,
+    messages: normalizeMessagesForModel(messages, model),
+    response_format: modelSupportsVision(model) ? { type: "json_object" } : undefined,
+  };
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+    "HTTP-Referer": process.env.APP_URL || "https://adncreativo.com",
+  };
+
+  const startTime = Date.now();
+  const { response, modelUsed } = await openRouterChatPost(requestBody, headers);
+
+  const usage = response.data?.usage;
+  if (usage) {
+    recordLLMRequest({
+      model: modelUsed,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+      totalCost: usage.total_cost || 0,
+      durationMs: Date.now() - startTime,
+      source: "analyze_image",
+    });
+  }
+
+  const content = response.data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error("LLM returned empty response");
+
+  return JSON.parse(sanitizeJsonControlChars(stripMarkdownJson(content)));
+}
+
+/**
+ * Construye el prompt para clonar un anuncio de referencia con la marca del usuario.
+ * Usa el Visual DNA (flux_natural_prompt) y añade instrucciones para reemplazar producto/logo por los assets del usuario.
+ * @param {object} visualDna - Objeto retornado por analyzeImageToJson (IMG-2-JSON-V4)
+ * @param {{ headline?: string, primary?: string, companyName?: string }} [branding] - Opcional: headline, color primario, nombre
+ * @returns {{ prompt: string, aspectRatio: string }}
+ */
+export function buildClonePromptFromDna(visualDna, branding = {}) {
+  const recon = visualDna?.generative_reconstruction || {};
+  const fluxPrompt =
+    recon.flux_natural_prompt ||
+    recon.dalle_flux_natural_prompt ||
+    (recon.mj_v6_prompt ? recon.mj_v6_prompt.replace(/--ar\s+[\d:]+.*$/i, "").trim() : "");
+  const meta = visualDna?.meta_parameters || {};
+  let aspectRatio = "4:5";
+  if (meta.aspect_ratio) {
+    const ar = String(meta.aspect_ratio).replace(/^--ar\s+/i, "").trim();
+    if (/^\d+:\d+$/.test(ar)) aspectRatio = ar;
+  }
+  const brandLine = branding?.companyName
+    ? ` Brand: ${branding.companyName}.`
+    : "";
+  const colorLine =
+    branding?.primary && /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", ""))
+      ? ` Use brand color ${branding.primary} for key accents where appropriate.`
+      : "";
+  const prompt = [
+    "Recreate this exact composition, lighting, and style:",
+    fluxPrompt,
+    "CRITICAL: Replace any product or logo visible in the scene with the user's brand assets provided in the reference images (first reference image = logo, second = product). Keep the same camera angle, materials, and mood. Do not include any text, words, or letters in the image unless the original scene had clearly visible text.",
+    brandLine,
+    colorLine,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return { prompt, aspectRatio };
+}
+
+/**
+ * Convierte el Visual DNA (IMG-2-JSON-V4) al mismo schema que los creativos (meta_parameters,
+ * technical_analysis, aesthetic_dna, composition_grid, entities, generative_reconstruction con
+ * midjourney_prompt y dalle_flux_natural_prompt). Así el creativo clonado se guarda con el mismo
+ * formato que los generados por ángulos/headlines.
+ * @param {object} visualDna - Objeto retornado por analyzeImageToJson (IMG-2-JSON-V4)
+ * @param {{ companyName?: string, primary?: string, headline?: string }} [branding] - Opcional
+ * @returns {object} - Spec en formato creative (listo para getImagePromptFromStructured)
+ */
+export function normalizeVisualDnaToCreativeSpec(visualDna, branding = {}) {
+  if (!visualDna || typeof visualDna !== "object") {
+    return {
+      meta_parameters: { aspect_ratio: "4:5", stylize_value: 250, chaos_level: "Med" },
+      technical_analysis: { medium: "Commercial Photography", camera_lens: "35mm", depth_of_field: "", lighting_type: "Soft key light", image_quality: "8k" },
+      aesthetic_dna: { art_style_reference: "", dominant_colors_hex: [], key_visual_tokens: [], mood: "" },
+      composition_grid: { A1_A3_Upper_Third: "", B1_B3_Middle_Third: "", C1_C3_Lower_Third: "" },
+      entities: [],
+      generative_reconstruction: { midjourney_prompt: "", dalle_flux_natural_prompt: "" },
+    };
+  }
+  const meta = visualDna.meta_parameters || {};
+  let aspectRatio = "4:5";
+  if (meta.aspect_ratio) {
+    const ar = String(meta.aspect_ratio).replace(/^--ar\s+/i, "").trim();
+    if (/^\d+:\d+$/.test(ar)) aspectRatio = ar;
+  }
+  const tech = visualDna.technical_analysis || {};
+  const lighting = tech.lighting && typeof tech.lighting === "object"
+    ? [tech.lighting.setup, tech.lighting.color_temp].filter(Boolean).join(", ")
+    : (tech.lighting_type || tech.lighting || "");
+  const optics = typeof tech.optics === "string" ? tech.optics : "";
+  const aesthetic = visualDna.aesthetic_dna || {};
+  const palette = Array.isArray(aesthetic.palette) ? aesthetic.palette : (aesthetic.dominant_colors_hex || []);
+  const materials = Array.isArray(aesthetic.materials) ? aesthetic.materials : [];
+  const tokens = aesthetic.key_visual_tokens || materials.slice(0, 8);
+  const grid = visualDna.composition_grid || {};
+  const entitiesRaw = Array.isArray(visualDna.entities) ? visualDna.entities : [];
+  const recon = visualDna.generative_reconstruction || {};
+  const mjRaw = recon.mj_v6_prompt || recon.midjourney_prompt || "";
+  const midjourney_prompt = typeof mjRaw === "string" && mjRaw.trim()
+    ? mjRaw.replace(/\s*--ar\s+[\d:]+\s*/gi, " ").replace(/\s*--v\s+[\d.]+\s*/gi, " ").replace(/\s*--style\s+raw\s*/gi, " ").trim() + ` --ar ${aspectRatio} --v 6.0 --style raw`
+    : "";
+  let fluxPrompt = recon.flux_natural_prompt || recon.dalle_flux_natural_prompt || "";
+  const replaceInstruction =
+    " CRITICAL: Replace any product or logo visible in the scene with the user's brand assets provided in the reference images (first reference = logo, second = product). Keep the same camera angle, materials, and mood.";
+  if (branding?.companyName || branding?.primary) {
+    fluxPrompt = (fluxPrompt || "").trim() + replaceInstruction;
+    if (branding.companyName) fluxPrompt += ` Brand: ${branding.companyName}.`;
+    if (branding.primary && /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", "")))
+      fluxPrompt += ` Use brand color ${branding.primary} for key accents where appropriate.`;
+  }
+  const dalle_flux_natural_prompt = fluxPrompt.trim() || "Recreate this exact composition, lighting, and style.";
+
+  return {
+    meta_parameters: {
+      aspect_ratio: aspectRatio,
+      stylize_value: typeof meta.stylize_value === "number" ? meta.stylize_value : 250,
+      chaos_level: meta.chaos_level || "Med",
+    },
+    technical_analysis: {
+      medium: tech.medium || "Commercial Photography",
+      camera_lens: tech.camera_lens || optics || "35mm",
+      depth_of_field: tech.depth_of_field || "",
+      lighting_type: lighting || tech.lighting_type || "Soft key light",
+      image_quality: tech.image_quality || "8k sharp",
+    },
+    aesthetic_dna: {
+      art_style_reference: meta.rendering_engine_vibe || aesthetic.art_style_reference || "",
+      dominant_colors_hex: palette,
+      key_visual_tokens: tokens,
+      mood: aesthetic.mood || "",
+    },
+    composition_grid: {
+      A1_A3_Upper_Third: grid.A1_A3_Upper_Third ?? grid.A1_A3_Upper ?? "",
+      B1_B3_Middle_Third: grid.B1_B3_Middle_Third ?? grid.B1_B3_Center ?? "",
+      C1_C3_Lower_Third: grid.C1_C3_Lower_Third ?? grid.C1_C3_Lower ?? "",
+    },
+    entities: entitiesRaw.map((e, i) => ({
+      id: e.id || `obj_${String(i + 1).padStart(2, "0")}`,
+      label: e.label || "Element",
+      prominence_weight: e.prominence_weight ?? 0.7,
+      grid_location: e.grid_location || "[B2]",
+      visual_description: e.visual_description ?? e.visual_dna ?? "",
+      action_pose: e.action_pose ?? "",
+      lighting_interaction: e.lighting_interaction ?? "",
+    })),
+    generative_reconstruction: {
+      midjourney_prompt: midjourney_prompt || `/imagine prompt: ${tech.medium || "Commercial"} --ar ${aspectRatio} --v 6.0 --style raw`,
+      dalle_flux_natural_prompt,
+    },
+  };
 }
 
 /** Genera la base de conocimiento del negocio a partir de url + branding + metadata (solo texto, sin imagen). */
 export async function generateKnowledgeBase(input) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-nano";
+  const model = getKnowledgeBaseModel();
 
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing");
@@ -206,31 +640,61 @@ export async function generateKnowledgeBase(input) {
 
   const startTime = Date.now();
   const text = JSON.stringify(input);
+  const kbSystemPrompt = `You are a business strategist and copywriter.
+
+Your task: Given a website URL and extracted branding data (company name, headline, metadata such as title and description), write a structured "Knowledge Base" document in plain text.
+
+LANGUAGE RULE (CRITICAL):
+1) Detect the primary language of the website using, in this order of priority:
+   - Website content language (if available)
+   - Company name and headline
+   - Metadata (title and description)
+2) Write the CONTENT of all sections in that detected language.
+3) If the language cannot be determined with high confidence, DEFAULT to Spanish.
+4) SECTION TITLES MUST ALWAYS BE IN SPANISH, regardless of the detected language.
+
+FORMAT RULES:
+- Plain text only (no markdown, no JSON).
+- Use the EXACT section titles listed below (in Spanish).
+- Each section title must be on its own line, followed by a blank line, then the content.
+- Bullet-style lines are allowed only as short separated lines without symbols.
+
+CONTENT GUIDELINES:
+- Infer reasonable and realistic details about products, audience, value proposition, and industry based on the brand and metadata.
+- Be concise, professional, and business-oriented.
+- Do not mention assumptions, inference, or limitations.
+
+REQUIRED SECTIONS (in this exact order and wording):
+
+1) "Descripción de la Empresa"
+One or two paragraphs explaining what the company does, its mission, and positioning.
+
+2) "Productos y Servicios"
+Key offerings and their main benefits, expressed as short standalone lines if needed.
+
+3) "Público Objetivo"
+Description of the ideal customers or users.
+
+4) "Propuesta de Valor"
+Clear explanation of why customers choose this company over alternatives.
+
+5) "Voz y Personalidad de la Marca"
+Tone, style, and communication characteristics.
+
+6) "Mensajes Clave"
+Core talking points the brand consistently communicates.
+
+7) "Contexto de la Industria"
+Brief overview of the industry or market in which the company operates.
+
+OUTPUT RULE:
+Return ONLY the document text. No preamble, no explanations, no metadata.`;
+
   const requestBody = {
     model,
     temperature: 0.3,
     max_tokens: 4000,
-    messages: [
-      {
-        role: "system",
-        content: `You are a business strategist and copywriter. Given a website URL and extracted branding data (company name, headline, metadata like title and description), write a structured "Knowledge Base" document in plain text (no markdown headers, no JSON). Use the exact section titles below, each on its own line followed by a blank line and then the paragraph(s). Write in the same language as the company name and headline (e.g. Spanish if they are in Spanish). Infer reasonable content for products, audience, value proposition, etc. based on the brand and metadata; be concise but professional.
-
-Required sections in this order:
-1) "Company Overview" - one or two paragraphs about the company mission and what they do.
-2) "Products/Services" - key offerings and benefits (bullet-style lines are ok).
-3) "Target Audience" - who they serve.
-4) "Value Proposition" - why customers choose them.
-5) "Brand Voice & Personality" - tone and how they communicate.
-6) "Key Messages" - main talking points.
-7) "Industry Context" - brief industry/market context.
-
-Output ONLY the document text, no preamble or explanation.`,
-      },
-      {
-        role: "user",
-        content: [{ type: "text", text }],
-      },
-    ],
+    messages: messagesForModel(model, kbSystemPrompt, [{ type: "text", text }]),
   };
 
   const headers = {
@@ -238,10 +702,9 @@ Output ONLY the document text, no preamble or explanation.`,
     "Content-Type": "application/json",
   };
 
-  const response = await axios.post(
-    "https://openrouter.ai/api/v1/chat/completions",
+  const { response, modelUsed } = await openRouterChatPost(
     requestBody,
-    { headers },
+    headers,
   );
 
   // Trackear métricas de costo
@@ -251,7 +714,7 @@ Output ONLY the document text, no preamble or explanation.`,
     const completionTokens = usage.completion_tokens || 0;
     const totalCost = usage.total_cost || 0;
     recordLLMRequest({
-      model,
+      model: modelUsed,
       promptTokens,
       completionTokens,
       totalCost,
@@ -272,13 +735,16 @@ Output ONLY the document text, no preamble or explanation.`,
 /** Genera 5 customer profiles (ICP) a partir de la base de conocimiento y branding. */
 export async function generateCustomerProfiles(input) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-nano";
+  const model = getProfilesModel();
 
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
 
   const startTime = Date.now();
+  const currentDate = new Date();
+  const dateContext = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
+
   const text = JSON.stringify({
     url: input.url,
     companyName: input.companyName,
@@ -291,43 +757,71 @@ export async function generateCustomerProfiles(input) {
     temperature: 0.4,
     max_tokens: 4000,
     response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content: `You are a marketing strategist. Given a business knowledge base and branding (company name, headline), generate exactly 5 Ideal Customer Profiles (ICPs) as a JSON object.
+    messages: messagesForModel(
+      model,
+      `You are a senior marketing strategist and customer research expert.
 
-Return ONLY a JSON object with this exact structure (no markdown, no extra text):
+REFERENCE DATE (use for realistic figures): Today is ${dateContext}. All monetary and economic figures must be consistent with this date.
+
+TASK:
+Given a business knowledge base and branding inputs (company name, headline, positioning), generate EXACTLY 5 Ideal Customer Profiles (ICPs).
+
+LANGUAGE RULE (CRITICAL):
+1) Detect the primary language from the company name and headline.
+2) Write ALL text fields in that language.
+3) If the language cannot be determined with high confidence, DEFAULT to Spanish.
+
+OUTPUT RULE (STRICT):
+- Return ONLY a valid JSON object.
+- No markdown, no comments, no explanations, no extra keys.
+- The JSON must strictly match the structure and field names below.
+
+REQUIRED JSON STRUCTURE:
 {
   "profiles": [
     {
-      "name": "Full name with descriptor, e.g. Carlos, the Ambitious Newcomer",
-      "title": "Short role label, e.g. Aspiring Detailer Entrepreneur",
-      "description": "One or two sentences describing this persona and why they care about the business.",
+      "name": "Full name with a descriptive persona label (e.g. Carlos, el Emprendedor Ambicioso)",
+      "title": "Short role or persona title",
+      "description": "One or two concise sentences explaining who this person is and why the business is relevant to them.",
       "demographics": {
-        "age": "age range e.g. 28-35",
+        "age": "Age range (e.g. 28-35)",
         "gender": "Male or Female",
-        "income": "e.g. $25,000-40,000",
-        "location": "e.g. Urban areas, Argentina",
-        "education": "e.g. Bachelor's degree"
+        "income": "Realistic annual income range in numbers for the reference date and location (e.g. 32000-48000 in local currency, or USD 32000-48000). Use plausible figures for the persona and market.",
+        "location": "Geographic context relevant to the business",
+        "education": "Highest or typical education level"
       },
-      "painPoints": ["string", "string", "string"],
-      "goals": ["string", "string", "string"],
-      "channels": ["string", "string", "string"]
+      "painPoints": [
+        "Specific and concrete pain point",
+        "Specific and concrete pain point",
+        "Specific and concrete pain point"
+      ],
+      "goals": [
+        "Clear and realistic goal",
+        "Clear and realistic goal",
+        "Clear and realistic goal"
+      ],
+      "channels": [
+        "Primary acquisition or communication channel",
+        "Secondary channel",
+        "Tertiary channel"
+      ]
     }
   ]
 }
 
-Rules:
-- Exactly 5 profiles. Diversify: different ages, genders, situations (e.g. newcomer, side hustler, enthusiast, professional, mentor).
-- Use the same language as the company name/headline (e.g. Spanish if the brand is in Spanish).
-- Each profile must have name, title, description, demographics (all 5 fields), painPoints (3 items), goals (3 items), channels (3 items).
-- Be specific to the business and industry from the knowledge base.`,
-      },
-      {
-        role: "user",
-        content: [{ type: "text", text }],
-      },
-    ],
+CONTENT RULES:
+- Generate EXACTLY 5 profiles.
+- Each profile must represent a clearly different persona (e.g. newcomer, side hustler, enthusiast, professional, mentor or leader).
+- Vary age ranges, genders, motivations, and maturity levels.
+- All profiles must be highly relevant to the specific business and industry described in the knowledge base.
+- Avoid generic personas; be concrete and realistic.
+- Do NOT repeat names, titles, or dominant motivations across profiles.
+- INCOME: Use realistic annual income figures (numeric ranges) consistent with the REFERENCE DATE and the persona's location and role. Examples: "28.000-42.000 EUR", "USD 35.000-52.000", "450.000-680.000 MXN". Avoid outdated or round placeholder figures; use plausible numbers for the current year.
+
+VALIDATION RULE:
+If any required field is missing or the count is incorrect, the output is invalid.`,
+      [{ type: "text", text }],
+    ),
   };
 
   const headers = {
@@ -335,10 +829,9 @@ Rules:
     "Content-Type": "application/json",
   };
 
-  const response = await axios.post(
-    "https://openrouter.ai/api/v1/chat/completions",
+  const { response, modelUsed } = await openRouterChatPost(
     requestBody,
-    { headers },
+    headers,
   );
 
   // Trackear métricas de costo
@@ -348,7 +841,7 @@ Rules:
     const completionTokens = usage.completion_tokens || 0;
     const totalCost = usage.total_cost || 0;
     recordLLMRequest({
-      model,
+      model: modelUsed,
       promptTokens,
       completionTokens,
       totalCost,
@@ -363,7 +856,9 @@ Rules:
     throw new Error("LLM returned empty or invalid customer profiles");
   }
 
-  const parsed = JSON.parse(content);
+  const parsed = JSON.parse(
+    sanitizeJsonControlChars(stripMarkdownJson(content)),
+  );
   const profiles = Array.isArray(parsed?.profiles) ? parsed.profiles : [];
   if (profiles.length < 5) {
     throw new Error(`LLM returned ${profiles.length} profiles, expected 5`);
@@ -373,12 +868,12 @@ Rules:
 }
 
 /**
- * Genera 100 titulares/headlines para la página de ventas y creativos.
- * Usa el prompt tipo copywriter profesional, 4U's de Mark Ford, 7-15 palabras.
+ * Generates 100 headlines/hooks for the sales page and creatives.
+ * All internal prompts are in English; output language is contentLanguage (fallback Spanish Argentina).
  */
 export async function generateHeadlines(input) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-nano";
+  const model = getHeadlinesModel();
 
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing");
@@ -392,20 +887,26 @@ export async function generateHeadlines(input) {
     clientIdealSummary,
     nicheOrSubniche,
     useVoseo,
+    contentLanguage: inputContentLanguage,
   } = input;
 
-  const voseoRule = useVoseo
-    ? `
-VOSEO (público argentino/uruguayo): Si el público es argentino o uruguayo, OBLIGATORIO usá VOSEO en todos los titulares. Ejemplos: "empezá", "aprendé", "mirá", "tené", "hacé", "sabé", "andá", "vení", "decime", "probá", "mejorá", "cambiá", "sumate", "descubrí". NO uses tuteo (empieza, aprende, mira, ten, haz, etc.) en ese caso.`
-    : `
-TUTEO (resto de hispanohablantes): Si el público no es argentino/uruguayo, usá tuteo: "empieza", "aprende", "mira", "ten", "haz", etc.`;
+  const contentLanguage = getContentLanguage(
+    inputContentLanguage || input?.branding || "es-AR",
+  );
+  const voseoRule =
+    contentLanguage === "es-AR" && useVoseo
+      ? " For Spanish (Argentina): use VOSEO in all headlines (e.g. empezá, aprendé, mirá, tené, hacé, descubrí, sumate). Do NOT use tuteo (empieza, aprende, mira, ten, haz)."
+      : contentLanguage.startsWith("es") && !useVoseo
+        ? " For Spanish: use tuteo (empieza, aprende, mira, ten, haz, etc.)."
+        : "";
 
   const text = JSON.stringify({
-    companyName: companyName || "el negocio",
+    companyName: companyName || "the business",
     headline: headline || "",
     knowledgeBaseSummary: (knowledgeBaseSummary || "").slice(0, 3000),
     clientIdealSummary: clientIdealSummary || "",
     nicheOrSubniche: nicheOrSubniche || "",
+    contentLanguage,
     useVoseo: Boolean(useVoseo),
   });
 
@@ -414,32 +915,21 @@ TUTEO (resto de hispanohablantes): Si el público no es argentino/uruguayo, usá
     temperature: 0.7,
     max_tokens: 12000,
     response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content: `Eres un copywriter profesional de clase mundial especializado en hooks para anuncios y creativos. Tu tarea es desarrollar exactamente 100 titulares/headlines que funcionen como GANCHOS VISUALES: texto grande, impactante y llamativo que detenga el scroll y obligue a leer.
+    messages: messagesForModel(
+      model,
+      `You are a world-class copywriter specializing in ad hooks and creatives. Your task is to produce exactly 100 headlines that work as VISUAL HOOKS: short, punchy, scroll-stopping text for ads (Instagram, Facebook, etc.).
 
-Reglas obligatorias:
-- Devuelve EXACTAMENTE 100 headlines en un JSON con la clave "headlines" que sea un array de strings.
-- Cada headline es un HOOK: corto, punchy, que funcione como texto grande en un anuncio (Instagram, Facebook, etc.). Prioriza frases de 5 a 12 palabras que se lean de un vistazo.
-- Sigue las 4U's de Mark Ford: Útil, Urgente, Único, Ultra-específico.
-- Debe ser el tipo de frase que se pone en GRANDE en un creativo: una promesa clara, una pregunta que enganche, o una afirmación audaz. Nada genérico.
-- Habla del gran beneficio; rebate objeciones; inspira a actuar. Promete resultados concretos cuando tenga sentido.
-- Usa el mismo idioma que el headline y la empresa (ej. español si la marca está en español).
-- Evita titulares largos o que no funcionen como texto principal de un anuncio visual.
+MANDATORY RULES:
+- Return EXACTLY 100 headlines in a JSON object with the key "headlines" (array of strings).
+- Each headline is a HOOK: 5–12 words, suitable as large text on a visual ad. Follow the 4 U's: Useful, Urgent, Unique, Ultra-specific.
+- One clear promise, a gripping question, or a bold claim. No generic phrases.
+- Speak to the main benefit; address objections; inspire action. Promise concrete results when relevant.
+- CONTENT LANGUAGE (CRITICAL): Write ALL headlines in the language specified in the input as contentLanguage. If contentLanguage is "es-AR" or "es", write in Spanish. If "en", write in English. Never output ad copy in a different language. Default if missing: Spanish (Argentina).
 ${voseoRule}
-
-Ejemplos con voseo (Argentina/Uruguay): "Empezá ahora", "Aprendé en 10 días", "Mirá cómo funciona", "Descubrí el método", "Sumate al cambio".
-Ejemplos con tuteo (resto): "Empieza ahora", "Aprende en 10 días", "Mira cómo funciona".
-
-Output: ÚNICAMENTE un objeto JSON con esta estructura, sin markdown ni texto extra:
-{"headlines": ["titular 1", "titular 2", ... "titular 100"]}`,
-      },
-      {
-        role: "user",
-        content: `Genera 100 titulares para esta página de ventas. Datos del negocio y cliente ideal (si useVoseo es true, todos los titulares en español deben usar voseo: empezá, aprendé, mirá, etc.):\n${text}`,
-      },
-    ],
+- Output ONLY a valid JSON object with this structure, no markdown or extra text:
+{"headlines": ["headline 1", "headline 2", ... "headline 100"]}`,
+      `Generate 100 headlines for this sales page. Business and audience data (contentLanguage and useVoseo are set; output all headlines in the content language):\n${text}`,
+    ),
   };
 
   const headers = {
@@ -447,10 +937,9 @@ Output: ÚNICAMENTE un objeto JSON con esta estructura, sin markdown ni texto ex
     "Content-Type": "application/json",
   };
 
-  const response = await axios.post(
-    "https://openrouter.ai/api/v1/chat/completions",
+  const { response, modelUsed } = await openRouterChatPost(
     requestBody,
-    { headers },
+    headers,
   );
 
   // Trackear métricas de costo
@@ -460,13 +949,15 @@ Output: ÚNICAMENTE un objeto JSON con esta estructura, sin markdown ni texto ex
     const completionTokens = usage.completion_tokens || 0;
     const totalCost = usage.total_cost || 0;
     recordLLMRequest({
-      model,
+      model: modelUsed,
       promptTokens,
       completionTokens,
       totalCost,
       durationMs: Date.now() - startTime,
       source: "headlines",
-      workspaceSlug: input?.companyName ? "headlines-" + input.companyName : null,
+      workspaceSlug: input?.companyName
+        ? "headlines-" + input.companyName
+        : null,
     });
   }
 
@@ -475,18 +966,157 @@ Output: ÚNICAMENTE un objeto JSON con esta estructura, sin markdown ni texto ex
     throw new Error("LLM returned empty or invalid headlines");
   }
 
-  const parsed = JSON.parse(content);
+  const parsed = JSON.parse(
+    sanitizeJsonControlChars(stripMarkdownJson(content)),
+  );
   const headlines = Array.isArray(parsed?.headlines) ? parsed.headlines : [];
   return headlines.filter((h) => typeof h === "string" && h.trim().length > 0);
 }
 
 /**
- * Genera un prompt para crear una imagen/creativo a partir de un headline,
- * teniendo en cuenta el tipo de público, branding y producto.
+ * Formato de un "Ángulo de Venta" (tarjeta de UI: categoría emocional + hook + descripción visual).
+ * @typedef {{ category: string, title: string, description: string, hook: string, visual: string }} SalesAngle
+ */
+
+/**
+ * Generates Sales Angles (card format: category, title, description, hook, visual).
+ * All internal prompts in English. Output: title, description, hook in contentLanguage; visual in English.
+ *
+ * @param {{ companyName?: string, headline?: string, knowledgeBaseSummary?: string, clientIdealSummary?: string, nicheOrSubniche?: string, useVoseo?: boolean, contentLanguage?: string, branding?: object }} input
+ * @returns {Promise<SalesAngle[]>}
+ */
+export async function generateSalesAngles(input) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = getCreativeModel();
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing");
+
+  const {
+    companyName = "",
+    headline = "",
+    knowledgeBaseSummary = "",
+    clientIdealSummary = "",
+    nicheOrSubniche = "",
+    useVoseo = false,
+    contentLanguage: inputContentLanguage,
+  } = input;
+
+  const contentLanguage = getContentLanguage(
+    inputContentLanguage || input?.branding || "es-AR",
+  );
+  const voseoRule =
+    contentLanguage === "es-AR" && useVoseo
+      ? " For Spanish (Argentina) use VOSEO in hook and description (empezá, aprendé, mirá, tené, ganá, etc.)."
+      : contentLanguage.startsWith("es") && !useVoseo
+        ? " For Spanish use tuteo (empieza, aprende, mira, ten, gana, etc.)."
+        : "";
+
+  const systemPrompt = `You are a top-tier social and creative strategist. You generate "Sales Angles": psychological angles for ads that STAND OUT on social (Instagram, Facebook, Threads, LinkedIn). Your goal is scroll-stopping, non-generic content.
+
+ANALYSIS FIRST: For the given business and audience, identify UNIQUE and NON-OBVIOUS angles. Use the audience's real pain points, curiosity gaps, and underused perspectives. Avoid generic advice and overused hooks.
+
+Each angle is a card with:
+- category: One label in UPPERCASE: CODICIA, FRUSTRACIÓN, ESPERANZA, ORGULLO, CONFIANZA, MIEDO, URGENCIA, IDENTIDAD, SUPERACIÓN, EFICIENCIA (or similar for the business).
+- title: Short name for the angle, in the TARGET CONTENT LANGUAGE (see input contentLanguage).
+- description: 1–2 sentences: which problem/emotion it targets and what it offers. In the TARGET CONTENT LANGUAGE.
+- hook: ONE punchy phrase for LARGE TEXT in the ad. Must STOP THE SCROLL: provoke curiosity, emotion or surprise without clickbait. Short, bold, pattern-breaking, impossible to ignore. Use power words, urgency or a clear promise of value. In the TARGET CONTENT LANGUAGE. ${voseoRule}
+- visual: Scene description in ENGLISH only (for image generation): subject, environment, objects, emotional state. 1–2 sentences.
+
+HOOK GUIDELINES: Create hooks that grab attention in the first line. Think viral hooks: thought-provoking questions, bold statements, numbers or credibility, or a clear solution to a pain. Keep them concise and easy to understand.
+
+CONTENT LANGUAGE (CRITICAL): Write title, description, and hook in the language specified in the input as contentLanguage. If not set, default is Spanish (Argentina). Never output visible ad copy in a different language. The "visual" field must always be in English.
+
+Generate 12–24 varied angles. Output ONLY a JSON object with key "angles" (array of objects with category, title, description, hook, visual). No markdown.`;
+
+  const userText = JSON.stringify({
+    companyName: (companyName || "").slice(0, 200),
+    headline: (headline || "").slice(0, 300),
+    knowledgeBaseSummary: (knowledgeBaseSummary || "").slice(0, 2500),
+    clientIdealSummary: (clientIdealSummary || "").slice(0, 800),
+    nicheOrSubniche: (nicheOrSubniche || "").slice(0, 200),
+    contentLanguage,
+    useVoseo: Boolean(useVoseo),
+  });
+
+  const requestBody = {
+    model,
+    temperature: 0.7,
+    max_tokens: 8000,
+    response_format: { type: "json_object" },
+    messages: messagesForModel(
+      model,
+      systemPrompt,
+      `Analyze this business and ideal client. Identify unique, non-obvious angles based on their pain points and curiosity gaps. Generate scroll-stopping sales angles. Avoid generic advice. Output title, description, and hook in the target content language (contentLanguage in the JSON below); visual always in English:\n${userText}`,
+    ),
+  };
+
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+
+  const startTime = Date.now();
+  const { response, modelUsed } = await openRouterChatPost(
+    requestBody,
+    headers,
+  );
+  const usage = response.data?.usage;
+  if (usage) {
+    recordLLMRequest({
+      model: modelUsed,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+      totalCost: usage.total_cost || 0,
+      durationMs: Date.now() - startTime,
+      source: "sales_angles",
+      workspaceSlug: input?.companyName ? String(input.companyName) : null,
+    });
+  }
+
+  const content = response.data?.choices?.[0]?.message?.content;
+  if (!content || typeof content !== "string") {
+    throw new Error("LLM returned empty or invalid sales angles");
+  }
+
+  const jsonStr = sanitizeJsonControlChars(stripMarkdownJson(content));
+  const parsed = JSON.parse(jsonStr);
+  const raw = Array.isArray(parsed?.angles) ? parsed.angles : [];
+  return raw
+    .filter(
+      (a) =>
+        a &&
+        typeof a === "object" &&
+        typeof (a.hook || "").trim() === "string" &&
+        (a.hook || "").trim().length > 0 &&
+        typeof (a.visual || "").trim() === "string" &&
+        (a.visual || "").trim().length > 0,
+    )
+    .map((a) => ({
+      category: String(a.category || "ANGLE")
+        .toUpperCase()
+        .slice(0, 32),
+      title: String(a.title || "")
+        .trim()
+        .slice(0, 200),
+      description: String(a.description || "")
+        .trim()
+        .slice(0, 500),
+      hook: String(a.hook || "")
+        .trim()
+        .slice(0, 300),
+      visual: String(a.visual || "")
+        .trim()
+        .slice(0, 800),
+    }));
+}
+
+/**
+ * Genera un prompt estructurado (JSON) para crear una imagen/creativo a partir de un headline.
+ * Devuelve objeto con meta_parameters, technical_analysis (incl. depth_of_field cuando aplique), aesthetic_dna (cuando aplique), composition_grid, entities (incl. action_pose cuando aplique), generative_reconstruction.
+ * Para FLUX/DALL·E usar generative_reconstruction.dalle_flux_natural_prompt.
  */
 export async function generateCreativeImagePrompt(input) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || "openai/gpt-4.1-nano";
+  const model = getCreativeModel();
 
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing");
@@ -500,89 +1130,149 @@ export async function generateCreativeImagePrompt(input) {
     clientIdealSummary,
     brandingColors,
     hasLogoOrImages,
+    referenceAssets,
     aspectRatio: inputAspectRatio,
+    contentLanguage: inputContentLanguage,
   } = input;
+  const contentLanguage = getContentLanguage(
+    inputContentLanguage || input?.branding || "es-AR",
+  );
+  const assets =
+    referenceAssets && typeof referenceAssets === "object"
+      ? referenceAssets
+      : { logo: null, product: null, other: [] };
+  const hasLogo = Boolean(assets.logo);
+  const hasProduct = Boolean(assets.product);
+  const hasOther = Array.isArray(assets.other) && assets.other.length > 0;
   const aspectRatio =
     inputAspectRatio && typeof inputAspectRatio === "string"
       ? inputAspectRatio.trim()
       : "4:5";
   const colors =
     brandingColors && typeof brandingColors === "object" ? brandingColors : {};
-  const colorList = [
-    colors.primary && `primary: ${colors.primary}`,
-    colors.secondary && `secondary: ${colors.secondary}`,
-    colors.accent && `accent: ${colors.accent}`,
-    colors.background && `background: ${colors.background}`,
-    colors.textPrimary && `text: ${colors.textPrimary}`,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const hexColors = [
+    colors.primary,
+    colors.secondary,
+    colors.accent,
+    colors.background,
+    colors.textPrimary,
+  ].filter(Boolean);
+  const headlineForCopy = (headline || "").trim().toUpperCase();
   const text = JSON.stringify({
-    headline: headline || "",
+    headline: headlineForCopy || (headline || "").trim(),
     companyName: companyName || "",
     brandingSummary: (brandingSummary || "").slice(0, 1500),
     clientIdealSummary: (clientIdealSummary || "").slice(0, 800),
-    brandColors: colorList || null,
+    brandColorsHex: hexColors,
     hasLogoOrImages: Boolean(hasLogoOrImages),
     aspectRatio,
+    contentLanguage,
   });
 
-  const logoInstruction = hasLogoOrImages
-    ? `Include a line instructing: "Include the brand logo from the reference image exactly and prominently (e.g. top corner or center). Do not alter or redraw the logo—reproduce it as in the reference."`
-    : "Do not mention a logo or reference images.";
+  const creativePromptSystem = `You are an art director. Output a SINGLE JSON object for an advertising image (Meta Ads). Use this schema; include aesthetic_dna, depth_of_field, and action_pose when they add value.
+
+meta_parameters: aspect_ratio (string e.g. 1:1, 16:9), stylize_value (integer 0-1000), chaos_level (Low | Med | High).
+technical_analysis: medium, camera_lens, depth_of_field (optional but use when relevant, e.g. f/1.8 or f/4.0 deep focus), lighting_type, image_quality (strings).
+aesthetic_dna (optional but recommended): art_style_reference, dominant_colors_hex (array of HEX), key_visual_tokens (array of concrete phrases), mood (one phrase). Include when it strengthens the visual recipe.
+composition_grid: A1_A3_Upper_Third, B1_B3_Middle_Third, C1_C3_Lower_Third (strings).
+entities: array of { id, label, prominence_weight, grid_location [A1-C3], visual_description, action_pose (optional, pose or state of the element), lighting_interaction }.
+generative_reconstruction: midjourney_prompt, dalle_flux_natural_prompt (strings).
+
+Example (match this structure):
+
+{
+  "meta_parameters": {
+    "aspect_ratio": "1:1",
+    "stylize_value": 250,
+    "chaos_level": "High"
+  },
+  "technical_analysis": {
+    "medium": "Commercial Editorial Photography",
+    "camera_lens": "35mm Wide Angle",
+    "depth_of_field": "f/4.0 deep focus with slight background softening",
+    "lighting_type": "Teal-and-orange cinematic, monitor-glow, cool ambient",
+    "image_quality": "8k sharp, high contrast, clean digital"
+  },
+  "aesthetic_dna": {
+    "art_style_reference": "Tech-noir marketing, corporate editorial, high-stress conceptual",
+    "dominant_colors_hex": ["#08121B", "#FFFFFF", "#CC0000", "#1E3A5F"],
+    "key_visual_tokens": ["Overwhelmed student", "tangled cables", "crossed-out UI", "bold white sans-serif typography", "cluttered desk", "blue monitor light"],
+    "mood": "Frustrated and technologically overwhelmed"
+  },
+  "composition_grid": {
+    "A1_A3_Upper_Third": "Large bold typography in Spanish. A white crest logo in [A1]. Dark, moody background with floating particles and light rays. Headline text in UPPERCASE.",
+    "B1_B3_Middle_Third": "Central stressed man, head in hands. Background wall of digital thumbnails with red X marks.",
+    "C1_C3_Lower_Third": "Foreground desk with laptops, crumpled paper, chaotic nest of black cables."
+  },
+  "entities": [
+    {
+      "id": "obj_01",
+      "label": "Frustrated Man",
+      "prominence_weight": 0.9,
+      "grid_location": "[B2]",
+      "visual_description": "Man in dark t-shirt, head buried in hands, slumped posture.",
+      "action_pose": "Hiding face in palms, showing extreme fatigue.",
+      "lighting_interaction": "Top-down fill with cool rim light from monitors."
+    },
+    {
+      "id": "obj_02",
+      "label": "Crossed-out Tutorials",
+      "prominence_weight": 0.7,
+      "grid_location": "[B1, B3, A2]",
+      "visual_description": "Digital video cards labeled AI Tutorial with large red diagonal X marks.",
+      "action_pose": "Static background wall display.",
+      "lighting_interaction": "Self-illuminated digital glow."
+    },
+    {
+      "id": "obj_03",
+      "label": "Tangled Wires",
+      "prominence_weight": 0.6,
+      "grid_location": "[C2]",
+      "visual_description": "Massive nest of black power and data cables on the desk.",
+      "action_pose": "Chaotic clutter in the immediate foreground.",
+      "lighting_interaction": "Specular highlights on black plastic."
+    }
+  ],
+  "generative_reconstruction": {
+    "midjourney_prompt": "/imagine prompt: Commercial photography of a stressed man with head in hands at a cluttered desk, surrounded by laptops and tangled cables. Background wall with video thumbnails with red X marks. Large bold white text at top reads '¿HARTO DE TUTORIALES QUE NO TE LLEVAN A NADA?'. High contrast, cinematic blue lighting --ar 1:1 --v 6.0 --style raw",
+    "dalle_flux_natural_prompt": "A high-fidelity ad showing a man overwhelmed at a desk, face in his hands. Desk with silver laptops, papers, chaotic black wires. Behind him, AI Tutorial video screens crossed out with red marks. At the top, bold white text in Spanish in UPPERCASE. Dark cinematic lighting with blue accents."
+  }
+}
+
+RULES: Use EXACT headline from input (contentLanguage). The headline/hook that appears as visible ad copy MUST be in UPPERCASE in composition_grid (A1_A3_Upper_Third) and in generative_reconstruction (midjourney_prompt and dalle_flux_natural_prompt), e.g. "MI PEOR ERROR CON LA IA", "TE SALVA", "LANZÁ TU NEGOCIO...". aspect_ratio from input; same in --ar. Include aesthetic_dna when it helps the scene; depth_of_field when lens/DOF matters; action_pose per entity when pose matters. No Meta/Facebook/Instagram in image. Output ONLY valid JSON, no markdown.`;
+
+  let referenceImagesRule = "";
+  if (hasLogoOrImages && (hasLogo || hasProduct || hasOther)) {
+    const parts = [];
+    let idx = 1;
+    if (hasLogo)
+      parts.push(
+        `Image ${idx++} = LOGO. If a logo reference image is provided, incorporate the EXACT logo into the design.`,
+      );
+    if (hasProduct)
+      parts.push(
+        `Image ${idx++} = PRODUCT. If a product reference image is provided, incorporate the EXACT product into the scene (e.g. mockup, hero).`,
+      );
+    if (hasOther)
+      parts.push(
+        `Images ${idx}+ = Other brand visuals. Use as style or subject reference.`,
+      );
+    referenceImagesRule = `\nREFERENCE IMAGES (the image model will receive them in this order): ${parts.join(" ")} In generative_reconstruction.dalle_flux_natural_prompt, instruct clearly: if a logo is provided, incorporate the EXACT logo; if a product image is provided, incorporate the EXACT product in the scene.`;
+  }
+
+  const creativePromptSystemWithRefs =
+    creativePromptSystem + referenceImagesRule;
 
   const requestBody = {
     model,
     temperature: 0.5,
-    max_tokens: 1200,
-    messages: [
-      {
-        role: "system",
-        content: `You are an art director writing image generation prompts for Meta Ads. Your output must be ONE complete prompt in ENGLISH, structured EXACTLY like this template. Output ONLY the prompt, no intro or explanation.
-
-Structure to follow (use these section titles and keep the same order):
-
-1. Opening line (one sentence): "Create a high-impact, scroll-stopping advertising image for Meta Ads."
-
-2. Main subject (1-2 sentences): Hyper-realistic, professional photography description of the product/service/scene. Be specific to the niche (e.g. car detailing: flawless paint, mirror finish, premium; other niches: adapt accordingly). Premium, expert, results-focused.
-
-3. Scene: "Scene: [environment description], [background]. Use [brand HEX colors if provided] that reinforce a premium, professional brand identity." When brandColors are provided, list the HEX codes (e.g. "subtle light blue accents (#5FB4E8) and green highlights (#2ECC71)").
-
-4. Lighting: "Lighting: [cinematic/professional style], [mood], high contrast, ultra sharp focus, premium commercial photography quality."
-
-5. Headline block (mandatory):
-BIG, BOLD, HIGH-CONTRAST HEADLINE TEXT clearly visible and impossible to ignore:
-"[EXACT HEADLINE IN BRAND LANGUAGE - e.g. Spanish]"
-
-Headline should be large, centered or top-focused, clean modern sans-serif typography, premium and bold, optimized for mobile feed viewing and instant attention.
-
-6. Visual hierarchy (tabbed list):
-Visual hierarchy:
-	1.	Headline hook first (scroll-stop)
-	2.	[Main subject/result] second
-	3.	Brand premium feel third
-
-7. Mood & positioning: "Mood & positioning: [from brandingSummary/personality - e.g. expert, premium, results-driven, trustworthy]."
-
-8. Target audience: "Target audience: [short summary from clientIdealSummary]."
-
-9. Composition: Adapt to the image format (aspectRatio). Use EXACTLY this wording based on aspectRatio:
-- "1:1" → "Composition optimized for Meta Ads performance, square format (1:1), balanced layout, high conversion focus, no people, clean layout, professional advertising aesthetic."
-- "4:5" or "3:4" → "Composition optimized for Meta Ads performance, portrait format (aspectRatio), vertical layout ideal for feed, high conversion focus, no people, clean layout, professional advertising aesthetic."
-- "9:16" → "Composition optimized for Meta Ads performance, vertical/stories format (9:16), tall layout for Reels/Stories, high conversion focus, no people, clean layout, professional advertising aesthetic."
-- "16:9" or "21:9" → "Composition optimized for Meta Ads performance, landscape format (aspectRatio), horizontal layout, high conversion focus, no people, clean layout, professional advertising aesthetic."
-Replace "aspectRatio" in the sentence with the actual value (e.g. "4:5", "9:16"). Frame the scene and headline placement for that aspect ratio (e.g. vertical = more headroom for text; square = centered; landscape = wider scene).
-
-CRITICAL - NO META LOGO: The generated image MUST NOT include the Meta logo, Facebook logo, Instagram logo, or any Meta/Facebook/Instagram branding (e.g. "from Meta", icons, watermarks). The creative is for use ON Meta platforms but must not display Meta's branding in the image itself.
-
-${logoInstruction}
-When brandColors are provided, use the exact HEX values in the Scene section. The headline in quotes must be the EXACT headline from the input, in the same language (e.g. Spanish).`,
-      },
-      {
-        role: "user",
-        content: `Generate the full image prompt following the structure. Use the exact headline and brand context below.\n${text}`,
-      },
-    ],
+    max_tokens: 2400,
+    response_format: { type: "json_object" },
+    messages: messagesForModel(
+      model,
+      creativePromptSystemWithRefs,
+      `Generate the full structured prompt JSON for this ad creative. Input:\n${text}`,
+    ),
   };
 
   const headers = {
@@ -590,23 +1280,18 @@ When brandColors are provided, use the exact HEX values in the Scene section. Th
     "Content-Type": "application/json",
   };
 
-  const response = await axios.post(
-    "https://openrouter.ai/api/v1/chat/completions",
+  const { response, modelUsed } = await openRouterChatPost(
     requestBody,
-    { headers },
+    headers,
   );
 
-  // Trackear métricas de costo
   const usage = response.data?.usage;
   if (usage) {
-    const promptTokens = usage.prompt_tokens || 0;
-    const completionTokens = usage.completion_tokens || 0;
-    const totalCost = usage.total_cost || 0;
     recordLLMRequest({
-      model,
-      promptTokens,
-      completionTokens,
-      totalCost,
+      model: modelUsed,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+      totalCost: usage.total_cost || 0,
       durationMs: Date.now() - startTime,
       source: "creative_image_prompt",
       workspaceSlug: input?.companyName ? input.companyName : null,
@@ -618,203 +1303,742 @@ When brandColors are provided, use the exact HEX values in the Scene section. Th
     throw new Error("LLM returned empty creative image prompt");
   }
 
-  return content.trim().replace(/^["']|["']$/g, "");
+  const parsed = JSON.parse(
+    sanitizeJsonControlChars(stripMarkdownJson(content)),
+  );
+  return parsed;
 }
 
-/** Modelo de OpenAI para imágenes de creativos (Meta Ads, Instagram, etc.). */
-const CREATIVE_IMAGE_MODEL = "gpt-image-1.5";
+/**
+ * Devuelve el prompt completo para el generador de imágenes (Nano Banana Pro, FLUX, etc.).
+ * Se envía el JSON estructurado (meta_parameters, technical_analysis, composition_grid, entities, generative_reconstruction) para el generador de imágenes.
+ */
+export function getImagePromptFromStructured(payload) {
+  if (payload == null) return "";
+  if (typeof payload === "string") return payload;
+  return JSON.stringify(payload, null, 2);
+}
 
-/** Mapeo aspect ratio → size de la API OpenAI (1024x1024 | 1024x1536 | 1536x1024). */
-const ASPECT_TO_OPENAI_SIZE = {
-  "1:1": "1024x1024",
-  "4:5": "1024x1536",
-  "3:4": "1024x1536",
-  "9:16": "1024x1536",
-  "4:3": "1536x1024",
-  "16:9": "1536x1024",
-  "21:9": "1536x1024",
+/**
+ * Visual Architect (IMG-2-JSON-V3). Output schema includes meta_parameters, technical_analysis (with depth_of_field when relevant), aesthetic_dna (when relevant), composition_grid, entities (with action_pose when relevant), generative_reconstruction.
+ */
+const VISUAL_ARCHITECT_SYSTEM_PROMPT = `Role: You are a "Creative Director & Visual Architect". Output exactly one JSON object. Include aesthetic_dna, depth_of_field in technical_analysis, and action_pose in entities when they add value.
+
+meta_parameters: aspect_ratio (string e.g. 1:1, 16:9), stylize_value (integer 0-1000), chaos_level (Low | Med | High).
+technical_analysis: medium, camera_lens, depth_of_field (use when relevant, e.g. f/1.8 or f/4.0 deep focus), lighting_type, image_quality (strings).
+aesthetic_dna (include when relevant): art_style_reference, dominant_colors_hex (array), key_visual_tokens (array of concrete phrases), mood (one phrase).
+composition_grid: A1_A3_Upper_Third, B1_B3_Middle_Third, C1_C3_Lower_Third (strings).
+entities: array of { id, label, prominence_weight, grid_location [A1-C3], visual_description, action_pose (use when pose/state matters), lighting_interaction }.
+generative_reconstruction: midjourney_prompt, dalle_flux_natural_prompt (strings).
+
+Example structure:
+
+{
+  "meta_parameters": { "aspect_ratio": "1:1", "stylize_value": 250, "chaos_level": "High" },
+  "technical_analysis": {
+    "medium": "Commercial Editorial Photography",
+    "camera_lens": "35mm Wide Angle",
+    "depth_of_field": "f/4.0 deep focus with slight background softening",
+    "lighting_type": "Teal-and-orange cinematic, monitor-glow, cool ambient",
+    "image_quality": "8k sharp, high contrast, clean digital"
+  },
+  "aesthetic_dna": {
+    "art_style_reference": "Tech-noir marketing, corporate editorial, high-stress conceptual",
+    "dominant_colors_hex": ["#08121B", "#FFFFFF", "#CC0000", "#1E3A5F"],
+    "key_visual_tokens": ["Overwhelmed student", "tangled cables", "crossed-out UI", "bold white sans-serif typography", "cluttered desk", "blue monitor light"],
+    "mood": "Frustrated and technologically overwhelmed"
+  },
+  "composition_grid": {
+    "A1_A3_Upper_Third": "Large bold typography in Spanish. Headline in UPPERCASE (e.g. 'MI PEOR ERROR CON LA IA' / 'TE SALVA'). Logo in [A1]. Dark, moody background.",
+    "B1_B3_Middle_Third": "Central stressed man, head in hands. Background wall of digital thumbnails with red X marks.",
+    "C1_C3_Lower_Third": "Foreground desk with laptops, crumpled paper, chaotic nest of black cables."
+  },
+  "entities": [
+    { "id": "obj_01", "label": "Frustrated Man", "prominence_weight": 0.9, "grid_location": "[B2]", "visual_description": "Man in dark t-shirt, head buried in hands, slumped posture.", "action_pose": "Hiding face in palms, showing extreme fatigue.", "lighting_interaction": "Top-down fill with cool rim light from monitors." },
+    { "id": "obj_02", "label": "Crossed-out Tutorials", "prominence_weight": 0.7, "grid_location": "[B1, B3, A2]", "visual_description": "Digital video cards labeled AI Tutorial with large red diagonal X marks.", "action_pose": "Static background wall display.", "lighting_interaction": "Self-illuminated digital glow." },
+    { "id": "obj_03", "label": "Tangled Wires", "prominence_weight": 0.6, "grid_location": "[C2]", "visual_description": "Massive nest of black power and data cables on the desk.", "action_pose": "Chaotic clutter in the immediate foreground.", "lighting_interaction": "Specular highlights on black plastic." }
+  ],
+  "generative_reconstruction": {
+    "midjourney_prompt": "/imagine prompt: Commercial photography of a stressed man with head in hands at a cluttered desk. Large bold white text at top reads '[EXACT HEADLINE IN UPPERCASE]'. High contrast, cinematic blue lighting --ar [RATIO] --v 6.0 --style raw",
+    "dalle_flux_natural_prompt": "A high-fidelity ad showing [scene]. At the top, bold white text in [Language] in UPPERCASE reads '[HEADLINE]'. The lighting is dark and cinematic with blue accents."
+  }
+}
+
+RULES: The headline/hook that appears as visible ad copy MUST be in UPPERCASE in composition_grid (A1_A3_Upper_Third) and in generative_reconstruction (midjourney_prompt and dalle_flux_natural_prompt). A1_A3 describe layout and language only. Include aesthetic_dna when it strengthens the scene; depth_of_field when DOF matters; action_pose per entity when pose matters. midjourney_prompt must include EXACT headline in target language and end with --ar [RATIO] --v 6.0 --style raw. aspect_ratio must match user message. Output ONLY valid JSON, no markdown.`;
+
+/**
+ * Placeholders replaced by injectBrandAssetUrls with real logo/product URLs from the app.
+ */
+const PLACEHOLDER_URL_LOGO = "URL_LOGO";
+const PLACEHOLDER_URL_PRODUCT = "URL_PRODUCT";
+const PLACEHOLDER_URL_CHARACTER = "URL_CHARACTER";
+
+/**
+ * Brand-Aware Visual Identity Orchestrator. Use when reference assets (logo, product) are available.
+ * Outputs JSON with brand_identity (asset locking) and reference_links placeholders for injection.
+ */
+const VISUAL_ARCHITECT_BRAND_AWARE_SYSTEM_PROMPT = `Role: You are a Digital Art Director for an Automated Branding App. Your job is to create advertising scenes based on assets extracted from a website. Your output must be exclusively one JSON object following the Brand-Aware IMG-2-JSON schema. Produce ONLY the JSON object. No introductions, no markdown.
+
+Decision logic (vary by angle):
+- Sometimes create "Lifestyle" scenes (person using the product), sometimes "Product Shot" (product only with epic lighting), sometimes "Pain/Problem" (e.g. frustrated person, tutorials theme).
+- Asset Locking: If the user provides logo_url or product_url (or says logo/product are available), you MUST set brand_identity.use_reference_logo and/or use_reference_product to true, and use reference_links placeholders URL_LOGO and URL_PRODUCT so the app can inject real URLs. Mark any entity that represents the logo or product with is_reference_locked: true.
+- Logo placement: When using the logo, set logo_placement to the grid cell where it goes (e.g. "[A1]"). The app may overlay the exact logo there in post-production for 1:1 fidelity.
+
+Prompt engineering:
+- Midjourney: Use image references at the start when available. For product/person use --cref [URL] when relevant. End with --ar [RATIO] --v 6.0 --style raw.
+- Flux (dalle_flux_natural_prompt): Describe the product with extreme detail based on the description given. State that it must be "identically reproduced as the reference" or "match the reference image exactly". Headline in target content language.
+- Copy: If the ad is in Spanish (or target language), keep the headline short and punchy (hook style).
+
+Typography & mood: Same as standard Visual Architect (headline in composition_grid, mood, psychology of color). Visible ad copy MUST be in the TARGET CONTENT LANGUAGE and in UPPERCASE (e.g. "MI PEOR ERROR CON LA IA", "TE SALVA") in composition_grid and generative_reconstruction.
+
+EXACT JSON SCHEMA (output only this). Include brand_identity always; use_reference_* true only when assets are provided:
+
+{
+  "brand_identity": {
+    "use_reference_logo": true,
+    "use_reference_product": true,
+    "use_reference_person": false,
+    "logo_placement": "[A1]",
+    "reference_links": {
+      "logo": "URL_LOGO",
+      "product": "URL_PRODUCT",
+      "character": null
+    }
+  },
+  "meta_parameters": { "aspect_ratio": "1:1", "stylize_value": 250, "chaos_level": "High" },
+  "technical_analysis": { "medium": "Commercial Editorial Photography", "camera_lens": "35mm Wide Angle", "depth_of_field": "f/4.0 deep focus with slight background softening", "lighting_type": "Teal-and-orange cinematic, monitor-glow, cool ambient", "image_quality": "8k sharp, high contrast, clean digital" },
+  "aesthetic_dna": { "art_style_reference": "...", "dominant_colors_hex": ["#HEX", ...], "key_visual_tokens": [...], "mood": "..." },
+  "composition_grid": { "A1_A3_Upper_Third": "...", "B1_B3_Middle_Third": "...", "C1_C3_Lower_Third": "..." },
+  "entities": [
+    { "id": "prod_01", "label": "Product name or Logo", "is_reference_locked": true, "prominence_weight": 0.9, "grid_location": "[B2]", "visual_description": "Description of the real product/logo for model context", "action_pose": "...", "lighting_interaction": "..." }
+  ],
+  "generative_reconstruction": {
+    "midjourney_prompt": "/imagine prompt: [Scene]. Large bold text reads '[HEADLINE]'. --ar [RATIO] --v 6.0 --style raw",
+    "dalle_flux_natural_prompt": "A high-fidelity ad showing [scene]. The product/logo must be identically reproduced as the reference image. At the top, bold white text reads '[HEADLINE]'. ...",
+    "flux_config": "Focus on the physical product provided in the reference, matching labels and form 1:1."
+  }
+}
+
+Output ONLY the JSON object. Use URL_LOGO and URL_PRODUCT literally in reference_links when use_reference_logo/use_reference_product are true; the app will replace them with real URLs. aspect_ratio must match the user message.`;
+
+/**
+ * Injects real logo/product URLs into a spec that contains brand_identity with placeholders.
+ * Replaces URL_LOGO, URL_PRODUCT (and URL_CHARACTER) in reference_links and in any string field of the spec.
+ *
+ * @param {object} spec - Parsed JSON spec (may have brand_identity.reference_links with placeholders).
+ * @param {{ logo?: string|null, product?: string|null, other?: string[] } | null} referenceAssets
+ * @returns {object} - Spec with reference_links filled and placeholders replaced in prompts.
+ */
+export function injectBrandAssetUrls(spec, referenceAssets) {
+  if (!spec || typeof spec !== "object") return spec;
+  const hasLogo = referenceAssets?.logo;
+  const hasProduct = referenceAssets?.product;
+  if (!hasLogo && !hasProduct) return spec;
+
+  const out = JSON.parse(JSON.stringify(spec));
+  if (!out.brand_identity) out.brand_identity = {};
+  if (!out.brand_identity.reference_links)
+    out.brand_identity.reference_links = {};
+  out.brand_identity.use_reference_logo = Boolean(hasLogo);
+  out.brand_identity.use_reference_product = Boolean(hasProduct);
+  out.brand_identity.reference_links.logo = hasLogo
+    ? referenceAssets.logo
+    : null;
+  out.brand_identity.reference_links.product = hasProduct
+    ? referenceAssets.product
+    : null;
+  out.brand_identity.reference_links.character =
+    out.brand_identity.reference_links.character ?? null;
+
+  const replaceInString = (s) => {
+    if (typeof s !== "string") return s;
+    let t = s;
+    if (hasLogo) t = t.split(PLACEHOLDER_URL_LOGO).join(referenceAssets.logo);
+    if (hasProduct)
+      t = t.split(PLACEHOLDER_URL_PRODUCT).join(referenceAssets.product);
+    return t;
+  };
+  const walk = (obj) => {
+    if (obj == null) return;
+    if (typeof obj === "string") return;
+    if (Array.isArray(obj)) {
+      obj.forEach((item, i) => {
+        if (typeof item === "string") obj[i] = replaceInString(item);
+        else walk(item);
+      });
+      return;
+    }
+    for (const key of Object.keys(obj)) {
+      if (typeof obj[key] === "string") obj[key] = replaceInString(obj[key]);
+      else if (typeof obj[key] === "object" && obj[key] !== null)
+        walk(obj[key]);
+    }
+  };
+  walk(out);
+  return out;
+}
+
+/**
+ * Expands a simple idea into a full visual spec (IMG-2-JSON-V3). All internal prompts in English.
+ * Visible headline/copy in the image must be in contentLanguage (default Spanish Argentina).
+ *
+ * @param {string} idea - Simple idea in any language.
+ * @param {string} [aspectRatio] - e.g. "4:5", "16:9", "1:1". Default "4:5".
+ * @param {{ contentLanguage?: string } | string} [options] - Optional. contentLanguage for visible ad text; or pass a string as contentLanguage.
+ * @returns {Promise<object>} - Spec with meta_parameters, technical_analysis (depth_of_field when relevant), aesthetic_dna (when relevant), composition_grid, entities (action_pose when relevant), generative_reconstruction.
+ */
+export async function expandIdeaToVisualSpec(
+  idea,
+  aspectRatio = "4:5",
+  options = {},
+) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = getCreativeModel();
+
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is missing");
+  }
+
+  const contentLanguage =
+    typeof options === "string"
+      ? getContentLanguage(options)
+      : getContentLanguage(
+          options?.contentLanguage ?? options?.branding ?? "es-AR",
+        );
+
+  const startTime = Date.now();
+  const ratio =
+    typeof aspectRatio === "string" && aspectRatio.trim()
+      ? aspectRatio.trim()
+      : "4:5";
+  const userMessage = [
+    `Idea: ${idea.trim()}`,
+    "Style: High-impact advertising (subscription, product or emotional campaign). Apply Problem/Solution or Emotional State logic (frustration vs solution, empowerment, urgency, trust).",
+    `Target content language for ad copy: ${contentLanguage}. The visible headline and any ad copy in the image MUST be written in this language. If ${contentLanguage} is es-AR or es, write the headline in Spanish. If en, write in English. Never show ad text in a different language. Default is Spanish (Argentina).`,
+    "Include a concrete headline proposal in composition_grid (A1_A3_Upper_Third) and in generative_reconstruction, in the target content language. The visible headline MUST be in UPPERCASE.",
+    `Use aspect_ratio "${ratio}" in meta_parameters and in midjourney_prompt (--ar ${ratio} --v 6.0 --style raw). Output ONLY the JSON object, no extra text.`,
+  ].join(" ");
+
+  const requestBody = {
+    model,
+    temperature: 0.5,
+    max_tokens: 2400,
+    messages: messagesForModel(
+      model,
+      VISUAL_ARCHITECT_SYSTEM_PROMPT,
+      userMessage,
+    ),
+    response_format: { type: "json_object" },
+  };
+
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+
+  const { response, modelUsed } = await openRouterChatPost(
+    requestBody,
+    headers,
+  );
+
+  const usage = response.data?.usage;
+  if (usage) {
+    recordLLMRequest({
+      model: modelUsed,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+      totalCost: usage.total_cost || 0,
+      durationMs: Date.now() - startTime,
+      source: "expand_idea_visual_spec",
+      workspaceSlug: null,
+    });
+  }
+
+  const content = response.data?.choices?.[0]?.message?.content;
+  if (!content || typeof content !== "string") {
+    throw new Error("LLM returned empty or invalid visual spec");
+  }
+
+  const parsed = JSON.parse(
+    sanitizeJsonControlChars(stripMarkdownJson(content)),
+  );
+  if (!parsed.meta_parameters) parsed.meta_parameters = {};
+  parsed.meta_parameters.aspect_ratio =
+    parsed.meta_parameters.aspect_ratio || ratio;
+  const mid = parsed.generative_reconstruction?.midjourney_prompt;
+  if (typeof mid === "string") {
+    let m = mid
+      .replace(/\s*--ar\s+[\d:]+\s*/gi, " ")
+      .replace(/\s*--v\s+[\d.]+\s*/gi, " ")
+      .replace(/\s*--style\s+raw\s*/gi, " ")
+      .trim();
+    parsed.generative_reconstruction.midjourney_prompt =
+      (m.startsWith("/imagine prompt:") ? m : `/imagine prompt: ${m}`) +
+      ` --ar ${ratio} --v 6.0 --style raw`;
+  }
+  return parsed;
+}
+
+/**
+ * Converts a Sales Angle (hook + visual + category) into a visual spec (IMG-2-JSON-V3). When referenceAssets (logo, product) are provided, uses Brand-Aware schema with asset locking and injects real URLs after the LLM response.
+ *
+ * @param {SalesAngle} angle - { category, title, description, hook, visual }.
+ * @param {string} [aspectRatio] - "4:5" | "1:1" | "16:9". Default "4:5".
+ * @param {{ referenceAssets?: { logo?: string|null, product?: string|null }, productDescription?: string, contentLanguage?: string } | null} [options]
+ * @returns {Promise<object>} - Spec with meta_parameters, brand_identity (if assets), technical_analysis (depth_of_field when relevant), aesthetic_dna (when relevant), composition_grid, entities (action_pose when relevant), generative_reconstruction.
+ */
+export async function expandAngleToVisualSpec(
+  angle,
+  aspectRatio = "4:5",
+  options = null,
+) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = getCreativeModel();
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing");
+
+  const hookRaw = (angle?.hook || "").trim();
+  const hook = hookRaw ? hookRaw.toUpperCase() : "";
+  const visual = (angle?.visual || "").trim();
+  const category = (angle?.category || "").trim();
+  const title = (angle?.title || "").trim();
+  if (!hook || !visual) {
+    throw new Error(
+      "expandAngleToVisualSpec requires angle.hook and angle.visual",
+    );
+  }
+
+  const opts = options && typeof options === "object" ? options : {};
+  const referenceAssets =
+    opts.referenceAssets && typeof opts.referenceAssets === "object"
+      ? opts.referenceAssets
+      : null;
+  const hasLogo = Boolean(referenceAssets?.logo);
+  const hasProduct = Boolean(referenceAssets?.product);
+  const useBrandAware = hasLogo || hasProduct;
+  const systemPrompt = useBrandAware
+    ? VISUAL_ARCHITECT_BRAND_AWARE_SYSTEM_PROMPT
+    : VISUAL_ARCHITECT_SYSTEM_PROMPT;
+
+  const ratio =
+    typeof aspectRatio === "string" && aspectRatio.trim()
+      ? aspectRatio.trim()
+      : "4:5";
+  const parts = [
+    `Sales angle to convert into visual spec (user message in English):`,
+    `- Emotional category: ${category || "AD"}. Angle title: ${title || "—"}.`,
+    `- HEADLINE that MUST appear in the image in UPPERCASE (this is the hook; already in correct language and uppercase — do NOT translate): "${hook}"`,
+    `- Visual scene (describe the image accordingly; use English in generative_reconstruction): ${visual}`,
+    `Style: High-impact ad. Mood must reflect this angle (${category}).`,
+    `Include the exact headline in UPPERCASE "${hook}" in composition_grid (A1_A3_Upper_Third) and in generative_reconstruction (midjourney_prompt and dalle_flux_natural_prompt). The visible text in the image must be exactly this headline in uppercase; do not translate it.`,
+  ];
+  if (useBrandAware) {
+    parts.push(
+      `Reference assets available: ${hasLogo ? "logo" : ""} ${hasProduct ? "product" : ""}. Set brand_identity.use_reference_logo=${hasLogo}, use_reference_product=${hasProduct}. Use reference_links.logo="${PLACEHOLDER_URL_LOGO}" and reference_links.product="${PLACEHOLDER_URL_PRODUCT}" (the app will inject real URLs). For entities that are the logo or product, set is_reference_locked: true. In dalle_flux_natural_prompt state that the product/logo must be "identically reproduced as the reference".`,
+    );
+    if (opts.productDescription)
+      parts.push(
+        `Product description for context: ${String(opts.productDescription).slice(0, 300)}.`,
+      );
+  }
+  parts.push(
+    `Use aspect_ratio "${ratio}" in meta_parameters and in midjourney_prompt (--ar ${ratio} --v 6.0 --style raw). Output ONLY the JSON object, no extra text.`,
+  );
+  const userMessage = parts.join(" ");
+
+  const requestBody = {
+    model,
+    temperature: 0.5,
+    max_tokens: 2400,
+    messages: messagesForModel(model, systemPrompt, userMessage),
+    response_format: { type: "json_object" },
+  };
+
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+
+  const startTime = Date.now();
+  const { response, modelUsed } = await openRouterChatPost(
+    requestBody,
+    headers,
+  );
+  const usage = response.data?.usage;
+  if (usage) {
+    recordLLMRequest({
+      model: modelUsed,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+      totalCost: usage.total_cost || 0,
+      durationMs: Date.now() - startTime,
+      source: "expand_angle_visual_spec",
+      workspaceSlug: null,
+    });
+  }
+
+  const content = response.data?.choices?.[0]?.message?.content;
+  if (!content || typeof content !== "string") {
+    throw new Error("LLM returned empty or invalid visual spec from angle");
+  }
+
+  let parsed = JSON.parse(sanitizeJsonControlChars(stripMarkdownJson(content)));
+  if (referenceAssets && (referenceAssets.logo || referenceAssets.product)) {
+    parsed = injectBrandAssetUrls(parsed, referenceAssets);
+  }
+  if (!parsed.meta_parameters) parsed.meta_parameters = {};
+  parsed.meta_parameters.aspect_ratio =
+    parsed.meta_parameters.aspect_ratio || ratio;
+  const mid = parsed.generative_reconstruction?.midjourney_prompt;
+  if (typeof mid === "string") {
+    let m = mid
+      .replace(/\s*--ar\s+[\d:]+\s*/gi, " ")
+      .replace(/\s*--v\s+[\d.]+\s*/gi, " ")
+      .replace(/\s*--style\s+raw\s*/gi, " ")
+      .trim();
+    parsed.generative_reconstruction.midjourney_prompt =
+      (m.startsWith("/imagine prompt:") ? m : `/imagine prompt: ${m}`) +
+      ` --ar ${ratio} --v 6.0 --style raw`;
+  }
+  return parsed;
+}
+
+/**
+ * Construye el prompt final para Midjourney a partir del spec de Inferencia Semántica.
+ * Concatena: [Medium] + [Subject/Environment] + [Lighting] + [Technical tags] + --ar [ratio] --v 6.0
+ *
+ * @param {object} spec - Objeto devuelto por expandIdeaToVisualSpec.
+ * @param {string} [aspectRatio] - Override del ratio (ej. "4:5").
+ * @returns {string} - Prompt listo para Midjourney.
+ */
+export function buildMidjourneyPromptFromSpec(spec, aspectRatio) {
+  if (spec == null) return "";
+  const mid = spec.generative_reconstruction?.midjourney_prompt;
+  if (typeof mid === "string" && mid.trim()) {
+    const ratio = aspectRatio || spec.meta_parameters?.aspect_ratio || "4:5";
+    let out = mid
+      .replace(/\s*--ar\s+[\d:]+\s*/gi, " ")
+      .replace(/\s*--v\s+[\d.]+\s*/gi, " ")
+      .replace(/\s*--style\s+raw\s*/gi, " ")
+      .trim();
+    return `${out} --ar ${ratio} --v 6.0 --style raw`;
+  }
+  const tech = spec.technical_analysis || {};
+  const aesthetic = spec.aesthetic_dna || {};
+  const parts = [
+    tech.medium,
+    tech.lighting_type,
+    aesthetic.mood,
+    (aesthetic.key_visual_tokens || []).slice(0, 5).join(", "),
+  ].filter(Boolean);
+  const ratio = aspectRatio || spec.meta_parameters?.aspect_ratio || "4:5";
+  return `/imagine prompt: ${parts.join(". ")} --ar ${ratio} --v 6.0 --style raw`;
+}
+
+/**
+ * Devuelve el prompt natural para Flux/DALL-E a partir del spec de Inferencia Semántica.
+ *
+ * @param {object} spec - Objeto devuelto por expandIdeaToVisualSpec.
+ * @returns {string} - Narrativa en inglés para Flux o DALL-E.
+ */
+export function getFluxPromptFromSpec(spec) {
+  if (spec == null) return "";
+  const flux = spec.generative_reconstruction?.dalle_flux_natural_prompt;
+  if (typeof flux === "string" && flux.trim()) return flux.trim();
+  const tech = spec.technical_analysis || {};
+  const aesthetic = spec.aesthetic_dna || {};
+  const parts = [
+    tech.medium,
+    tech.lighting_type,
+    tech.camera_lens,
+    aesthetic.mood,
+    (aesthetic.key_visual_tokens || []).slice(0, 5).join(", "),
+  ].filter(Boolean);
+  return parts.join(". ");
+}
+
+/**
+ * Si OPENROUTER_FREE_ONLY=1 o true: solo imágenes ICP (avatar/hero) usan DiceBear/Picsum.
+ * Los creativos (OPENROUTER_IMAGE_MODEL) no se ven afectados y usan el modelo configurado.
+ */
+function isFreeOnlyMode() {
+  const v = (process.env.OPENROUTER_FREE_ONLY || "").toString().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+/**
+ * Modelo de imagen para creativos (Meta Ads). OPENROUTER_FREE_ONLY no aplica aquí:
+ * los creativos usan siempre este modelo salvo que sea "placeholder"|"free"|"picsum".
+ */
+const OPENROUTER_IMAGE_MODEL =
+  process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-4-pro-image-preview";
+
+function useFreeCreativeImage() {
+  const v = (
+    process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-4-pro-image-preview"
+  )
+    .toLowerCase()
+    .trim();
+  return v === "placeholder" || v === "free" || v === "picsum" || v === "";
+}
+
+/** Dimensiones por aspect ratio para placeholder Picsum (creative). */
+const CREATIVE_PLACEHOLDER_DIMENSIONS = {
+  "1:1": [800, 800],
+  "4:5": [800, 1000],
+  "3:4": [750, 1000],
+  "9:16": [720, 1280],
+  "16:9": [1280, 720],
+  "4:3": [1067, 800],
+  "21:9": [1280, 549],
 };
 
 /**
- * Obtiene el buffer de una imagen desde URL o data URL.
- * @param {string} url - URL http(s) o data:image/...;base64,...
- * @returns {Promise<Buffer|null>}
+ * Modelo de imagen para ICP (avatares y heroes).
+ * FLUX.2 Klein 4B NO es gratis (~$0.015/imagen). Solo "dicebear"|"placeholder"|"free" = 0 cost.
  */
-async function fetchImageBuffer(url) {
-  if (!url || typeof url !== "string") return null;
-  if (url.startsWith("data:")) {
-    const base64 = url.replace(/^data:image\/\w+;base64,/, "");
-    try {
-      return Buffer.from(base64, "base64");
-    } catch {
-      return null;
-    }
-  }
-  try {
-    const res = await axios.get(url, {
-      responseType: "arraybuffer",
-      timeout: 15000,
-    });
-    return Buffer.from(res.data);
-  } catch (err) {
-    console.warn(
-      "[Creative image] Failed to fetch reference image:",
-      err.message,
-    );
-    return null;
-  }
+const OPENROUTER_ICP_IMAGE_MODEL =
+  process.env.OPENROUTER_ICP_IMAGE_MODEL || "dicebear";
+
+function useFreeIcpImages() {
+  if (isFreeOnlyMode()) return true;
+  const v = (process.env.OPENROUTER_ICP_IMAGE_MODEL || "dicebear")
+    .toLowerCase()
+    .trim();
+  return v === "dicebear" || v === "placeholder" || v === "free" || v === "";
 }
 
-/**
- * Genera una imagen creativa con OpenAI gpt-image-1.5 (ideal para Meta Ads / Instagram).
- * Sin referenceImages: POST /v1/images/generations. Con referenceImages: POST /v1/images/edits.
- * @param {string} prompt - Prompt en inglés para la imagen
- * @param {string} [aspectRatio] - "4:5" | "3:4" | "1:1" | "9:16" | "16:9" etc.
- * @param {{ url: string }[]} [referenceImages] - Logo y/o imágenes de marca para incluir en la imagen
- * @param {{ source?: string }} [opts] - opts.source para métricas: "creative" | "welcome"
- * @returns {Promise<string|null>} - data URL base64 (data:image/png;base64,...) o null
- */
-/** Instrucción fija añadida a todo prompt de creativo para que el modelo de imagen no dibuje el logo de Meta. */
+/** Convierte una URL de imagen en data URL base64. */
+async function fetchImageAsDataUrl(url) {
+  const res = await axios.get(url, { responseType: "arraybuffer" });
+  const contentType = res.headers["content-type"] || "image/png";
+  const base64 = Buffer.from(res.data).toString("base64");
+  return `data:${contentType};base64,${base64}`;
+}
+
+/** Instrucción fija para que el modelo no dibuje el logo de Meta. */
 const NO_META_LOGO_SUFFIX =
   '\n\nIMPORTANT: Do NOT include the Meta logo, Facebook logo, Instagram logo, or any Meta/Facebook/Instagram branding (e.g. "from Meta", infinity symbol, watermarks) in the image. The ad is for use on Meta platforms but the image itself must not show Meta\'s branding.';
 
+/**
+ * Construye lista ordenada de URLs y prefijo de prompt para referencia.
+ * Solo se envían logo y/o producto (máximo 2 imágenes); no se envían "other".
+ * @param {{ logo?: string|null, product?: string|null, other?: string[] } | null} referenceAssets
+ * @returns {{ urls: string[], promptPrefix: string }}
+ */
+function buildReferenceAssetsOrder(referenceAssets) {
+  const urls = [];
+  const labels = [];
+  if (!referenceAssets || typeof referenceAssets !== "object") {
+    return { urls: [], promptPrefix: "" };
+  }
+  if (referenceAssets.logo) {
+    urls.push(referenceAssets.logo);
+    labels.push(
+      "1) LOGO: if provided, incorporate the EXACT logo into the design",
+    );
+  }
+  if (referenceAssets.product) {
+    urls.push(referenceAssets.product);
+    labels.push(
+      `${urls.length}) PRODUCT: if provided, incorporate the EXACT product into the scene`,
+    );
+  }
+  const promptPrefix =
+    urls.length > 0
+      ? `Reference images in order: ${labels.join(". ")}. Then generate the following scene:\n\n`
+      : "";
+  return { urls, promptPrefix };
+}
+
+/**
+ * Genera una imagen creativa con OpenRouter FLUX (ideal para Meta Ads / Instagram).
+ * @param {string} prompt - Prompt en inglés para la imagen
+ * @param {string} [aspectRatio] - "4:5" | "3:4" | "1:1" | "9:16" | "16:9" etc.
+ * @param {{ logo?: string|null, product?: string|null, other?: string[] } | { url: string }[] | null} [referenceAssetsOrImages] - Si es objeto { logo, product, other } se envían en ese orden con roles; si es array se mantiene compatibilidad.
+ * @param {{ source?: string }} [opts] - opts.source para métricas: "creative" | "welcome"
+ * @returns {Promise<string|null>} - data URL base64 (data:image/png;base64,...) o null
+ */
 export async function generateCreativeImageSeedream(
   prompt,
   aspectRatio = "4:5",
-  referenceImages = [],
+  referenceAssetsOrImages = null,
   opts = {},
 ) {
   const metricSource = opts?.source || "creative";
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "OPENAI_API_KEY is missing (required for gpt-image-1.5 creative images)",
-    );
-  }
-
-  const fullPrompt = (prompt || "").trim() + NO_META_LOGO_SUFFIX;
-
   const allowedRatios = ["21:9", "16:9", "9:16", "4:5", "3:4", "4:3", "1:1"];
   const requestedRatio =
     aspectRatio && allowedRatios.includes(aspectRatio) ? aspectRatio : "4:5";
-  const size = ASPECT_TO_OPENAI_SIZE[requestedRatio] || "1024x1536";
 
-  console.log(
-    "[Creative image] Model:",
-    CREATIVE_IMAGE_MODEL,
-    "| Aspect:",
-    requestedRatio,
-    "| Size:",
-    size,
-  );
-  if (referenceImages?.length) {
-    console.log(
-      "[Creative image] Reference images (logo/brand):",
-      referenceImages.length,
-    );
-  }
-
-  const hasReferenceImages =
-    Array.isArray(referenceImages) &&
-    referenceImages.length > 0 &&
-    referenceImages.some((img) => img?.url);
-
-  if (hasReferenceImages) {
-    const urls = referenceImages
-      .filter((img) => img?.url)
-      .map((img) => img.url);
-    const buffers = await Promise.all(urls.map((url) => fetchImageBuffer(url)));
-    const validBuffers = buffers.filter(Boolean);
-    if (validBuffers.length === 0) {
-      console.warn(
-        "[Creative image] No valid reference images, falling back to generations (no logo).",
-      );
-    } else {
-      try {
-        const form = new FormData();
-        form.append("model", CREATIVE_IMAGE_MODEL);
-        form.append("prompt", fullPrompt);
-        form.append("size", size);
-        validBuffers.forEach((buf, i) => {
-          form.append(
-            "image[]",
-            new Blob([buf], { type: "image/png" }),
-            `image${i}.png`,
-          );
-        });
-        const start = Date.now();
-        const res = await fetch("https://api.openai.com/v1/images/edits", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}` },
-          body: form,
-        });
-        const durationMs = Date.now() - start;
-        const data = await res.json();
-        if (res.ok && data?.data?.[0]?.b64_json) {
-          recordImageGeneration({
-            model: CREATIVE_IMAGE_MODEL,
-            size,
-            aspectRatio: requestedRatio,
-            durationMs,
-            source: metricSource,
-          });
-          return `data:image/png;base64,${data.data[0].b64_json}`;
-        }
-        const errMsg = data?.error?.message ?? res.statusText;
-        console.warn(
-          "[Creative image] OpenAI edits error:",
-          res.status,
-          errMsg,
-        );
-      } catch (err) {
-        console.warn("[Creative image] OpenAI edits failed:", err.message);
-      }
+  if (useFreeCreativeImage()) {
+    const [w, h] =
+      CREATIVE_PLACEHOLDER_DIMENSIONS[requestedRatio] ||
+      CREATIVE_PLACEHOLDER_DIMENSIONS["4:5"];
+    const seed = crypto
+      .createHash("md5")
+      .update(String(prompt || ""))
+      .digest("hex")
+      .slice(0, 16);
+    const url = `https://picsum.photos/seed/${seed}/${w}/${h}`;
+    console.log("[Creative image] Free placeholder (picsum):", requestedRatio);
+    try {
+      return await fetchImageAsDataUrl(url);
+    } catch (err) {
+      console.warn("[Creative image] Picsum fetch failed:", err.message);
+      return null;
     }
   }
 
-  const start = Date.now();
-  const response = await axios.post(
-    "https://api.openai.com/v1/images/generations",
-    {
-      model: CREATIVE_IMAGE_MODEL,
-      prompt: fullPrompt,
-      n: 1,
-      size,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      validateStatus: () => true,
-    },
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "OPENROUTER_API_KEY is missing (required for FLUX creative images)",
+    );
+  }
+
+  let refUrls = [];
+  let promptPrefix = "";
+  const isAssetsObject =
+    referenceAssetsOrImages &&
+    typeof referenceAssetsOrImages === "object" &&
+    !Array.isArray(referenceAssetsOrImages) &&
+    ("logo" in referenceAssetsOrImages ||
+      "product" in referenceAssetsOrImages ||
+      "other" in referenceAssetsOrImages);
+  if (isAssetsObject) {
+    const built = buildReferenceAssetsOrder(referenceAssetsOrImages);
+    refUrls = built.urls;
+    promptPrefix = built.promptPrefix;
+  } else if (Array.isArray(referenceAssetsOrImages)) {
+    refUrls = referenceAssetsOrImages
+      .filter((img) => img?.url)
+      .map((img) => img.url);
+  }
+
+  const fullPrompt = promptPrefix + (prompt || "").trim() + NO_META_LOGO_SUFFIX;
+  const content = [{ type: "text", text: fullPrompt }];
+  refUrls.forEach((url) => {
+    content.push({ type: "image_url", image_url: { url } });
+  });
+
+  console.log(
+    "[Creative image] Model:",
+    OPENROUTER_IMAGE_MODEL,
+    "| Aspect:",
+    requestedRatio,
+    "| Ref images (logo/product):",
+    refUrls.length,
   );
-  const durationMs = Date.now() - start;
+
+  const startTime = Date.now();
+  const requestBody = {
+    model: OPENROUTER_IMAGE_MODEL,
+    modalities: ["image"],
+    max_tokens: 4096,
+    messages: [{ role: "user", content }],
+  };
+  if (requestedRatio) {
+    requestBody.image_config = { aspect_ratio: requestedRatio };
+  }
+
+  let response;
+  try {
+    response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      requestBody,
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        validateStatus: () => true,
+      },
+    );
+  } catch (err) {
+    console.warn("[Creative image] OpenRouter request error:", err.message);
+    return null;
+  }
+
+  const durationMs = Date.now() - startTime;
+
+  const usage = response.data?.usage;
+  const totalCost = usage?.total_cost;
+  if (response.status === 200 && (usage || totalCost !== undefined)) {
+    recordImageGeneration({
+      model: OPENROUTER_IMAGE_MODEL,
+      size: requestedRatio,
+      aspectRatio: requestedRatio,
+      durationMs,
+      source: metricSource,
+      estimatedUsd: totalCost ?? null,
+    });
+  }
 
   if (response.status !== 200) {
     const msg =
       response.data?.error?.message ??
       response.data?.message ??
       response.statusText;
+    console.warn("[Creative image] OpenRouter error:", response.status, msg);
+    if (response.data && typeof response.data === "object") {
+      console.warn(
+        "[Creative image] Response data (keys):",
+        Object.keys(response.data),
+      );
+      if (response.data.error)
+        console.warn("[Creative image] Error object:", response.data.error);
+    }
+    return null;
+  }
+
+  const message = response.data?.choices?.[0]?.message;
+  const images = message?.images;
+  if (!Array.isArray(images) || images.length === 0) {
+    console.warn("[Creative image] No image in OpenRouter response");
     console.warn(
-      "[Creative image] OpenAI generations error:",
-      response.status,
-      msg,
+      "[Creative image] message keys:",
+      message ? Object.keys(message) : "no message",
+    );
+    console.warn(
+      "[Creative image] choices[0] keys:",
+      response.data?.choices?.[0]
+        ? Object.keys(response.data.choices[0])
+        : "no choice",
     );
     return null;
   }
 
-  const b64 = response.data?.data?.[0]?.b64_json;
-  if (typeof b64 === "string") {
-    recordImageGeneration({
-      model: CREATIVE_IMAGE_MODEL,
-      size,
-      aspectRatio: requestedRatio,
-      durationMs,
-      source: metricSource,
-    });
-    return `data:image/png;base64,${b64}`;
+  const first = images[0];
+  if (typeof first === "string" && first.startsWith("data:")) {
+    return first;
   }
+  if (typeof first?.b64_json === "string") {
+    return `data:image/png;base64,${first.b64_json}`;
+  }
+  if (typeof first?.url === "string") {
+    return first.url;
+  }
+  const imageUrl =
+    typeof first?.image_url === "string"
+      ? first.image_url
+      : first?.image_url?.url;
+  if (
+    typeof imageUrl === "string" &&
+    (imageUrl.startsWith("http") || imageUrl.startsWith("data:"))
+  ) {
+    if (imageUrl.startsWith("data:")) return imageUrl;
+    try {
+      return await fetchImageAsDataUrl(imageUrl);
+    } catch (err) {
+      console.warn("[Creative image] Failed to fetch image_url:", err.message);
+      return null;
+    }
+  }
+  console.warn(
+    "[Creative image] Image item format not recognized. typeof first:",
+    typeof first,
+    "keys:",
+    typeof first === "object" && first !== null ? Object.keys(first) : "-",
+  );
   return null;
 }
 
@@ -826,19 +2050,46 @@ export async function generateCreativeImageNanoBananaPro(
   return generateCreativeImageSeedream(prompt, aspectRatio || "4:5");
 }
 
-/** Avatares y banners de ICP: Seedream 4.5 vía OpenRouter (modalities: ["image"]). */
-const ICP_IMAGE_MODEL = "bytedance-seed/seedream-4.5";
 const DEBUG_ICP_IMAGE =
   process.env.DEBUG_ICP_IMAGE === "1" || process.env.DEBUG_ICP_IMAGE === "true";
 
 /**
- * Genera una imagen para ICP (avatar o banner) con Seedream 4.5 vía OpenRouter.
- * OpenRouter: modalities solo ["image"] para este modelo.
+ * Genera una imagen para ICP (avatar o hero/banner).
+ * Si OPENROUTER_ICP_IMAGE_MODEL es "dicebear"|"placeholder"|"free": usa avatares/banners gratis (DiceBear + Picsum).
+ * Si no: usa OpenRouter FLUX (consume créditos).
  * @param {string} prompt - Descripción en texto para la imagen
- * @param {string} aspectRatio - "1:1" (avatar) o "21:9" (banner)
+ * @param {string} aspectRatio - "1:1" (avatar) o "21:9" (hero/banner)
  * @returns {Promise<string|null>} - data URL base64 (data:image/png;base64,...) o null
  */
 export async function generateProfileImage(prompt, aspectRatio = "1:1") {
+  if (useFreeIcpImages()) {
+    const seed = crypto
+      .createHash("md5")
+      .update(String(prompt || ""))
+      .digest("hex")
+      .slice(0, 16);
+    if (aspectRatio === "21:9" || aspectRatio === "16:9") {
+      const w = 840;
+      const h = 360;
+      const url = `https://picsum.photos/seed/${seed}/${w}/${h}`;
+      console.log("[ICP image] Free banner (picsum):", url);
+      try {
+        return await fetchImageAsDataUrl(url);
+      } catch (err) {
+        console.warn("[ICP image] Picsum fetch failed:", err.message);
+        return null;
+      }
+    }
+    const url = `https://api.dicebear.com/7.x/avataaars/png?seed=${seed}&size=256`;
+    console.log("[ICP image] Free avatar (dicebear):", url);
+    try {
+      return await fetchImageAsDataUrl(url);
+    } catch (err) {
+      console.warn("[ICP image] DiceBear fetch failed:", err.message);
+      return null;
+    }
+  }
+
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing");
@@ -846,7 +2097,7 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
 
   const startTime = Date.now();
   const requestBody = {
-    model: ICP_IMAGE_MODEL,
+    model: OPENROUTER_ICP_IMAGE_MODEL,
     modalities: ["image"],
     max_tokens: 4096,
     messages: [
@@ -865,7 +2116,7 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
   }
 
   console.log("[ICP image] Request:", {
-    model: ICP_IMAGE_MODEL,
+    model: OPENROUTER_ICP_IMAGE_MODEL,
     modalities: requestBody.modalities,
     aspectRatio,
     promptLength: prompt?.length ?? 0,
@@ -904,11 +2155,12 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
     const completionTokens = usage.completion_tokens || 0;
     const totalCost = usage.total_cost || 0;
     recordImageGeneration({
-      model: ICP_IMAGE_MODEL,
+      model: OPENROUTER_ICP_IMAGE_MODEL,
       size: aspectRatio,
-      cost: totalCost,
+      aspectRatio,
       durationMs: Date.now() - startTime,
       source: "profiles",
+      estimatedUsd: totalCost,
     });
   }
 
@@ -934,7 +2186,7 @@ export async function generateProfileImage(prompt, aspectRatio = "1:1") {
       status: response.status,
       message: msg,
       data: response.data,
-      model: ICP_IMAGE_MODEL,
+      model: OPENROUTER_ICP_IMAGE_MODEL,
       aspectRatio,
     };
     console.error(

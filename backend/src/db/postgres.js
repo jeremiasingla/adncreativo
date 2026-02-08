@@ -5,14 +5,13 @@ import pg from "pg";
 const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-console.log(
-  "[DEBUG] DATABASE_URL:",
-  process.env.DATABASE_URL ? "PRESENTE" : "AUSENTE",
-);
-console.log(
-  "[DEBUG] POSTGRES_URL:",
-  process.env.POSTGRES_URL ? "PRESENTE" : "AUSENTE",
-);
+if (process.env.NODE_ENV !== "production") {
+  if (connectionString) {
+    console.log("[postgres] DATABASE_URL configured");
+  } else {
+    console.log("[postgres] DATABASE_URL not set");
+  }
+}
 if (!connectionString) {
   console.warn(
     "⚠️ DATABASE_URL no configurado. Postgres está deshabilitado. Algunas funciones no estarán disponibles.",
@@ -92,7 +91,9 @@ export async function initPostgresWorkspaces() {
     `);
     
     workspacesTableInitialized = true;
-    
+
+    await initReferenceGalleryTable();
+
     // Ejecutar migraciones DESPUÉS de que la tabla existe
     if (!workspacesMigrationDone) {
       await runWorkspaceMigrations();
@@ -100,6 +101,42 @@ export async function initPostgresWorkspaces() {
     }
   } catch (err) {
     console.warn("⚠️ initPostgresWorkspaces:", err.message);
+  }
+}
+
+let referenceGalleryTableInitialized = false;
+
+/** Crea la tabla reference_gallery en Postgres si no existe. Global para todos los proyectos (sin user_id/workspace_id). Imagen en Blob, URL y prompt en DB. */
+export async function initReferenceGalleryTable() {
+  if (!pool || referenceGalleryTableInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS reference_gallery (
+        id TEXT PRIMARY KEY,
+        image_url TEXT NOT NULL,
+        category TEXT,
+        generation_prompt TEXT NOT NULL,
+        created_at BIGINT NOT NULL
+      )
+    `);
+    referenceGalleryTableInitialized = true;
+    await migrateReferenceGalleryDropTitle();
+  } catch (err) {
+    console.warn("⚠️ initReferenceGalleryTable:", err.message);
+  }
+}
+
+async function migrateReferenceGalleryDropTitle() {
+  try {
+    const col = await query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'reference_gallery' AND column_name = 'title'
+    `);
+    if (col.rows && col.rows.length > 0) {
+      await query(`ALTER TABLE reference_gallery DROP COLUMN IF EXISTS title`);
+    }
+  } catch (e) {
+    console.warn("[migrateReferenceGalleryDropTitle]", e.message);
   }
 }
 
@@ -119,25 +156,23 @@ async function runWorkspaceMigrations() {
         
         // Si es integer, convertir a text
         if (currentType === 'integer') {
-          console.log("[DEBUG] Migrating user_id from integer to text...");
-          
-          // Primero, remover la foreign key constraint si existe
+          if (process.env.NODE_ENV !== "production") {
+            console.log("[postgres] Migrating user_id from integer to text...");
+          }
           try {
             await query(`
               ALTER TABLE workspaces 
               DROP CONSTRAINT IF EXISTS workspaces_user_id_fkey
             `);
-            console.log("[DEBUG] Foreign key constraint dropped");
           } catch (fkErr) {
-            console.debug("[DEBUG] FK drop skipped:", fkErr.message);
+            if (process.env.NODE_ENV !== "production") {
+              console.debug("[postgres] FK drop skipped:", fkErr.message);
+            }
           }
-          
-          // Ahora convertir el tipo
           await query(`
             ALTER TABLE workspaces 
             ALTER COLUMN user_id TYPE TEXT USING user_id::text
           `);
-          console.log("[DEBUG] user_id migrated to TEXT successfully");
         }
       }
     } catch (migErr) {
@@ -153,15 +188,30 @@ async function runWorkspaceMigrations() {
       `);
       
       if (!clerkOrgIdInfo.rows || clerkOrgIdInfo.rows.length === 0) {
-        console.log("[DEBUG] Adding clerk_org_id column...");
         await query(`
           ALTER TABLE workspaces 
           ADD COLUMN clerk_org_id TEXT
         `);
-        console.log("[DEBUG] clerk_org_id column added successfully");
       }
     } catch (clerkOrgIdErr) {
       console.warn("[DEBUG] clerk_org_id migration:", clerkOrgIdErr.message);
+    }
+
+    // sales_angles: JSON array de ángulos de venta (category, title, description, hook, visual)
+    try {
+      const salesAnglesInfo = await query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'workspaces' AND column_name = 'sales_angles'
+      `);
+      if (!salesAnglesInfo.rows || salesAnglesInfo.rows.length === 0) {
+        await query(`
+          ALTER TABLE workspaces 
+          ADD COLUMN sales_angles TEXT
+        `);
+      }
+    } catch (salesAnglesErr) {
+      console.warn("[DEBUG] sales_angles migration:", salesAnglesErr.message);
     }
   } catch (err) {
     console.warn("[DEBUG] Migration error:", err.message);

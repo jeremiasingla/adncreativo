@@ -1,177 +1,24 @@
 import React from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
-import { createPortal } from "react-dom";
-import { OrganizationProfile } from "@clerk/clerk-react";
+import { useTranslation } from "react-i18next";
+import { useClerk } from "@clerk/clerk-react";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  IconHouse,
+  IconImage,
+  IconPalette,
+  IconBookOpen,
+  IconCircleUser,
+  IconChevronDown,
+  IconPanelLeftClose,
+  IconPanelLeftOpen,
+  IconSparkles,
+  IconSettings,
+  IconCreditCard,
+  IconLogOut,
+} from "./icons";
 
 const iconClass = "w-4 h-4 shrink-0";
-
-function IconHouse({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className || iconClass}
-      aria-hidden="true"
-    >
-      <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
-      <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-    </svg>
-  );
-}
-function IconImage({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className || iconClass}
-      aria-hidden="true"
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-      <circle cx="9" cy="9" r="2" />
-      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-    </svg>
-  );
-}
-function IconPalette({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className || iconClass}
-      aria-hidden="true"
-    >
-      <path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
-      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-    </svg>
-  );
-}
-function IconBookOpen({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className || iconClass}
-      aria-hidden="true"
-    >
-      <path d="M12 7v14" />
-      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-    </svg>
-  );
-}
-function IconCircleUser({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className || iconClass}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="10" r="3" />
-      <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
-    </svg>
-  );
-}
-function IconChevronDown({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-function IconPanelLeftClose({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" />
-      <path d="M9 3v18" />
-      <path d="m16 15-3-3 3-3" />
-    </svg>
-  );
-}
-function IconPanelLeftOpen({ className }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <rect width="18" height="18" x="3" y="3" rx="2" />
-      <path d="M9 3v18" />
-      <path d="m14 9 3 3-3 3" />
-    </svg>
-  );
-}
 const iconSizeClass =
   "[&_svg]:!w-4 [&_svg]:!h-4 [&_svg]:shrink-0 [&_svg]:flex-none";
 const sidebarIconSize = "w-4 h-4 shrink-0";
@@ -196,15 +43,19 @@ const navButtonCollapsed =
   sidebarHover;
 
 export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
-  const { user } = useAuth();
+  const { t } = useTranslation();
+  const { openUserProfile } = useClerk();
+  const { user, logout } = useAuth();
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();
-  const [showOrgModal, setShowOrgModal] = React.useState(false);
-
+  const [showUserPopup, setShowUserPopup] = React.useState(false);
+  const userButtonRef = React.useRef(null);
+  const popupRef = React.useRef(null);
+  
   const safeWorkspace = workspace ?? {};
   const { name: workspaceName = "Espacio", logoUrl, slug } = safeWorkspace;
   const displayName =
-    user?.name?.trim() || user?.email?.split("@")[0] || "Usuario";
+    user?.name?.trim() || user?.email?.split("@")[0] || t("common.user");
 
   const parts = pathname.split("/").filter(Boolean);
   const currentSegment = parts[0] === workspaceSlug ? (parts[1] ?? "") : "";
@@ -213,44 +64,63 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
 
   const pxBar = collapsed ? "px-4" : "px-3";
 
-  const handleOpenOrgModal = () => {
-    setShowOrgModal(true);
-  };
+  // Cerrar popup al hacer clic fuera o presionar Escape
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        showUserPopup &&
+        popupRef.current &&
+        !popupRef.current.contains(event.target) &&
+        userButtonRef.current &&
+        !userButtonRef.current.contains(event.target)
+      ) {
+        setShowUserPopup(false);
+      }
+    };
 
-  const handleCloseOrgModal = () => {
-    setShowOrgModal(false);
+    const handleEscape = (event) => {
+      if (event.key === "Escape" && showUserPopup) {
+        setShowUserPopup(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showUserPopup]);
+
+  const toggleUserPopup = () => {
+    setShowUserPopup(!showUserPopup);
   };
 
   return (
     <aside
-      className={`h-full flex flex-col shrink-0 border-r border-neutral-100 bg-transparent overflow-hidden transition-all duration-200 ${
-        collapsed ? "w-20" : "w-64"
-      }`}
+      className={`h-full flex flex-col shrink-0 border-r border-neutral-100 bg-transparent overflow-hidden transition-all duration-200 ${collapsed ? "w-20" : "w-64"}`}
       aria-label="Navegación del workspace"
     >
       {/* Top bar: colapsado = botón w-12 h-12 (logo por defecto, ícono expandir al hover); expandido = logo + selector + botón colapsar w-11 h-11 */}
       <div
-        className={`h-16 flex items-center border-b border-neutral-100 ${
-          collapsed ? "px-4 justify-center" : "px-3 justify-between"
-        }`}
+        className={`h-16 flex items-center border-b border-neutral-100 ${collapsed ? "px-4 justify-center" : "px-3 justify-between"}`}
       >
         {collapsed ? (
           <button
             type="button"
             onClick={onCollapse}
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-xl group w-12 h-12 shrink-0 cursor-e-resize"
-            title="Expandir barra lateral"
-            aria-label="Expandir barra lateral"
+            title={t("sidebar.expand")}
+            aria-label={t("sidebar.expand")}
           >
             <img
-              alt="ADNCreativo"
+              alt="Vibiz"
               width={24}
               height={24}
-              src="/images/logo-adncreativo-no-background.svg"
+              decoding="async"
+              src="/images/logo-vibiz-no-background.svg"
               className="w-6 h-6 shrink-0 group-hover:hidden"
               style={{ color: "transparent" }}
-              loading="lazy"
-              decoding="async"
             />
             <IconPanelLeftOpen className="w-4 h-4 shrink-0 text-neutral-500 hidden group-hover:block group-hover:text-[#1e9df1]" />
           </button>
@@ -259,11 +129,11 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="flex items-center justify-center shrink-0 pl-1">
                 <img
-                  alt="ADNCreativo"
+                  alt="Vibiz"
                   width={24}
                   height={24}
                   decoding="async"
-                  src="/images/logo-adncreativo-no-background.svg"
+                  src="/images/logo-vibiz-no-background.svg"
                   className="w-6 h-6 shrink-0"
                   style={{ color: "transparent" }}
                 />
@@ -271,7 +141,6 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
               <span className="text-neutral-300 text-lg shrink-0">/</span>
               <button
                 type="button"
-                onClick={handleOpenOrgModal}
                 className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 cursor-pointer hover:bg-accent hover:text-accent-foreground group h-auto px-2 py-1.5 min-w-0"
                 aria-label="Cambiar espacio de trabajo"
               >
@@ -281,8 +150,6 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
                       alt={workspaceName}
                       src={logoUrl}
                       className="w-full h-full object-cover"
-                      loading="lazy"
-                      decoding="async"
                     />
                   ) : (
                     <span className="text-foreground">
@@ -303,8 +170,8 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
               type="button"
               onClick={onCollapse}
               className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground rounded-xl w-11 h-11 text-neutral-400 shrink-0 cursor-w-resize"
-              title="Colapsar barra lateral"
-              aria-label="Colapsar barra lateral"
+              title={t("sidebar.collapse")}
+              aria-label={t("sidebar.collapse")}
             >
               <IconPanelLeftClose className="w-4 h-4 shrink-0" />
             </button>
@@ -314,18 +181,14 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
 
       {/* Inicio: vuelve al dashboard */}
       <div
-        className={`py-4 border-b border-neutral-100 ${
-          collapsed ? "px-4" : "px-3"
-        }`}
+        className={`py-4 border-b border-neutral-100 ${collapsed ? "px-4" : "px-3"}`}
       >
         <Link
           to="/"
-          className={`inline-flex items-center whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none ${iconSizeClass} cursor-pointer py-2.5 text-neutral-600 w-full justify-start gap-3 px-3 h-11 ${
-            collapsed ? "!w-12 !h-12 !justify-center" : ""
-          } ${sidebarHover}`}
+          className={`inline-flex items-center whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none ${iconSizeClass} cursor-pointer py-2.5 text-neutral-600 w-full justify-start gap-3 px-3 h-11 ${collapsed ? "!w-12 !h-12 !justify-center" : ""} ${sidebarHover}`}
         >
           <IconHouse className={sidebarIconSize} />
-          {!collapsed && <span>Inicio</span>}
+          {!collapsed && <span>{t("sidebar.home")}</span>}
         </Link>
       </div>
 
@@ -335,7 +198,7 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
           <div>
             {!collapsed && (
               <p className="font-sans text-xs font-medium text-neutral-400 uppercase tracking-wide mb-2.5 px-2">
-                Crear
+                {t("sidebar.create")}
               </p>
             )}
             <ul className={collapsed ? "space-y-2.5" : "space-y-1.5"}>
@@ -353,13 +216,28 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
                   }
                 >
                   <IconImage
-                    className={`${sidebarIconSize} transition-colors ${
-                      effectiveSegment === "creatives"
-                        ? "text-primary-foreground"
-                        : "text-neutral-500 group-hover:text-[#1e9df1]"
-                    }`}
+                    className={`${sidebarIconSize} transition-colors ${effectiveSegment === "creatives" ? "text-primary-foreground" : "text-neutral-500 group-hover:text-[#1e9df1]"}`}
                   />
-                  {!collapsed && <span>Creativos</span>}
+                  {!collapsed && <span>{t("sidebar.creatives")}</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to={`${basePath}/galeria`}
+                  className={
+                    effectiveSegment === "galeria"
+                      ? collapsed
+                        ? activeButtonCollapsed
+                        : navButtonActive
+                      : collapsed
+                        ? navButtonCollapsed
+                        : navButtonDefault
+                  }
+                >
+                  <IconSparkles
+                    className={`${sidebarIconSize} transition-colors ${effectiveSegment === "galeria" ? "text-primary-foreground" : "text-neutral-500 group-hover:text-[#1e9df1]"}`}
+                  />
+                  {!collapsed && <span>{t("sidebar.gallery")}</span>}
                 </Link>
               </li>
             </ul>
@@ -369,7 +247,7 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
           <div>
             {!collapsed && (
               <p className="font-sans text-xs font-medium text-neutral-400 uppercase tracking-wide mb-2.5 px-2">
-                Mi negocio
+                {t("sidebar.myBusiness")}
               </p>
             )}
             <ul className={collapsed ? "space-y-2.5" : "space-y-1.5"}>
@@ -387,13 +265,9 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
                   }
                 >
                   <IconPalette
-                    className={`${sidebarIconSize} transition-colors ${
-                      effectiveSegment === "branding"
-                        ? "text-primary-foreground"
-                        : "text-neutral-500 group-hover:text-[#1e9df1]"
-                    }`}
+                    className={`${sidebarIconSize} transition-colors ${effectiveSegment === "branding" ? "text-primary-foreground" : "text-neutral-500 group-hover:text-[#1e9df1]"}`}
                   />
-                  {!collapsed && <span>Branding</span>}
+                  {!collapsed && <span>{t("sidebar.branding")}</span>}
                 </Link>
               </li>
               <li>
@@ -410,13 +284,9 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
                   }
                 >
                   <IconBookOpen
-                    className={`${sidebarIconSize} transition-colors ${
-                      effectiveSegment === "base-de-conocimiento"
-                        ? "text-primary-foreground"
-                        : "text-neutral-500 group-hover:text-[#1e9df1]"
-                    }`}
+                    className={`${sidebarIconSize} transition-colors ${effectiveSegment === "base-de-conocimiento" ? "text-primary-foreground" : "text-neutral-500 group-hover:text-[#1e9df1]"}`}
                   />
-                  {!collapsed && <span>Base de Conocimiento</span>}
+                  {!collapsed && <span>{t("sidebar.knowledgeBase")}</span>}
                 </Link>
               </li>
               <li>
@@ -433,13 +303,9 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
                   }
                 >
                   <IconCircleUser
-                    className={`${sidebarIconSize} transition-colors ${
-                      effectiveSegment === "customer-profiles"
-                        ? "text-primary-foreground"
-                        : "text-neutral-500 group-hover:text-[#1e9df1]"
-                    }`}
+                    className={`${sidebarIconSize} transition-colors ${effectiveSegment === "customer-profiles" ? "text-primary-foreground" : "text-neutral-500 group-hover:text-[#1e9df1]"}`}
                   />
-                  {!collapsed && <span>Perfiles de Clientes</span>}
+                  {!collapsed && <span>{t("sidebar.customerProfiles")}</span>}
                 </Link>
               </li>
             </ul>
@@ -448,70 +314,125 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
       </nav>
 
       {/* Pie: usuario */}
-      <div className={`py-5 border-t border-neutral-100 space-y-3 ${pxBar}`}>
+      <div className={`py-5 border-t border-neutral-100 space-y-3 ${pxBar} relative`}>
         <div
-          className={`group flex items-center text-sm font-semibold transition-all cursor-pointer rounded-xl text-neutral-600 hover:bg-accent hover:text-accent-foreground font-sans ${
-            collapsed ? "w-12 h-12 justify-center" : "w-full h-11 gap-3 px-3"
-          }`}
+          ref={userButtonRef}
+          onClick={toggleUserPopup}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              toggleUserPopup();
+            }
+          }}
+          className={`group flex items-center text-sm font-semibold transition-all cursor-pointer rounded-xl text-neutral-600 hover:bg-accent hover:text-accent-foreground font-sans ${collapsed ? "w-12 h-12 justify-center" : "w-full h-11 gap-3 px-3"}`}
           role="button"
           tabIndex={0}
+          aria-label={t("nav.userMenu")}
+          aria-expanded={showUserPopup}
         >
-          <div className="w-4 h-4 shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
-            {displayName.charAt(0).toUpperCase()}
-          </div>
+          {user?.imageUrl ? (
+            <img
+              src={user.imageUrl}
+              alt={displayName}
+              className="w-4 h-4 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-4 h-4 shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-xs">
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+          )}
           {!collapsed && (
             <>
               <span className="truncate flex-1">{displayName}</span>
               <span className="shrink-0 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                {user?.role === "admin" ? "ADMIN" : "Básico"}
+                {user?.role === "admin" ? t("common.admin") : t("common.basic")}
               </span>
             </>
           )}
         </div>
-      </div>
-    </aside>
-    {showOrgModal &&
-      createPortal(
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={handleCloseOrgModal}
-        >
+
+        {/* Popover tipo Clerk: User button popover */}
+        {showUserPopup && (
           <div
-            className="fixed inset-0 bg-black/50"
-            onClick={handleCloseOrgModal}
-            aria-hidden="true"
-          />
-          <div
-            className="relative bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto z-50"
-            onClick={(e) => e.stopPropagation()}
+            ref={popupRef}
+            role="dialog"
+            aria-label={t("nav.userMenu")}
+            className="absolute bottom-full left-0 mb-2 min-w-[220px] max-w-[calc(100%-24px)] bg-white rounded-xl shadow-xl border border-neutral-200/80 overflow-hidden z-50"
+            style={{
+              animation: "fadeInUp 0.2s ease-out",
+              boxShadow:
+                "0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)",
+            }}
           >
-            <button
-              onClick={handleCloseOrgModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-50"
-              aria-label="Cerrar"
+            <div className="p-3">
+              {/* User preview */}
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-[22px] h-[22px] rounded-full overflow-hidden bg-neutral-100">
+                  {user?.imageUrl ? (
+                    <img
+                      src={user.imageUrl}
+                      alt={displayName}
+                      title={displayName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-[10px]">
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-neutral-900 truncate">
+                    {displayName}
+                  </div>
+                  <div className="text-[12px] text-neutral-500 truncate">
+                    {user?.email || ""}
+                  </div>
+                </div>
+              </div>
+            </div>
+            {/* Actions */}
+            <div
+              className="border-t border-neutral-100 py-1"
+              role="menu"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-6 h-6"
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setShowUserPopup(false);
+                  openUserProfile?.();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
               >
-                <path d="M18 6l-12 12" />
-                <path d="M6 6l12 12" />
-              </svg>
-            </button>
-            <div className="p-6 pt-12">
-              <OrganizationProfile />
+                <IconSettings className="w-4 h-4 shrink-0 text-neutral-500" />
+                <span>{t("common.manageAccount")}</span>
+              </button>
+              <Link
+                to="/billing"
+                role="menuitem"
+                onClick={() => setShowUserPopup(false)}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <IconCreditCard className="w-4 h-4 shrink-0 text-neutral-500" />
+                <span>{t("common.billing")}</span>
+              </Link>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={async () => {
+                  setShowUserPopup(false);
+                  await logout();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+              >
+                <IconLogOut className="w-4 h-4 shrink-0 text-neutral-500" />
+                <span>{t("common.signOut")}</span>
+              </button>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
+        )}
+      </div>
+    </aside>
   );
 }

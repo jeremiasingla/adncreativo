@@ -45,6 +45,10 @@
   --font-serif: var(--font-instrument-serif), ui-serif, serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
   --radius: 1rem;
+  --radius-sm: 0.5rem;
+  --border-width-lg: 2px;
+  --duration-fast: 0.15s;
+  --duration-normal: 0.2s;
   --shadow-x: 0px;
   --shadow-y: 2px;
   --shadow-blur: 2px;
@@ -152,6 +156,13 @@
   --default-transition-duration: 0.15s;
   --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   --animate-typing-dot-bounce: typing-dot-bounce 1.4s ease-in-out infinite;
+  /* Liquid glass (Apple-style, ref: apple-liquid-glass-switcher) */
+  --c-glass: #bbbbbc;
+  --c-light: #fff;
+  --c-dark: #000;
+  --glass-reflex-light: 1;
+  --glass-reflex-dark: 1;
+  --saturation: 150%;
 }
 
 html,
@@ -205,6 +216,7 @@ html,
   }
 }
 
+/* --- Animaciones según Aura (prompt-for-animation): transform/opacity para performance --- */
 @keyframes float {
   0%,
   100% {
@@ -213,6 +225,106 @@ html,
   50% {
     transform: translateY(-6px);
   }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Respeta preferencia de movimiento reducido (accesibilidad Aura) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Glass prompt wrap (hero URL input) */
+.glass-prompt-wrap {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  background: #ffffff1f;
+  border: 1px solid #fff3;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 32px #0000001a, inset 0 1px #ffffff4d, inset 0 -1px #0000000d;
+}
+.glass-prompt-wrap:hover {
+  background: #ffffff2e;
+  border-color: #ffffff4d;
+  box-shadow: 0 12px 40px #0000001f, inset 0 1px #ffffff59, inset 0 -1px #0000000d;
+}
+.glass-prompt-wrap:focus-within {
+  background: #ffffff38;
+  border-color: #ffffff59;
+  box-shadow: 0 16px 48px #00000026, 0 0 0 2px #1e9df133,
+    inset 0 1px #fff6, inset 0 -1px #0000000d;
+}
+.glass-prompt-wrap::before {
+  content: "";
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(135deg, #ffffff26 0%, #fff0 50%, #ffffff0d 100%);
+  position: absolute;
+  inset: 0;
+}
+
+/* Círculos tipo Figma (diagrama Una marca. Todas las redes) */
+.circle-figma {
+  @apply rounded-full border-2 border-gray-200 bg-white;
+  box-shadow: 0 0 20px -12px rgba(0, 0, 0, 0.8);
+}
+
+/* Líneas de gradiente: fase 1 = usuario → logo central (0→600px), fase 2 = centro → iconos (600→1232px) */
+@keyframes brand-reveal-width {
+  0% {
+    width: 0;
+  }
+  25% {
+    width: 600px; /* Llega al logo central, dispara fase 2 */
+  }
+  75% {
+    width: 1232px; /* Revelado hasta los iconos */
+  }
+  100% {
+    width: 0;
+  }
+}
+.brand-line-mask-reveal {
+  width: 0;
+  animation: brand-reveal-width 3.2s ease-in-out infinite;
 }
 
 @keyframes blink {
@@ -226,7 +338,7 @@ html,
   }
 }
 
-/* Modal popup enter/exit */
+/* Modal popup enter/exit (Aura: modals 400-600ms, ease-in-out) */
 @keyframes modal-backdrop-in {
   from {
     opacity: 0;
@@ -238,27 +350,279 @@ html,
 @keyframes modal-panel-in {
   from {
     opacity: 0;
-    transform: scale(0.98);
+    transform: scale(0.98) translateY(12px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
 .modal-backdrop {
-  animation: modal-backdrop-in 0.2s ease-out;
+  animation: modal-backdrop-in 0.35s ease-out;
 }
 .modal-backdrop.modal-closing {
   opacity: 0;
-  transition: opacity 0.2s ease-out;
+  transition: opacity 0.25s ease-out;
 }
 
 .modal-panel {
-  animation: modal-panel-in 0.2s ease-out;
+  animation: modal-panel-in 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .modal-panel.modal-closing {
   opacity: 0;
-  transform: scale(0.98);
-  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+  transform: scale(0.98) translateY(8px);
+  transition:
+    opacity 0.25s ease-out,
+    transform 0.25s ease-out;
+}
+
+/* Header: mismo efecto liquid glass que el switcher (CodePen Apple Liquid glass) */
+.header-liquid-glass {
+  background-color: color-mix(in srgb, var(--c-glass) 12%, transparent);
+  backdrop-filter: blur(8px) url(#header-liquid-glass)
+    saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(8px) saturate(var(--saturation));
+  box-shadow:
+    inset -0.3px -1px 4px 0px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 6%),
+        transparent
+      ),
+    inset -1.5px 2.5px 0px -2px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 10%),
+        transparent
+      ),
+    inset 0px 3px 4px -2px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 10%),
+        transparent
+      ),
+    inset 2px -6.5px 1px -4px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 5%),
+        transparent
+      ),
+    0px 1px 5px 0px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 5%),
+        transparent
+      ),
+    0px 6px 16px 0px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 4%),
+        transparent
+      );
+  transition:
+    background-color 400ms cubic-bezier(1, 0, 0.4, 1),
+    box-shadow 400ms cubic-bezier(1, 0, 0.4, 1);
+}
+
+/* Estado inicial (sin scroll): un poco más opaco para buena legibilidad */
+.header-liquid-glass--initial {
+  background-color: color-mix(in srgb, var(--c-glass) 20%, transparent);
+}
+
+/* Liquid glass (Apple-style, igual que reference apple-liquid-glass-switcher) */
+.liquid-glass {
+  background-color: color-mix(in srgb, var(--c-glass) 12%, transparent);
+  backdrop-filter: blur(8px) saturate(var(--saturation));
+  -webkit-backdrop-filter: blur(8px) saturate(var(--saturation));
+  box-shadow:
+    inset 0 0 0 1px
+      color-mix(
+        in srgb,
+        var(--c-light) calc(var(--glass-reflex-light) * 10%),
+        transparent
+      ),
+    inset 1.8px 3px 0px -2px
+      color-mix(
+        in srgb,
+        var(--c-light) calc(var(--glass-reflex-light) * 90%),
+        transparent
+      ),
+    inset -2px -2px 0px -2px
+      color-mix(
+        in srgb,
+        var(--c-light) calc(var(--glass-reflex-light) * 80%),
+        transparent
+      ),
+    inset -3px -8px 1px -6px
+      color-mix(
+        in srgb,
+        var(--c-light) calc(var(--glass-reflex-light) * 60%),
+        transparent
+      ),
+    inset -0.3px -1px 4px 0px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 12%),
+        transparent
+      ),
+    inset -1.5px 2.5px 0px -2px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 20%),
+        transparent
+      ),
+    inset 0px 3px 4px -2px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 20%),
+        transparent
+      ),
+    inset 2px -6.5px 1px -4px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 10%),
+        transparent
+      ),
+    0px 1px 5px 0px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 10%),
+        transparent
+      ),
+    0px 6px 16px 0px
+      color-mix(
+        in srgb,
+        var(--c-dark) calc(var(--glass-reflex-dark) * 8%),
+        transparent
+      );
+}
+
+.liquid-glass-dark {
+  --c-glass: #333;
+  --c-light: #fff;
+  --c-dark: #000;
+  --glass-reflex-dark: 2;
+  --glass-reflex-light: 0.3;
+}
+
+.liquid-glass-backdrop {
+  background: color-mix(in srgb, #000 35%, transparent);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+}
+
+.liquid-glass-backdrop-light {
+  background: color-mix(in srgb, #fff 18%, transparent);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+}
+
+/* Botón Iniciar sesión: fondo negro, texto blanco, 3D acorde al liquid glass */
+.btn-signin-3d {
+  background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 50%, #000 100%);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.4),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.04),
+    inset -1px 0 0 0 rgba(0, 0, 0, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    0 4px 16px rgba(0, 0, 0, 0.15);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.btn-signin-3d:hover {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.4),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.06),
+    inset -1px 0 0 0 rgba(0, 0, 0, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
+}
+.btn-signin-3d:active {
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    0 1px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(1px);
+}
+
+/* Card Figma - accordion/FAQ cards */
+.card-figma {
+  border: var(--border-width-lg) solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px #00000014, inset 0 1px #ffffff80;
+}
+@supports (color: color-mix(in lab, red, red)) {
+  .card-figma {
+    background: linear-gradient(
+      to bottom,
+      var(--background),
+      color-mix(in srgb, var(--muted) 30%, transparent)
+    );
+  }
+}
+@supports not (color: color-mix(in lab, red, red)) {
+  .card-figma {
+    background: linear-gradient(to bottom, var(--background), var(--muted));
+  }
+}
+
+/* Chevron button - accordion trigger icon */
+.chevron-button {
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  transition:
+    transform var(--duration-normal) var(--ease-in-out),
+    box-shadow var(--duration-fast) var(--ease-in-out),
+    background var(--duration-fast) var(--ease-in-out);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px #00000014, inset 0 1px #ffffff80;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(to bottom, var(--background), var(--muted));
+  justify-content: center;
+  align-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+}
+@supports (color: color-mix(in lab, red, red)) {
+  .chevron-button {
+    background: linear-gradient(
+      to bottom,
+      var(--background),
+      color-mix(in srgb, var(--muted) 30%, transparent)
+    );
+  }
+}
+
+/* Contención de layout/paint para secciones below-the-fold (mejor scroll) */
+@layer utilities {
+  .contain-paint {
+    contain: layout paint;
+  }
+}
+
+/* Circle Figma - mismos tokens que card-figma (var hex desde :root) */
+.circle-figma {
+  border: var(--border-width-lg) solid var(--border);
+  box-shadow: 0 2px 8px #00000014, inset 0 1px #ffffff80;
+}
+@supports (color: color-mix(in lab, red, red)) {
+  .circle-figma {
+    background: linear-gradient(
+      to bottom,
+      var(--background),
+      color-mix(in srgb, var(--muted) 30%, transparent)
+    );
+  }
+}
+@supports not (color: color-mix(in lab, red, red)) {
+  .circle-figma {
+    background: linear-gradient(to bottom, var(--background), var(--muted));
+  }
 }
