@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
+  startTransition,
 } from "react";
 import { useTranslation } from "react-i18next";
 import gsap from "gsap";
@@ -11,8 +12,10 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion, AnimatePresence } from "framer-motion";
 import WebsiteUrlInput from "../components/WebsiteUrlInput";
 import HeroBackground from "../components/HeroBackground";
+import Footer from "../components/Footer";
 
 gsap.registerPlugin(ScrollTrigger);
+ScrollTrigger.config({ limitCallbacks: true });
 
 export default function Home() {
   const { t } = useTranslation();
@@ -33,27 +36,29 @@ export default function Home() {
 
   React.useEffect(() => {
     const phrase = heroPhrases[heroPhraseIndex];
-    const typingDelay = heroIsDeleting ? 60 : 120;
+    const typingDelay = heroIsDeleting ? 80 : 140;
     const pauseWhenFull = 2000;
     const delay =
       !heroIsDeleting && heroCharIndex === phrase.length
         ? pauseWhenFull
         : typingDelay;
     const timeout = setTimeout(() => {
-      if (!heroIsDeleting) {
-        if (heroCharIndex < phrase.length) {
-          setHeroCharIndex((i) => i + 1);
+      startTransition(() => {
+        if (!heroIsDeleting) {
+          if (heroCharIndex < phrase.length) {
+            setHeroCharIndex((i) => i + 1);
+          } else {
+            setHeroIsDeleting(true);
+          }
         } else {
-          setHeroIsDeleting(true);
+          if (heroCharIndex > 0) {
+            setHeroCharIndex((i) => i - 1);
+          } else {
+            setHeroIsDeleting(false);
+            setHeroPhraseIndex((i) => (i + 1) % heroPhrases.length);
+          }
         }
-      } else {
-        if (heroCharIndex > 0) {
-          setHeroCharIndex((i) => i - 1);
-        } else {
-          setHeroIsDeleting(false);
-          setHeroPhraseIndex((i) => (i + 1) % heroPhrases.length);
-        }
-      }
+      });
     }, delay);
     return () => clearTimeout(timeout);
   }, [heroPhraseIndex, heroCharIndex, heroIsDeleting, heroPhrases]);
@@ -94,13 +99,27 @@ export default function Home() {
       return masterTimeline;
     };
 
-    // En mobile el DOM puede no estar listo; dar un frame para que los SVG defs existan
+    let beamIo = null;
     const raf = requestAnimationFrame(() => {
       beamTimelineRef.current = runAnimation();
+      const timeline = beamTimelineRef.current;
+      if (!timeline || !container) return;
+      beamIo = new IntersectionObserver(
+        (entries) => {
+          const [e] = entries;
+          if (e.isIntersecting) timeline.play();
+          else timeline.pause();
+        },
+        { threshold: 0.1, rootMargin: "50px" },
+      );
+      beamIo.observe(container);
     });
 
     return () => {
       cancelAnimationFrame(raf);
+      if (beamIo && container) {
+        beamIo.disconnect();
+      }
       if (beamTimelineRef.current) {
         beamTimelineRef.current.kill();
         beamTimelineRef.current = null;
@@ -211,8 +230,11 @@ export default function Home() {
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    const ctx = gsap.context(() => {
-      const sections = pageRef.current.querySelectorAll("section");
+    const root = pageRef.current;
+    let gsapCtx = null;
+    const raf = requestAnimationFrame(() => {
+      gsapCtx = gsap.context(() => {
+        const sections = root.querySelectorAll("section");
       const heroTitle = pageRef.current.querySelector(
         "[data-gsap='hero-title']",
       );
@@ -222,7 +244,7 @@ export default function Home() {
       const heroInput = pageRef.current.querySelector(
         "[data-gsap='hero-input']",
       );
-      if (heroTitle && heroSubtitle && heroInput && !prefersReducedMotion) {
+        if (heroTitle && heroSubtitle && heroInput && !prefersReducedMotion) {
         gsap.from([heroTitle, heroSubtitle, heroInput], {
           opacity: 0,
           y: 20,
@@ -239,6 +261,7 @@ export default function Home() {
         const marcaBlock = section.querySelector("[class*='38rem']");
         const heading = section.querySelector("h2");
         const sub = section.querySelector("p");
+        if (!section.parentNode) return;
         const targets = [heading, sub].filter(Boolean);
         if (targets.length && !isCta && !marcaBlock) {
           gsap.from(targets, {
@@ -246,6 +269,7 @@ export default function Home() {
               trigger: section,
               start: "top 88%",
               end: "top 55%",
+              once: true,
             },
             opacity: 0,
             y: 30,
@@ -257,7 +281,7 @@ export default function Home() {
         const grid = section.querySelector("[class*='md:grid']");
         if (grid && grid.children.length) {
           gsap.from(grid.children, {
-            scrollTrigger: { trigger: grid, start: "top 90%" },
+            scrollTrigger: { trigger: grid, start: "top 90%", once: true },
             opacity: 0,
             y: 30,
             duration: 0.6,
@@ -268,7 +292,7 @@ export default function Home() {
         const faqList = section.querySelector(".space-y-4");
         if (faqList && faqList.children.length) {
           gsap.from(faqList.children, {
-            scrollTrigger: { trigger: faqList, start: "top 92%" },
+            scrollTrigger: { trigger: faqList, start: "top 92%", once: true },
             opacity: 0,
             y: 20,
             duration: 0.5,
@@ -279,7 +303,7 @@ export default function Home() {
         const diagramBox = section.querySelector("[data-gsap='brand-diagram']");
         if (diagramBox) {
           gsap.from(diagramBox, {
-            scrollTrigger: { trigger: diagramBox, start: "top 88%" },
+            scrollTrigger: { trigger: diagramBox, start: "top 88%", once: true },
             opacity: 0,
             y: 30,
             duration: 0.6,
@@ -295,7 +319,7 @@ export default function Home() {
           ].filter(Boolean);
           if (ctaTexts.length) {
             gsap.from(ctaTexts, {
-              scrollTrigger: { trigger: ctaContent, start: "top 88%" },
+              scrollTrigger: { trigger: ctaContent, start: "top 88%", once: true },
               opacity: 0,
               y: 30,
               duration: 0.6,
@@ -306,7 +330,7 @@ export default function Home() {
         }
         if (marcaBlock && marcaBlock.children.length) {
           gsap.from(Array.from(marcaBlock.children), {
-            scrollTrigger: { trigger: section, start: "top 85%" },
+            scrollTrigger: { trigger: section, start: "top 85%", once: true },
             opacity: 0,
             x: -24,
             duration: 0.6,
@@ -315,8 +339,12 @@ export default function Home() {
           });
         }
       });
-    }, pageRef);
-    return () => ctx.revert();
+      }, root);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      if (gsapCtx) gsapCtx.revert();
+    };
   }, []);
 
   return (
@@ -687,7 +715,7 @@ export default function Home() {
                   ref={(el) => {
                     cardInnerRefs.current[0] = el;
                   }}
-                  className="relative card-figma p-4 sm:p-6 text-center h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out will-change-transform group-hover/card:shadow-2xl"
+                  className="relative card-figma p-4 sm:p-6 text-center h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out group-hover/card:will-change-transform group-hover/card:shadow-2xl"
                 >
                   <span className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-300 font-instrument-serif text-2xl sm:text-3xl italic">
                     1
@@ -772,7 +800,7 @@ export default function Home() {
                   ref={(el) => {
                     cardInnerRefs.current[1] = el;
                   }}
-                  className="relative card-figma p-4 sm:p-6 text-center h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out will-change-transform group-hover/card:shadow-2xl"
+                  className="relative card-figma p-4 sm:p-6 text-center h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out group-hover/card:will-change-transform group-hover/card:shadow-2xl"
                 >
                   <span className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-300 font-instrument-serif text-2xl sm:text-3xl italic">
                     2
@@ -855,7 +883,7 @@ export default function Home() {
                   ref={(el) => {
                     cardInnerRefs.current[2] = el;
                   }}
-                  className="relative card-figma p-4 sm:p-6 text-center overflow-visible h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out will-change-transform group-hover/card:shadow-2xl"
+                  className="relative card-figma p-4 sm:p-6 text-center overflow-visible h-full flex flex-col justify-between transition-[transform,box-shadow] duration-300 ease-out group-hover/card:will-change-transform group-hover/card:shadow-2xl"
                 >
                   <span className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-300 font-instrument-serif text-2xl sm:text-3xl italic">
                     3
@@ -948,7 +976,7 @@ export default function Home() {
           </p>
           <div
             ref={beamContainerRef}
-            className="relative flex h-[400px] min-h-[320px] sm:h-[500px] md:h-[650px] w-full items-center justify-center overflow-hidden rounded-3xl card-figma"
+            className="relative flex h-[400px] min-h-[320px] sm:h-[500px] md:h-[650px] w-full items-center justify-center overflow-hidden rounded-3xl"
             data-gsap="brand-diagram"
           >
             <div className="flex w-full h-full min-w-0 flex-row items-center justify-between px-3 sm:px-12 md:px-24 gap-1 sm:gap-4 md:gap-6">
@@ -1322,7 +1350,7 @@ export default function Home() {
                 alt={t("home.brandFirst.imageAlt")}
                 loading="lazy"
                 decoding="async"
-                className="object-cover object-bottom w-full h-full"
+                className="object-cover object-center w-full h-full"
                 src="/images/Banner.png"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
@@ -1390,6 +1418,7 @@ export default function Home() {
                   >
                     <span>{faq.question}</span>
                     <motion.div
+                      layout={false}
                       className="chevron-button shrink-0"
                       animate={{ rotate: openFaq === index ? 180 : 0 }}
                       transition={{ duration: 0.2, ease: "easeInOut" }}
@@ -1415,6 +1444,7 @@ export default function Home() {
                 <AnimatePresence initial={false}>
                   {openFaq === index && (
                     <motion.div
+                      layout={false}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
@@ -1435,170 +1465,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer con CTA, disclaimer e iconos sociales */}
-      <footer className="relative w-full overflow-hidden">
-        <div
-          className="absolute top-0 left-0 right-0 h-24 sm:h-36 md:h-48 bg-gradient-to-b from-white via-white/50 to-transparent pointer-events-none z-20"
-          aria-hidden
-        />
-        <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/images/Footer.png')" }}
-          aria-hidden
-        />
-        <div
-          className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-transparent to-black/20"
-          aria-hidden
-        />
-
-        <div className="relative z-10 pt-20 sm:pt-32 md:pt-40 pb-32 sm:pb-48 md:pb-64">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 text-black font-instrument-serif">
-              {t("home.cta.title")}
-            </h2>
-            <p className="text-lg sm:text-xl text-black mb-8 sm:mb-12">
-              {t("home.cta.subtitle")}
-            </p>
-            <div className="max-w-md mx-auto">
-              <div className="w-full max-w-2xl mx-auto relative rounded-xl p-1 transition-all duration-300 glass-prompt-wrap hover:scale-[1.005]">
-                <WebsiteUrlInput
-                  value={websiteUrl}
-                  onChange={handleUrlChange}
-                  onSubmit={handleSubmit}
-                  placeholder={t("home.placeholderUrl")}
-                />
-              </div>
-            </div>
-            <p className="text-black/80 text-xs sm:text-sm mt-4">
-              {t("home.footer.disclaimer")}
-            </p>
-          </div>
-        </div>
-
-        <div className="relative z-10 py-8 sm:py-12 md:py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="flex flex-col items-center gap-4 sm:gap-6">
-              <div className="flex items-center gap-4 sm:gap-6 flex-wrap justify-center">
-                <a
-                  href="https://discord.com/invite/N9dGY8gf3y"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
-                  aria-label="Discord"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden
-                  >
-                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z" />
-                  </svg>
-                </a>
-                <a
-                  href="https://www.instagram.com/vibiz.ai/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
-                  aria-label="Instagram"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                  >
-                    <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                    <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-                  </svg>
-                </a>
-                <a
-                  href="https://www.tiktok.com/@vibiz.ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
-                  aria-label="TikTok"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden
-                  >
-                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                  </svg>
-                </a>
-                <a
-                  href="https://x.com/vibiz_ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
-                  aria-label="X (Twitter)"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                  >
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                </a>
-                <a
-                  href="https://www.linkedin.com/company/vibizai/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-black/90 hover:text-black transition-colors cursor-pointer"
-                  aria-label="LinkedIn"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                  >
-                    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-                    <rect width="4" height="12" x="2" y="9" />
-                    <circle cx="4" cy="4" r="2" />
-                  </svg>
-                </a>
-                <div className="w-px h-5 bg-black/50" aria-hidden />
-                <a
-                  href="/privacy"
-                  className="text-black/90 hover:text-black transition-colors text-sm"
-                >
-                  {t("home.footer.privacy")}
-                </a>
-                <a
-                  href="/refund-policy"
-                  className="text-black/90 hover:text-black transition-colors text-sm"
-                >
-                  {t("home.footer.refundPolicy")}
-                </a>
-              </div>
-              <p className="text-black/90 text-sm">
-                {t("home.footer.copyright")}
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer
+        value={websiteUrl}
+        onChange={handleUrlChange}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

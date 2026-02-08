@@ -518,6 +518,54 @@ html,
   -webkit-backdrop-filter: blur(12px) saturate(120%);
 }
 
+/* Header desktop: transición fluida al hacer scroll */
+.nav-bar-transition {
+  transition:
+    backdrop-filter 0.4s ease-out,
+    -webkit-backdrop-filter 0.4s ease-out,
+    box-shadow 0.4s ease-out,
+    border-color 0.4s ease-out,
+    background-color 0.4s ease-out,
+    padding 0.4s ease-out;
+}
+.nav-bar-margin-transition {
+  transition: margin 0.4s ease-out;
+}
+
+/* Botón Precios del header: fondo glass, texto oscuro, Inter Tight */
+.nav-pricing-btn {
+  margin: 0;
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: rgb(15, 20, 25);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: -0.16px;
+  font-family: "Inter Tight", "Inter Tight Fallback", "Inter Tight", ui-sans-serif, sans-serif, system-ui;
+}
+
+/* Botón Sign in del header: gradiente secondary (#0f1419), texto blanco, sombras fijas */
+.btn-signin-header {
+  background: linear-gradient(to bottom, #0f1419, #0f1419, rgba(15, 20, 25, 0.8));
+  color: #fff;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.btn-signin-header:hover {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+.btn-signin-header:active {
+  transform: translateY(1px);
+}
+
 /* Botón Iniciar sesión: fondo negro, texto blanco, 3D acorde al liquid glass */
 .btn-signin-3d {
   background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 50%, #000 100%);

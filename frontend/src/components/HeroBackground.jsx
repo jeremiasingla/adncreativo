@@ -1,15 +1,23 @@
-import React, { memo } from "react";
+import React, { memo, useState, useEffect } from "react";
 import { GrainGradient } from "@paper-design/shaders-react";
 
 /**
  * Fondo del hero con Paper Shaders: GrainGradient claro y celeste eléctrico.
- * Memoizado para evitar re-renders cuando cambia estado del padre (typing, etc.).
+ * Memoizado para evitar re-renders. Reduce speed/noise si el usuario pide menos movimiento.
  * @see https://shaders.paper.design/
  */
 function HeroBackground() {
+  const [reduceMotion, setReduceMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduceMotion(mq.matches);
+    const fn = () => setReduceMotion(mq.matches);
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, []);
+
   return (
     <div className="absolute inset-0 z-0" aria-hidden>
-      {/* Grain gradient: fondo claro + celeste eléctrico + grain */}
       <div
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{ width: "100%", height: "100%" }}
@@ -18,10 +26,10 @@ function HeroBackground() {
           colorBack="#f0f9ff"
           colors={["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9"]}
           softness={0.7}
-          intensity={0.35}
-          noise={0.45}
+          intensity={reduceMotion ? 0.2 : 0.35}
+          noise={reduceMotion ? 0.2 : 0.45}
           shape="wave"
-          speed={0.15}
+          speed={reduceMotion ? 0 : 0.08}
           fit="cover"
           width="100%"
           height="100%"

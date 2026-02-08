@@ -1,5 +1,6 @@
 {
   "common": {
+    "language": "Idioma",
     "signIn": "Iniciar sesión",
     "signOut": "Cerrar sesión",
     "manageAccount": "Gestionar cuenta",
@@ -15,7 +16,12 @@
   },
   "nav": {
     "goHome": "Ir al inicio",
-    "userMenu": "Menú de usuario"
+    "userMenu": "Menú de usuario",
+    "toggleMenu": "Abrir menú",
+    "home": "Inicio",
+    "pricing": "Precios",
+    "creators": "Creadores",
+    "scheduleDemo": "Agendar Demo"
   },
   "sidebar": {
     "expand": "Expandir barra lateral",
@@ -124,7 +130,67 @@
       "disclaimer": "Sin tarjeta de crédito • Listo en 2 minutos",
       "privacy": "Privacidad",
       "refundPolicy": "Política de reembolso",
-      "copyright": "© 2025 Vibiz Inc. Todos los derechos reservados."
+      "copyright": "© {{year}} Vibiz Inc. Todos los derechos reservados."
+    }
+  },
+  "pricing": {
+    "title": "Planes desde la primera idea hasta la gran escala",
+    "subtitle": "Empieza gratis. Actualiza cuando estés listo.",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "annualBadge": "20% OFF",
+    "perMemberMonth": "por miembro / mes",
+    "billedYearly": "Facturado como",
+    "whatsIncluded": "Qué incluye:",
+    "creditsExplained": "Créditos explicados",
+    "recommended": "Recomendado para ti",
+    "startWith": "Empezar con",
+    "plans": {
+      "plus": {
+        "name": "Plus",
+        "credits": "50 créditos (50 generaciones)",
+        "priceMonthly": "20",
+        "priceAnnual": "16",
+        "yearlyTotal": "$192/año",
+        "features": [
+          "50 créditos/mes",
+          "Los créditos se renuevan mensualmente (no se acumulan)",
+          "Hasta 2 espacios de trabajo",
+          "Hasta 3 miembros del equipo",
+          "Descargas de imágenes ilimitadas"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "credits": "100 créditos (100 generaciones)",
+        "priceMonthly": "35",
+        "priceAnnual": "28",
+        "yearlyTotal": "$336/año",
+        "features": [
+          "100 créditos/mes",
+          "Los créditos se renuevan mensualmente (no se acumulan)",
+          "Hasta 5 espacios de trabajo",
+          "Hasta 10 miembros del equipo",
+          "Descargas de imágenes ilimitadas",
+          "Soporte prioritario"
+        ]
+      },
+      "ultra": {
+        "name": "Ultra",
+        "credits": "250 créditos (250 generaciones)",
+        "priceMonthly": "50",
+        "priceAnnual": "40",
+        "yearlyTotal": "$480/año",
+        "features": [
+          "250 créditos/mes",
+          "Los créditos se renuevan mensualmente (no se acumulan)",
+          "Espacios de trabajo ilimitados",
+          "Miembros del equipo ilimitados",
+          "Descargas de imágenes ilimitadas",
+          "Soporte prioritario",
+          "Integraciones"
+        ]
+      }
     }
   },
   "workspace": {

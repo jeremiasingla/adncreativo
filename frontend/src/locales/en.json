@@ -1,5 +1,6 @@
 {
   "common": {
+    "language": "Language",
     "signIn": "Sign in",
     "signOut": "Sign out",
     "manageAccount": "Manage account",
@@ -15,7 +16,12 @@
   },
   "nav": {
     "goHome": "Go to home",
-    "userMenu": "User menu"
+    "userMenu": "User menu",
+    "toggleMenu": "Toggle menu",
+    "home": "Home",
+    "pricing": "Pricing",
+    "creators": "Creators",
+    "scheduleDemo": "Schedule Demo"
   },
   "sidebar": {
     "expand": "Expand sidebar",
@@ -124,7 +130,67 @@
       "disclaimer": "No credit card required • Ready in 2 minutes",
       "privacy": "Privacy",
       "refundPolicy": "Refund Policy",
-      "copyright": "© 2025 Vibiz Inc. All rights reserved."
+      "copyright": "© {{year}} Vibiz Inc. All rights reserved."
+    }
+  },
+  "pricing": {
+    "title": "Plans from first idea to scale",
+    "subtitle": "Start free. Upgrade when you're ready.",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "annualBadge": "20% OFF",
+    "perMemberMonth": "per member / month",
+    "billedYearly": "Billed as",
+    "whatsIncluded": "What's included:",
+    "creditsExplained": "Credits explained",
+    "recommended": "Recommended for you",
+    "startWith": "Start with",
+    "plans": {
+      "plus": {
+        "name": "Plus",
+        "credits": "50 credits (50 generations)",
+        "priceMonthly": "20",
+        "priceAnnual": "16",
+        "yearlyTotal": "$192/year",
+        "features": [
+          "50 credits/month",
+          "Credits renew monthly (do not roll over)",
+          "Up to 2 workspaces",
+          "Up to 3 team members",
+          "Unlimited image downloads"
+        ]
+      },
+      "pro": {
+        "name": "Pro",
+        "credits": "100 credits (100 generations)",
+        "priceMonthly": "35",
+        "priceAnnual": "28",
+        "yearlyTotal": "$336/year",
+        "features": [
+          "100 credits/month",
+          "Credits renew monthly (do not roll over)",
+          "Up to 5 workspaces",
+          "Up to 10 team members",
+          "Unlimited image downloads",
+          "Priority support"
+        ]
+      },
+      "ultra": {
+        "name": "Ultra",
+        "credits": "250 credits (250 generations)",
+        "priceMonthly": "50",
+        "priceAnnual": "40",
+        "yearlyTotal": "$480/year",
+        "features": [
+          "250 credits/month",
+          "Credits renew monthly (do not roll over)",
+          "Unlimited workspaces",
+          "Unlimited team members",
+          "Unlimited image downloads",
+          "Priority support",
+          "Integrations"
+        ]
+      }
     }
   },
   "workspace": {
