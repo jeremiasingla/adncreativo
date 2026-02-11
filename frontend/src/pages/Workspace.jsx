@@ -95,6 +95,11 @@ export default function Workspace() {
   const [creativesList, setCreativesList] = useState([]);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [creativesGenerating, setCreativesGenerating] = useState(false);
+  const [creativesError, setCreativesError] = useState(null);
+  const [creativesGeneratingAngles, setCreativesGeneratingAngles] =
+    useState(false);
+  const [creativesRunningFull, setCreativesRunningFull] = useState(false);
+  const [fullGenerationMessage, setFullGenerationMessage] = useState(null);
   const [aspectRatioMenuOpen, setAspectRatioMenuOpen] = useState(false);
   const aspectRatioMenuRef = useRef(null);
   const [profileEditing, setProfileEditing] = useState(false);
@@ -121,16 +126,16 @@ export default function Workspace() {
 
   /** Opciones del menú Aspect Ratio: portrait, luego landscape, con etiqueta y dimensiones del icono (w×h en px, base 16). */
   const ASPECT_RATIO_MENU_OPTIONS = [
-    { ratio: "1:1", label: "Square (1:1)", icon: "check" },
-    { ratio: "2:3", label: "Portrait (2:3)", w: 10.6667, h: 16 },
-    { ratio: "3:4", label: "Portrait (3:4)", w: 12, h: 16 },
-    { ratio: "4:5", label: "Social (4:5)", w: 12.8, h: 16 },
-    { ratio: "9:16", label: "Mobile (9:16)", w: 9, h: 16 },
-    { ratio: "3:2", label: "Landscape (3:2)", w: 16, h: 10.6667 },
-    { ratio: "4:3", label: "Landscape (4:3)", w: 16, h: 12 },
-    { ratio: "5:4", label: "Classic (5:4)", w: 16, h: 12.8 },
-    { ratio: "16:9", label: "Widescreen (16:9)", w: 16, h: 9 },
-    { ratio: "21:9", label: "Cinematic (21:9)", w: 16, h: 6.85714 },
+    { ratio: "1:1", label: "Cuadrado (1:1)", icon: "check" },
+    { ratio: "2:3", label: "Vertical (2:3)", w: 10.6667, h: 16 },
+    { ratio: "3:4", label: "Vertical (3:4)", w: 12, h: 16 },
+    { ratio: "4:5", label: "Redes (4:5)", w: 12.8, h: 16 },
+    { ratio: "9:16", label: "Móvil (9:16)", w: 9, h: 16 },
+    { ratio: "3:2", label: "Horizontal (3:2)", w: 16, h: 10.6667 },
+    { ratio: "4:3", label: "Horizontal (4:3)", w: 16, h: 12 },
+    { ratio: "5:4", label: "Clásico (5:4)", w: 16, h: 12.8 },
+    { ratio: "16:9", label: "Panorámico (16:9)", w: 16, h: 9 },
+    { ratio: "21:9", label: "Cinemático (21:9)", w: 16, h: 6.85714 },
   ];
   const ASPECT_RATIO_PORTRAIT_COUNT = 5; // 1:1, 2:3, 3:4, 4:5, 9:16
 
@@ -175,7 +180,9 @@ export default function Workspace() {
       knowledgeBaseContentBeforeEdit.current = kb;
       const rawProfiles = data.customerProfiles ?? [];
       setCustomerProfilesFromApi(
-        Array.isArray(rawProfiles) ? rawProfiles.map(normalizeApiProfileToUI) : []
+        Array.isArray(rawProfiles)
+          ? rawProfiles.map(normalizeApiProfileToUI)
+          : [],
       );
       const rawCreatives = data.creatives ?? [];
       setCreativesList(Array.isArray(rawCreatives) ? rawCreatives : []);
@@ -183,7 +190,10 @@ export default function Workspace() {
   }, [workspaceSlug]);
 
   /** Refetch creatives (reutiliza el mismo GET y actualiza toda la data del workspace). */
-  const refetchCreatives = useCallback(() => refetchWorkspace(), [refetchWorkspace]);
+  const refetchCreatives = useCallback(
+    () => refetchWorkspace(),
+    [refetchWorkspace],
+  );
 
   /** Un solo fetch al montar o cambiar workspaceSlug. */
   useEffect(() => {
@@ -229,7 +239,9 @@ export default function Workspace() {
         knowledgeBaseContentBeforeEdit.current = kb;
         const rawProfiles = data.customerProfiles ?? [];
         setCustomerProfilesFromApi(
-          Array.isArray(rawProfiles) ? rawProfiles.map(normalizeApiProfileToUI) : []
+          Array.isArray(rawProfiles)
+            ? rawProfiles.map(normalizeApiProfileToUI)
+            : [],
         );
         const rawCreatives = data.creatives ?? [];
         setCreativesList(Array.isArray(rawCreatives) ? rawCreatives : []);
@@ -306,7 +318,12 @@ export default function Workspace() {
       refetchWorkspace();
     }, POLL_MS);
     return () => clearInterval(id);
-  }, [workspaceSlug, segmentForDisplay, refetchWorkspace, creativesList.length]);
+  }, [
+    workspaceSlug,
+    segmentForDisplay,
+    refetchWorkspace,
+    creativesList.length,
+  ]);
 
   useEffect(() => {
     setAspectRatioMenuOpen(false);
@@ -336,7 +353,9 @@ export default function Workspace() {
   }, [profileId, profile]);
 
   const CurrentIcon = SEGMENT_ICONS[segmentForDisplay] ?? SEGMENT_ICONS[""];
-  const currentLabel = t(SEGMENT_I18N_KEYS[segmentForDisplay] ?? SEGMENT_I18N_KEYS[""]);
+  const currentLabel = t(
+    SEGMENT_I18N_KEYS[segmentForDisplay] ?? SEGMENT_I18N_KEYS[""],
+  );
   const isProfileDetail = Boolean(profileId && profile);
 
   return (
@@ -362,7 +381,9 @@ export default function Workspace() {
             : undefined
         }
       >
-        <div className="shrink-0 h-14 flex items-center justify-between px-6">
+        <div
+          className={`shrink-0 h-14 flex items-center justify-between px-6 ${isCreativeDetail ? "hidden" : ""}`}
+        >
           <div className="flex items-center min-w-0 gap-3">
             {isProfileDetail ? (
               <>
@@ -589,7 +610,10 @@ export default function Workspace() {
                       </div>
                       <div className="pb-1 min-w-0 flex-1">
                         {profileEditing ? (
-                          <div className="space-y-0.5 w-full min-w-0" data-editing="name-title">
+                          <div
+                            className="space-y-0.5 w-full min-w-0"
+                            data-editing="name-title"
+                          >
                             <input
                               type="text"
                               value={profileEditDraft.name}
@@ -1500,19 +1524,19 @@ export default function Workspace() {
                               </div>
                             </div>
                           </div>
-                          <div className="hidden md:flex shrink-0 w-72 border-l border-neutral-200 overflow-y-auto flex-col">
-                            <div className="shrink-0 h-14 flex items-center px-4 border-b border-neutral-100">
+                          <div className="hidden md:flex shrink-0 w-72 border-l border-neutral-200 overflow-y-auto flex-col min-h-0 [&>div]:flex-none">
+                            <div className="h-10 flex items-center px-4 border-b border-neutral-100">
                               <span className="text-xs font-medium text-neutral-400 uppercase tracking-wider">
-                                Propiedades
+                                {t("workspace.properties")}
                               </span>
                             </div>
-                            <div className="px-4 py-4 space-y-3">
+                            <div className="px-4 py-2 space-y-1.5">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-500">
-                                  Aspect Ratio
+                                  {t("workspace.aspectRatio")}
                                 </span>
                                 <div
-                                  className="relative shrink-0"
+                                  className="relative"
                                   ref={aspectRatioMenuRef}
                                 >
                                   <button
@@ -1521,7 +1545,7 @@ export default function Workspace() {
                                     onClick={() =>
                                       setAspectRatioMenuOpen((open) => !open)
                                     }
-                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 font-normal text-neutral-600 h-7 text-xs"
+                                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all cursor-pointer disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.6)] hover:bg-gradient-to-b hover:from-accent/50 hover:to-accent/30 hover:translate-y-[-1px] active:translate-y-[1px] dark:from-input/30 dark:to-input/10 dark:border-input dark:hover:from-input/50 dark:hover:to-input/30 px-5 py-2.5 has-[>svg]:px-4 rounded-full size-8 sm:w-auto sm:h-auto sm:gap-1 sm:!px-2 sm:!py-1.5 font-normal text-neutral-600 h-7 text-xs"
                                     aria-haspopup="menu"
                                     aria-expanded={aspectRatioMenuOpen}
                                     data-state={
@@ -1577,10 +1601,11 @@ export default function Workspace() {
                                   </button>
                                   {aspectRatioMenuOpen && (
                                     <div
-                                      className="absolute right-0 top-full mt-1 z-50 min-w-[11rem] rounded-lg border border-neutral-200 bg-white py-1 shadow-lg outline-none"
+                                      className="absolute right-0 top-full -mt-px rounded-t-none rounded-b-lg border border-t-0 border-neutral-200 bg-white pt-0.5 pb-0 shadow-lg outline-none z-50 min-w-[11rem] w-max"
                                       role="menu"
                                       aria-orientation="vertical"
                                       data-slot="dropdown-menu-content"
+                                      style={{ height: "fit-content" }}
                                     >
                                       {ASPECT_RATIO_MENU_OPTIONS.map(
                                         (opt, idx) => (
@@ -1655,17 +1680,17 @@ export default function Workspace() {
                                       <div
                                         role="separator"
                                         aria-orientation="horizontal"
-                                        className="my-1 h-px bg-neutral-200"
+                                        className="mt-1 mb-0 h-px bg-neutral-200"
                                         data-slot="dropdown-menu-separator"
                                       />
-                                      <div className="px-3 py-2">
+                                      <div className="px-3 py-0.5">
                                         <button
                                           type="button"
                                           disabled
-                                          className="text-sm text-neutral-400 cursor-not-allowed"
+                                          className="text-sm text-neutral-400 cursor-not-allowed leading-tight"
                                           data-slot="button"
                                         >
-                                          Resize image
+                                          {t("workspace.resizeImage")}
                                         </button>
                                       </div>
                                     </div>
@@ -1674,33 +1699,36 @@ export default function Workspace() {
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-500">
-                                  Version
+                                  {t("workspace.version")}
                                 </span>
                                 <span className="text-sm font-medium text-neutral-900">
                                   {totalCount
-                                    ? `${currentIndex + 1} of ${totalCount}`
+                                    ? t("workspace.versionOf", {
+                                        current: currentIndex + 1,
+                                        total: totalCount,
+                                      })
                                     : "—"}
                                 </span>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-neutral-500">
-                                  Platform
+                                  {t("workspace.platform")}
                                 </span>
                                 <span className="text-sm font-medium text-neutral-900 capitalize">
                                   {platformLabel.toLowerCase()}
                                 </span>
                               </div>
                             </div>
-                            <div className="px-4 py-4 space-y-2 border-t border-neutral-200">
+                            <div className="px-4 py-2 space-y-1.5 border-t border-neutral-200">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-medium text-neutral-400 uppercase tracking-wider">
-                                  Prompt
+                                  {t("workspace.prompt")}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={copyPrompt}
                                   className="inline-flex items-center justify-center rounded-xl h-6 w-6 hover:bg-accent hover:text-accent-foreground cursor-pointer"
-                                  title="Copiar prompt"
+                                  title={t("workspace.copyPrompt")}
                                 >
                                   <IconCopy
                                     className="h-3.5 w-3.5 text-neutral-400"
@@ -1729,6 +1757,8 @@ export default function Workspace() {
                           onClick={async () => {
                             if (!workspaceSlug) return;
                             setCreativesGenerating(true);
+                            setCreativesError(null);
+                            setFullGenerationMessage(null);
                             try {
                               const res = await fetchWithAuth(
                                 `/workspaces/${encodeURIComponent(workspaceSlug)}/creatives`,
@@ -1749,8 +1779,21 @@ export default function Workspace() {
                                   setCreativesList(json.data.creatives);
                                 }
                                 await refetchCreatives();
+                              } else {
+                                const json = await res
+                                  ?.json()
+                                  .catch(() => ({}));
+                                setCreativesError(
+                                  json?.error ||
+                                    res?.statusText ||
+                                    t("workspace.errorGenerating"),
+                                );
                               }
-                            } catch (_) {}
+                            } catch (e) {
+                              setCreativesError(
+                                e?.message || t("workspace.errorGenerating"),
+                              );
+                            }
                             setCreativesGenerating(false);
                           }}
                           className="inline-flex items-center justify-center whitespace-nowrap text-sm font-semibold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer border bg-gradient-to-b from-background to-muted/30 shadow-[0_2px_8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:translate-y-[-1px] active:translate-y-[1px] h-8 rounded-lg px-3 gap-2"
@@ -1773,6 +1816,147 @@ export default function Workspace() {
                             </>
                           )}
                         </button>
+                        {creativesError && (
+                          <div
+                            className="rounded-lg border border-amber-200 bg-amber-50/80 p-4 space-y-3"
+                            role="alert"
+                          >
+                            <p className="text-sm text-amber-900">
+                              {creativesError.includes("No hay headlines") ||
+                              creativesError.includes("headlines ni ángulos")
+                                ? t("workspace.noHeadlinesOrAngles")
+                                : creativesError}
+                            </p>
+                            {(creativesError.includes("No hay headlines") ||
+                              creativesError.includes(
+                                "headlines ni ángulos",
+                              )) && (
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  disabled={
+                                    creativesGeneratingAngles ||
+                                    creativesRunningFull
+                                  }
+                                  onClick={async () => {
+                                    if (!workspaceSlug) return;
+                                    setCreativesGeneratingAngles(true);
+                                    setCreativesError(null);
+                                    setFullGenerationMessage(null);
+                                    try {
+                                      const res = await fetchWithAuth(
+                                        `/workspaces/${encodeURIComponent(workspaceSlug)}/sales-angles`,
+                                        {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                          },
+                                        },
+                                      );
+                                      if (res?.ok) {
+                                        await refetchWorkspace();
+                                        setCreativesError(null);
+                                      } else {
+                                        const json = await res
+                                          ?.json()
+                                          .catch(() => ({}));
+                                        setCreativesError(
+                                          json?.error ||
+                                            res?.statusText ||
+                                            t("workspace.errorGenerating"),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      setCreativesError(
+                                        e?.message ||
+                                          t("workspace.errorGenerating"),
+                                      );
+                                    }
+                                    setCreativesGeneratingAngles(false);
+                                  }}
+                                  className="inline-flex items-center justify-center gap-2 text-sm font-semibold rounded-lg px-4 py-2 bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                                >
+                                  {creativesGeneratingAngles ? (
+                                    <>
+                                      <span
+                                        className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+                                        aria-hidden
+                                      />
+                                      {t(
+                                        "workspace.generateSalesAnglesLoading",
+                                      )}
+                                    </>
+                                  ) : (
+                                    t("workspace.generateSalesAngles")
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={
+                                    creativesGeneratingAngles ||
+                                    creativesRunningFull
+                                  }
+                                  onClick={async () => {
+                                    if (!workspaceSlug) return;
+                                    setCreativesRunningFull(true);
+                                    setCreativesError(null);
+                                    setFullGenerationMessage(null);
+                                    try {
+                                      const res = await fetchWithAuth(
+                                        `/workspaces/${encodeURIComponent(workspaceSlug)}/run-full-generation`,
+                                        {
+                                          method: "POST",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                          },
+                                        },
+                                      );
+                                      if (res?.ok) {
+                                        setFullGenerationMessage(
+                                          t("workspace.fullGenerationStarted"),
+                                        );
+                                        setCreativesError(null);
+                                      } else {
+                                        const json = await res
+                                          ?.json()
+                                          .catch(() => ({}));
+                                        setCreativesError(
+                                          json?.error ||
+                                            res?.statusText ||
+                                            t("workspace.errorGenerating"),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      setCreativesError(
+                                        e?.message ||
+                                          t("workspace.errorGenerating"),
+                                      );
+                                    }
+                                    setCreativesRunningFull(false);
+                                  }}
+                                  className="inline-flex items-center justify-center gap-2 text-sm font-semibold rounded-lg px-4 py-2 border border-amber-600 text-amber-800 bg-white hover:bg-amber-50 disabled:opacity-50"
+                                >
+                                  {creativesRunningFull ? (
+                                    <>
+                                      <span
+                                        className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"
+                                        aria-hidden
+                                      />
+                                      {t("workspace.runFullGenerationLoading")}
+                                    </>
+                                  ) : (
+                                    t("workspace.runFullGeneration")
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                            {fullGenerationMessage && (
+                              <p className="text-sm text-amber-800">
+                                {fullGenerationMessage}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                       {workspaceLoading ? (
                         <CenteredLoadingSpinner />
@@ -1874,8 +2058,7 @@ export default function Workspace() {
                             Array.from({ length: 20 }, (_, i) => {
                               const creative =
                                 creativesList[i % creativesList.length];
-                              const aspectRatio =
-                                creative.aspectRatio || "4:5";
+                              const aspectRatio = creative.aspectRatio || "4:5";
                               const platform =
                                 getPlatformFromAspectRatio(aspectRatio);
                               const aspectClass =
@@ -2021,7 +2204,7 @@ export default function Workspace() {
                           >
                             <div className="p-6">
                               <div className="flex items-start gap-4">
-                                <div className="relative shrink-0 w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl overflow-hidden shadow-lg bg-muted">
+                                <div className="relative w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-2xl overflow-hidden shadow-lg bg-muted">
                                   <img
                                     src={profile.avatar}
                                     alt={profile.name}

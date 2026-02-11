@@ -235,110 +235,120 @@ export default function Home() {
     const raf = requestAnimationFrame(() => {
       gsapCtx = gsap.context(() => {
         const sections = root.querySelectorAll("section");
-      const heroTitle = pageRef.current.querySelector(
-        "[data-gsap='hero-title']",
-      );
-      const heroSubtitle = pageRef.current.querySelector(
-        "[data-gsap='hero-subtitle']",
-      );
-      const heroInput = pageRef.current.querySelector(
-        "[data-gsap='hero-input']",
-      );
+        const heroTitle = pageRef.current.querySelector(
+          "[data-gsap='hero-title']",
+        );
+        const heroSubtitle = pageRef.current.querySelector(
+          "[data-gsap='hero-subtitle']",
+        );
+        const heroInput = pageRef.current.querySelector(
+          "[data-gsap='hero-input']",
+        );
         if (heroTitle && heroSubtitle && heroInput && !prefersReducedMotion) {
-        gsap.from([heroTitle, heroSubtitle, heroInput], {
-          opacity: 0,
-          y: 20,
-          duration: 0.6,
-          stagger: 0.2,
-          ease: "power2.out",
-          delay: 0.15,
-        });
-      }
-      sections.forEach((section, index) => {
-        if (index === 0) return;
-        if (prefersReducedMotion) return;
-        const isCta = section.querySelector(".relative.z-10.max-w-4xl");
-        const marcaBlock = section.querySelector("[class*='38rem']");
-        const heading = section.querySelector("h2");
-        const sub = section.querySelector("p");
-        if (!section.parentNode) return;
-        const targets = [heading, sub].filter(Boolean);
-        if (targets.length && !isCta && !marcaBlock) {
-          gsap.from(targets, {
-            scrollTrigger: {
-              trigger: section,
-              start: "top 88%",
-              end: "top 55%",
-              once: true,
-            },
-            opacity: 0,
-            y: 30,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: "power2.out",
-          });
-        }
-        const grid = section.querySelector("[class*='md:grid']");
-        if (grid && grid.children.length) {
-          gsap.from(grid.children, {
-            scrollTrigger: { trigger: grid, start: "top 90%", once: true },
-            opacity: 0,
-            y: 30,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: "power2.out",
-          });
-        }
-        const faqList = section.querySelector(".space-y-4");
-        if (faqList && faqList.children.length) {
-          gsap.from(faqList.children, {
-            scrollTrigger: { trigger: faqList, start: "top 92%", once: true },
+          gsap.from([heroTitle, heroSubtitle, heroInput], {
             opacity: 0,
             y: 20,
-            duration: 0.5,
-            stagger: 0.04,
-            ease: "power2.out",
-          });
-        }
-        const diagramBox = section.querySelector("[data-gsap='brand-diagram']");
-        if (diagramBox) {
-          gsap.from(diagramBox, {
-            scrollTrigger: { trigger: diagramBox, start: "top 88%", once: true },
-            opacity: 0,
-            y: 30,
             duration: 0.6,
+            stagger: 0.2,
             ease: "power2.out",
+            delay: 0.15,
           });
         }
-        const ctaContent = section.querySelector(".relative.z-10.max-w-4xl");
-        if (ctaContent && ctaContent.children.length) {
-          // Solo animar título y subtítulo; el input queda siempre visible
-          const ctaTexts = [
-            ctaContent.children[0],
-            ctaContent.children[1],
-          ].filter(Boolean);
-          if (ctaTexts.length) {
-            gsap.from(ctaTexts, {
-              scrollTrigger: { trigger: ctaContent, start: "top 88%", once: true },
+        sections.forEach((section, index) => {
+          if (index === 0) return;
+          if (prefersReducedMotion) return;
+          const isCta = section.querySelector(".relative.z-10.max-w-4xl");
+          const marcaBlock = section.querySelector("[class*='38rem']");
+          const heading = section.querySelector("h2");
+          const sub = section.querySelector("p");
+          if (!section.parentNode) return;
+          const targets = [heading, sub].filter(Boolean);
+          if (targets.length && !isCta && !marcaBlock) {
+            gsap.from(targets, {
+              scrollTrigger: {
+                trigger: section,
+                start: "top 88%",
+                end: "top 55%",
+                once: true,
+              },
               opacity: 0,
               y: 30,
               duration: 0.6,
-              stagger: 0.12,
+              stagger: 0.1,
               ease: "power2.out",
             });
           }
-        }
-        if (marcaBlock && marcaBlock.children.length) {
-          gsap.from(Array.from(marcaBlock.children), {
-            scrollTrigger: { trigger: section, start: "top 85%", once: true },
-            opacity: 0,
-            x: -24,
-            duration: 0.6,
-            stagger: 0.1,
-            ease: "power2.out",
-          });
-        }
-      });
+          const grid = section.querySelector("[class*='md:grid']");
+          if (grid && grid.children.length) {
+            gsap.from(grid.children, {
+              scrollTrigger: { trigger: grid, start: "top 90%", once: true },
+              opacity: 0,
+              y: 30,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: "power2.out",
+            });
+          }
+          const faqList = section.querySelector(".space-y-4");
+          if (faqList && faqList.children.length) {
+            gsap.from(faqList.children, {
+              scrollTrigger: { trigger: faqList, start: "top 92%", once: true },
+              opacity: 0,
+              y: 20,
+              duration: 0.5,
+              stagger: 0.04,
+              ease: "power2.out",
+            });
+          }
+          const diagramBox = section.querySelector(
+            "[data-gsap='brand-diagram']",
+          );
+          if (diagramBox) {
+            gsap.from(diagramBox, {
+              scrollTrigger: {
+                trigger: diagramBox,
+                start: "top 88%",
+                once: true,
+              },
+              opacity: 0,
+              y: 30,
+              duration: 0.6,
+              ease: "power2.out",
+            });
+          }
+          const ctaContent = section.querySelector(".relative.z-10.max-w-4xl");
+          if (ctaContent && ctaContent.children.length) {
+            // Solo animar título y subtítulo; el input queda siempre visible
+            const ctaTexts = [
+              ctaContent.children[0],
+              ctaContent.children[1],
+            ].filter(Boolean);
+            if (ctaTexts.length) {
+              gsap.from(ctaTexts, {
+                scrollTrigger: {
+                  trigger: ctaContent,
+                  start: "top 88%",
+                  once: true,
+                },
+                opacity: 0,
+                y: 30,
+                duration: 0.6,
+                stagger: 0.12,
+                ease: "power2.out",
+              });
+            }
+          }
+          if (marcaBlock && marcaBlock.children.length) {
+            gsap.from(Array.from(marcaBlock.children), {
+              scrollTrigger: { trigger: section, start: "top 85%", once: true },
+              opacity: 0,
+              x: -24,
+              duration: 0.6,
+              stagger: 0.1,
+              ease: "power2.out",
+            });
+          }
+        });
       }, root);
     });
     return () => {
@@ -349,7 +359,7 @@ export default function Home() {
 
   return (
     <div ref={pageRef}>
-      {/* Hero Section – solo fondo shader (sin bg white) */}
+      {/* Hero Section – fondo gradiente celeste */}
       <section className="relative min-h-screen w-full lg:min-h-0 lg:h-[100dvh]">
         <HeroBackground />
         <div
@@ -444,6 +454,43 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sección 2 – Video / Demo */}
+      <section className="w-full bg-white py-12 md:py-24 contain-paint">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-3 sm:mb-4 text-gray-900 font-instrument-serif">
+            {t("home.demo.title")}
+          </h2>
+          <p className="text-lg sm:text-xl text-gray-600 text-center mb-8 sm:mb-12 max-w-2xl mx-auto">
+            {t("home.demo.subtitle")}
+          </p>
+          {/* Video placeholder – reemplazar src con el video/embed real */}
+          <div className="relative w-full max-w-4xl mx-auto aspect-video rounded-2xl overflow-hidden bg-gray-100 border border-gray-200 shadow-lg">
+            <div className="absolute inset-0 flex items-center justify-center">
+              {/* Placeholder: ícono play + botón */}
+              <button
+                type="button"
+                className="group flex items-center gap-3 bg-black/80 hover:bg-black text-white px-6 py-3 rounded-full transition-all duration-300 hover:scale-105 shadow-xl"
+                aria-label={t("home.demo.button")}
+              >
+                <svg
+                  className="w-6 h-6"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                <span className="font-medium text-sm sm:text-base">
+                  {t("home.demo.button")}
+                </span>
+              </button>
+            </div>
+            {/* Cuando tengas el video, reemplazá este div con:
+            <video src="/videos/demo.mp4" controls className="w-full h-full object-cover" />
+            o un iframe de YouTube/Vimeo */}
           </div>
         </div>
       </section>
@@ -855,7 +902,7 @@ export default function Home() {
                     </div>
                   </div>
                   <p className="text-gray-500 text-xs leading-relaxed mt-4">
-                    {t("home.howItWorks.card1Desc")}
+                    {t("home.howItWorks.card2Desc")}
                   </p>
                 </div>
               </div>
@@ -890,7 +937,7 @@ export default function Home() {
                   </span>
                   <div>
                     <h3 className="italic text-gray-900 font-instrument-serif text-xl sm:text-2xl mb-3 sm:mb-4">
-                      {t("home.howItWorks.card2Title")}
+                      {t("home.howItWorks.card3Title")}
                     </h3>
                     <div className="relative h-[220px] sm:h-[130px] md:h-[160px] flex items-center justify-center overflow-visible">
                       <div
@@ -956,7 +1003,7 @@ export default function Home() {
                     </div>
                   </div>
                   <p className="text-gray-500 text-xs leading-relaxed mt-4">
-                    {t("home.howItWorks.card2Desc")}
+                    {t("home.howItWorks.card3Desc")}
                   </p>
                 </div>
               </div>

@@ -1,52 +1,16 @@
-import React, { memo, useState, useEffect } from "react";
-import { GrainGradient } from "@paper-design/shaders-react";
+import React, { memo } from "react";
 
 /**
- * Fondo del hero con Paper Shaders: GrainGradient claro y celeste eléctrico.
- * Memoizado para evitar re-renders. Reduce speed/noise si el usuario pide menos movimiento.
- * @see https://shaders.paper.design/
+ * Fondo del hero: gradiente celeste claro sin shaders.
  */
 function HeroBackground() {
-  const [reduceMotion, setReduceMotion] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduceMotion(mq.matches);
-    const fn = () => setReduceMotion(mq.matches);
-    mq.addEventListener("change", fn);
-    return () => mq.removeEventListener("change", fn);
-  }, []);
-
   return (
     <div className="absolute inset-0 z-0" aria-hidden>
       <div
         className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ width: "100%", height: "100%" }}
-      >
-        <GrainGradient
-          colorBack="#f0f9ff"
-          colors={["#e0f2fe", "#bae6fd", "#7dd3fc", "#38bdf8", "#0ea5e9"]}
-          softness={0.7}
-          intensity={reduceMotion ? 0.2 : 0.35}
-          noise={reduceMotion ? 0.2 : 0.45}
-          shape="wave"
-          speed={reduceMotion ? 0 : 0.08}
-          fit="cover"
-          width="100%"
-          height="100%"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-          }}
-        />
-      </div>
-      {/* Capa para bajar opacidad del celeste (el grain queda debajo, sin tocar) */}
-      <div
-        className="absolute inset-0 w-full h-full pointer-events-none"
         style={{
-          background: "rgba(240, 249, 255, 0.32)",
-          mixBlendMode: "normal",
+          background:
+            "linear-gradient(to bottom, #f0f9ff 0%, #e0f2fe 25%, #bae6fd 50%, #7dd3fc 75%, #38bdf8 100%)",
         }}
       />
       {/* Suave resplandor celeste desde abajo */}

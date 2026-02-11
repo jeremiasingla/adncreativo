@@ -9,22 +9,31 @@ const imageEvents = [];
 /** Eventos de llamadas LLM (en memoria). */
 const llmEvents = [];
 
-/** Estimación USD por tamaño (FLUX / OpenRouter; fallback cuando no viene cost en usage). */
+/** Estimación USD por tamaño (Imagen 3 / Vertex AI). */
 const SIZE_TO_ESTIMATED_USD = {
-  "1024x1024": 0.04,
-  "1024x1536": 0.08,
-  "1536x1024": 0.08,
-  "1024x1792": 0.08,
-  "1792x1024": 0.08,
+  "1:1": 0.03,
+  "4:5": 0.03,
+  "3:4": 0.03,
+  "16:9": 0.03,
+  "9:16": 0.03,
+  "1024x1024": 0.03,
+  "1024x1536": 0.03,
+  "1536x1024": 0.03,
+};
+
+/** Precios Vertex AI (Gemini 2.0 Flash Lite aproximado por 1M tokens). */
+const VERTEX_LLM_PRICING = {
+  input: 0.075 / 1000000,
+  output: 0.3 / 1000000,
 };
 
 /**
- * Registra una llamada LLM con su costo real de OpenRouter
+ * Registra una llamada LLM con su costo.
  * @param {object} opts
  * @param {string} opts.model - Modelo usado
  * @param {number} opts.promptTokens - Tokens del prompt
  * @param {number} opts.completionTokens - Tokens de la respuesta
- * @param {number} opts.totalCost - Costo total en USD
+ * @param {number} opts.totalCost - Costo total en USD (si es 0, se calcula)
  * @param {number} opts.durationMs - Duración en ms
  * @param {string} [opts.source] - Origen: "branding" | "profiles" | "headlines" | "creative_image"
  * @param {string} [opts.workspaceSlug] - Slug del workspace relacionado
@@ -33,17 +42,25 @@ export function recordLLMRequest({
   model,
   promptTokens,
   completionTokens,
-  totalCost,
+  totalCost = 0,
   durationMs,
   source = "unknown",
   workspaceSlug = null,
 }) {
+  let cost = totalCost;
+  // Si el costo es 0 (Vertex AI) y es Gemini Flash Lite, calculamos estimado
+  if (cost === 0 && (model || "").includes("gemini")) {
+    cost =
+      promptTokens * VERTEX_LLM_PRICING.input +
+      completionTokens * VERTEX_LLM_PRICING.output;
+  }
+
   llmEvents.push({
     model,
     promptTokens,
     completionTokens,
     totalTokens: promptTokens + completionTokens,
-    totalCost,
+    totalCost: cost,
     durationMs,
     source,
     workspaceSlug,
@@ -51,7 +68,7 @@ export function recordLLMRequest({
   });
   if (process.env.NODE_ENV !== "production" || process.env.LOG_METRICS === "1") {
     console.log(
-      `[Metrics] LLM Request - ${source} | Model: ${model} | Tokens: ${promptTokens + completionTokens} | Cost: $${totalCost.toFixed(4)} | Duration: ${durationMs}ms`,
+      `[Metrics] LLM Request - ${source} | Model: ${model} | Tokens: ${promptTokens + completionTokens} | Cost: $${cost.toFixed(6)} | Duration: ${durationMs}ms`,
     );
   }
 }
@@ -59,11 +76,11 @@ export function recordLLMRequest({
 /**
  * Registra una generación de imagen.
  * @param {object} opts
- * @param {string} opts.model - Modelo usado (ej. black-forest-labs/flux.2-max).
- * @param {string} opts.size - Tamaño o aspect ratio (ej. 1024x1536, 4:5, 1:1).
- * @param {string} [opts.aspectRatio] - Aspect ratio solicitado (ej. 4:5).
+ * @param {string} opts.model - Modelo usado (ej. imagen-3.0-generate-001).
+ * @param {string} opts.size - Tamaño o aspect ratio.
+ * @param {string} [opts.aspectRatio] - Aspect ratio solicitado.
  * @param {number} opts.durationMs - Tiempo de generación en ms.
- * @param {string} [opts.source] - Origen: "creative" | "welcome" | "profile".
+ * @param {string} [opts.source] - Origen.
  * @param {number} [opts.estimatedUsd] - Costo estimado o real
  */
 export function recordImageGeneration({
@@ -74,7 +91,8 @@ export function recordImageGeneration({
   source = "creative",
   estimatedUsd = null,
 }) {
-  const cost = estimatedUsd ?? SIZE_TO_ESTIMATED_USD[size] ?? 0.08;
+  // Imagen 3 en Vertex cuesta aprox $0.03 por imagen generada con éxito
+  const cost = estimatedUsd ?? SIZE_TO_ESTIMATED_USD[size] ?? 0.03;
   imageEvents.push({
     model,
     size,
@@ -130,7 +148,7 @@ export function getLLMMetrics() {
   }
 
   return {
-    note: "Costos reales de OpenRouter basados en usage reportado",
+    note: "Costos basados en precios oficiales de Vertex AI (Gemini Flash Lite e Imagen 3)",
     summary: {
       totalRequests,
       totalCost: Math.round(totalCost * 10000) / 10000,
@@ -183,7 +201,7 @@ export function getImageMetrics() {
   }
 
   return {
-    note: "Modelos de imagen (FLUX / OpenRouter) no usan tokens; se registra tamaño, tiempo y costo estimado USD por imagen.",
+    note: "Vertex AI Imagen 3 tiene un costo fijo por imagen generada ($0.03).",
     summary: {
       totalImages,
       totalEstimatedUsd: Math.round(totalEstimatedUsd * 100) / 100,

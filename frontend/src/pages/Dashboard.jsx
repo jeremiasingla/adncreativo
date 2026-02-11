@@ -105,7 +105,7 @@ export default function Dashboard() {
 
   return (
     <div ref={pageRef} className="bg-white">
-      {/* Hero Section – mismo background que Home (paper shader + gradiente) */}
+      {/* Hero Section – mismo background que Home (gradiente celeste) */}
       <section className="relative min-h-screen w-full lg:min-h-0 lg:h-[100dvh] flex flex-col items-center justify-center isolate bg-white">
         <HeroBackground />
         <div

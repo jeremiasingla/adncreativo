@@ -14,11 +14,13 @@ import {
   generateSalesAngles,
   generateCreativeImagePrompt,
   getImagePromptFromStructured,
+  getFluxPromptFromSpec,
   generateCreativeImageSeedream,
   generateProfileImage,
   expandAngleToVisualSpec,
   analyzeImageToJson,
   normalizeVisualDnaToCreativeSpec,
+  refineCreativeSpecWithBranding,
 } from "../services/llm.service.js";
 import { getReferenceById } from "../db/referenceGalleryDb.js";
 import {
@@ -29,7 +31,7 @@ import { saveCreativeImage } from "../utils/creativeImage.js";
 
 const SCREENSHOT_DIR = path.resolve(
   process.env.SCREENSHOT_DIR ||
-    path.join(process.cwd(), "storage", "screenshots"),
+  path.join(process.cwd(), "storage", "screenshots"),
 );
 
 /** Convierte URL de logo/imagen relativa a absoluta para que OpenRouter pueda cargarla. */
@@ -173,9 +175,9 @@ function creativeToAd(creative, branding, index, baseUrl) {
   const imageUrl = creative.imageUrl?.startsWith("http")
     ? creative.imageUrl
     : baseUrl +
-      (creative.imageUrl?.startsWith("/")
-        ? creative.imageUrl
-        : "/" + creative.imageUrl);
+    (creative.imageUrl?.startsWith("/")
+      ? creative.imageUrl
+      : "/" + creative.imageUrl);
   const headline = creative.headline ?? "";
   const platform = getPlatformFromAspectRatio(creative.aspectRatio);
   const platformLabel = creative.targetPlatformLabel || creative.targetPlatform || platform;
@@ -273,18 +275,18 @@ export async function getWorkspaceCampaigns(req, res) {
     let branding = {};
     try {
       branding = JSON.parse(row.branding || "{}");
-    } catch (_) {}
+    } catch (_) { }
     let creativesList = [];
     try {
       if (row.creatives != null && row.creatives !== "")
         creativesList = JSON.parse(row.creatives);
-    } catch (_) {}
+    } catch (_) { }
     if (!Array.isArray(creativesList)) creativesList = [];
     let campaignsData = null;
     try {
       if (row.campaigns != null && row.campaigns !== "")
         campaignsData = JSON.parse(row.campaigns);
-    } catch (_) {}
+    } catch (_) { }
     const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
     if (!campaignsData?.campaigns?.length && creativesList.length > 0) {
       const brandingWithUrl = { ...branding, websiteUrl: row.url };
@@ -325,7 +327,7 @@ export async function listWorkspaces(req, res) {
       let branding = {};
       try {
         branding = JSON.parse(row.branding || "{}");
-      } catch (_) {}
+      } catch (_) { }
       const screenshotUrl = row.screenshot_path
         ? row.screenshot_path.startsWith("http")
           ? row.screenshot_path
@@ -386,7 +388,7 @@ export async function getWorkspaceBySlug(req, res) {
     let branding = {};
     try {
       branding = JSON.parse(row.branding || "{}");
-    } catch (_) {}
+    } catch (_) { }
     const screenshotUrl = row.screenshot_path
       ? row.screenshot_path.startsWith("http")
         ? row.screenshot_path
@@ -406,13 +408,13 @@ export async function getWorkspaceBySlug(req, res) {
     try {
       if (row.creatives != null && row.creatives !== "")
         creativesList = JSON.parse(row.creatives);
-    } catch (_) {}
+    } catch (_) { }
     if (!Array.isArray(creativesList)) creativesList = [];
     let campaignsData = null;
     try {
       if (row.campaigns != null && row.campaigns !== "")
         campaignsData = JSON.parse(row.campaigns);
-    } catch (_) {}
+    } catch (_) { }
     const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
     if (!campaignsData?.campaigns?.length && creativesList.length > 0) {
       const brandingWithUrl = { ...branding, websiteUrl: row.url };
@@ -493,7 +495,7 @@ export async function runFullWorkspaceGeneration(req, res) {
     let branding = {};
     try {
       branding = JSON.parse(row.branding || "{}");
-    } catch (_) {}
+    } catch (_) { }
 
     const companyName = branding.companyName || branding.name || null;
     const headline = branding.headline || null;
@@ -554,7 +556,7 @@ export async function getWorkspaceSalesAngles(req, res) {
       if (row.sales_angles != null && row.sales_angles !== "") {
         angles = JSON.parse(row.sales_angles);
       }
-    } catch (_) {}
+    } catch (_) { }
     if (!Array.isArray(angles)) angles = [];
     return res.status(200).json({
       success: true,
@@ -600,7 +602,7 @@ export async function generateWorkspaceSalesAngles(req, res) {
     try {
       if (row.branding != null && row.branding !== "")
         branding = JSON.parse(row.branding);
-    } catch (_) {}
+    } catch (_) { }
     try {
       if (row.knowledge_base != null && row.knowledge_base !== "") {
         const kb = JSON.parse(row.knowledge_base);
@@ -608,10 +610,10 @@ export async function generateWorkspaceSalesAngles(req, res) {
           typeof kb.summary === "string"
             ? kb.summary
             : (kb.content && typeof kb.content === "string"
-                ? kb.content
-                : "") || "";
+              ? kb.content
+              : "") || "";
       }
-    } catch (_) {}
+    } catch (_) { }
     try {
       if (row.customer_profiles != null && row.customer_profiles !== "") {
         const profiles = JSON.parse(row.customer_profiles);
@@ -629,7 +631,7 @@ export async function generateWorkspaceSalesAngles(req, res) {
             .slice(0, 800);
         }
       }
-    } catch (_) {}
+    } catch (_) { }
     const useVoseo = Boolean(branding?.useVoseo);
     const angles = await generateSalesAngles({
       companyName: branding?.companyName ?? "",
@@ -687,7 +689,7 @@ export async function generateCustomerProfileImages(req, res) {
     try {
       const raw = row.customer_profiles;
       if (raw != null && raw !== "") profiles = JSON.parse(raw);
-    } catch (_) {}
+    } catch (_) { }
     const index = profiles.findIndex((p) => p.id === profileId);
     if (index === -1) {
       return res
@@ -786,7 +788,7 @@ export async function regenerateAllCustomerProfileImagesCore(userId, slug) {
   try {
     const raw = row.customer_profiles;
     if (raw != null && raw !== "") profiles = JSON.parse(raw);
-  } catch (_) {}
+  } catch (_) { }
   if (profiles.length === 0) return { profiles: [], deleted: 0 };
 
   if (skipIcpImageGeneration()) {
@@ -1015,23 +1017,28 @@ export async function generateCreatives(req, res) {
       if (row.headlines != null && row.headlines !== "") {
         headlinesList = JSON.parse(row.headlines);
       }
-    } catch (_) {}
+    } catch (_) { }
     let anglesList = [];
     try {
       if (row.sales_angles != null && row.sales_angles !== "") {
         anglesList = JSON.parse(row.sales_angles);
       }
-    } catch (_) {}
+    } catch (_) { }
     if (!Array.isArray(anglesList)) anglesList = [];
+    if (!Array.isArray(headlinesList)) headlinesList = [];
 
-    const useAngles = Boolean(req.body?.useAngles) && anglesList.length > 0;
+    const hasHeadlines = headlinesList.length > 0;
+    const hasAngles = anglesList.length > 0;
+    // Usar ángulos si el cliente lo pide o si no hay headlines pero sí ángulos
+    const useAngles =
+      (Boolean(req.body?.useAngles) && hasAngles) || (!hasHeadlines && hasAngles);
     const angleIndices = Array.isArray(req.body?.angleIndices) ? req.body.angleIndices : null;
     const selectedAngles = useAngles
       ? angleIndices && angleIndices.length > 0
         ? angleIndices.map((i) => anglesList[i]).filter(Boolean)
         : anglesList
       : [];
-    if (!useAngles && (!Array.isArray(headlinesList) || headlinesList.length === 0)) {
+    if (!useAngles && !hasHeadlines) {
       return res.status(400).json({
         success: false,
         error:
@@ -1055,7 +1062,7 @@ export async function generateCreatives(req, res) {
     try {
       if (row.branding != null && row.branding !== "")
         branding = JSON.parse(row.branding);
-    } catch (_) {}
+    } catch (_) { }
     const companyName = branding?.companyName ?? "";
     const personality = branding?.personality ?? "";
     const brandingSummary = [companyName, branding?.headline, personality]
@@ -1093,7 +1100,7 @@ export async function generateCreatives(req, res) {
       if (row.customer_profiles != null && row.customer_profiles !== "") {
         profiles = JSON.parse(row.customer_profiles);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const CREATIVE_ASPECT_RATIOS = ["4:5", "1:1", "9:16", "3:4"];
 
@@ -1110,7 +1117,8 @@ export async function generateCreatives(req, res) {
           referenceAssets: hasLogoOrImages ? referenceAssets : null,
           productDescription: branding?.headline || branding?.productDescription || "",
         });
-        const promptForImage = getImagePromptFromStructured(spec);
+        const promptForImage =
+          getFluxPromptFromSpec(spec) || getImagePromptFromStructured(spec);
         const imageDataUrl = await generateCreativeImageSeedream(
           promptForImage,
           aspectRatio,
@@ -1210,7 +1218,7 @@ export async function generateCreatives(req, res) {
     try {
       if (row.creatives != null && row.creatives !== "")
         creativesList = JSON.parse(row.creatives);
-    } catch (_) {}
+    } catch (_) { }
     if (!Array.isArray(creativesList)) creativesList = [];
 
     if (!isAdmin && creativesList.length >= MAX_CREATIVES_PER_WORKSPACE_FREE) {
@@ -1242,16 +1250,26 @@ export async function generateCreatives(req, res) {
     let generated = 0;
     const CREATIVE_CONCURRENCY = 3;
 
+    // Asignación fija de ángulo por índice de creativo (round-robin) para no repetir hasta agotar todos
+    const angleIndexForCreative =
+      useAngles && !forAllPlatforms
+        ? Array.from({ length: count }, (_, i) => i % selectedAngles.length)
+        : [];
+
     const generateOneCreative = async (offsetIndex, baseLength) => {
       const aspectRatio =
         CREATIVE_ASPECT_RATIOS[
-          (baseLength + offsetIndex) % CREATIVE_ASPECT_RATIOS.length
+        (baseLength + offsetIndex) % CREATIVE_ASPECT_RATIOS.length
         ];
       const platform = getPlatformFromAspectRatio(aspectRatio);
       const version = ((baseLength + offsetIndex) % 3) + 1;
 
       if (useAngles) {
-        const angleIndex = (baseLength + offsetIndex) % selectedAngles.length;
+        // Usar ángulo preasignado por índice para evitar repeticiones en paralelo
+        const angleIndex =
+          offsetIndex < angleIndexForCreative.length
+            ? angleIndexForCreative[offsetIndex]
+            : offsetIndex % selectedAngles.length;
         const angle = selectedAngles[angleIndex];
         if (!angle || !angle.hook || !angle.visual) return null;
         try {
@@ -1259,7 +1277,8 @@ export async function generateCreatives(req, res) {
             referenceAssets: hasLogoOrImages ? referenceAssets : null,
             productDescription: branding?.headline || branding?.productDescription || "",
           });
-          const promptForImage = getImagePromptFromStructured(spec);
+          const promptForImage =
+            getFluxPromptFromSpec(spec) || getImagePromptFromStructured(spec);
           const imageDataUrl = await generateCreativeImageSeedream(
             promptForImage,
             aspectRatio,
@@ -1365,13 +1384,12 @@ export async function generateCreatives(req, res) {
           ? profiles[profileIndex]
           : null;
       const clientIdealSummary = profile
-        ? `${profile.name ?? ""}, ${profile.title ?? ""}. ${
-            profile.description ?? ""
+        ? `${profile.name ?? ""}, ${profile.title ?? ""}. ${profile.description ?? ""
           }. Objetivos: ${(profile.goals || [])
             .slice(0, 2)
             .join("; ")}. Dificultades: ${(profile.painPoints || [])
-            .slice(0, 2)
-            .join("; ")}`.slice(0, 800)
+              .slice(0, 2)
+              .join("; ")}`.slice(0, 800)
         : "";
       const useLogoThisTime =
         hasLogoOrImages && (baseLength + offsetIndex) % 2 === 0;
@@ -1389,7 +1407,9 @@ export async function generateCreatives(req, res) {
           contentLanguage: branding?.language || "es-AR",
           branding,
         });
-        const promptForImage = getImagePromptFromStructured(creativePromptPayload);
+        const promptForImage =
+          getFluxPromptFromSpec(creativePromptPayload) ||
+          getImagePromptFromStructured(creativePromptPayload);
         const imageDataUrl = await generateCreativeImageSeedream(
           promptForImage,
           aspectRatio,
@@ -1612,7 +1632,7 @@ export async function cloneReference(req, res) {
     try {
       if (row.creatives != null && row.creatives !== "")
         creativesList = JSON.parse(row.creatives);
-    } catch (_) {}
+    } catch (_) { }
     if (!Array.isArray(creativesList)) creativesList = [];
 
     const MAX_FREE = 3;
@@ -1627,7 +1647,7 @@ export async function cloneReference(req, res) {
     try {
       if (row.branding != null && row.branding !== "")
         branding = JSON.parse(row.branding);
-    } catch (_) {}
+    } catch (_) { }
 
     const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
     const logoUrl = branding?.logo ? toAbsoluteImageUrl(branding.logo) : null;
@@ -1658,24 +1678,13 @@ export async function cloneReference(req, res) {
       try {
         const parsed = JSON.parse(reference.generationPrompt);
         if (parsed && typeof parsed === "object" && parsed.meta_parameters) {
-          spec = JSON.parse(JSON.stringify(parsed));
-          if (!spec.generative_reconstruction) spec.generative_reconstruction = {};
-          const repl =
-            " CRITICAL: Replace any product or logo visible in the scene with the user's brand assets provided in the reference images (first reference = logo, second = product). Keep the same camera angle, materials, and mood.";
-          spec.generative_reconstruction.dalle_flux_natural_prompt =
-            (spec.generative_reconstruction.dalle_flux_natural_prompt || "").trim() + repl;
-          if (branding?.companyName)
-            spec.generative_reconstruction.dalle_flux_natural_prompt += ` Brand: ${branding.companyName}.`;
-          if (branding?.primary && /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", "")))
-            spec.generative_reconstruction.dalle_flux_natural_prompt += ` Use brand color ${branding.primary} for key accents.`;
-        } else {
-          spec = null;
+          spec = parsed;
         }
-      } catch (_) {
-        spec = null;
-      }
+      } catch (_) { }
     }
+
     if (!spec) {
+      console.log("[Clone] Analyzing image for Visual DNA...");
       const visualDna = await analyzeImageToJson(reference.imageUrl);
       spec = normalizeVisualDnaToCreativeSpec(visualDna, {
         companyName: branding?.companyName,
@@ -1683,8 +1692,28 @@ export async function cloneReference(req, res) {
         headline: branding?.headline,
       });
     }
+
+    // Refine the spec with branding (Intelligent asset replacement)
+    console.log("[Clone] Refining spec with brand identity...");
+    try {
+      spec = await refineCreativeSpecWithBranding(spec, {
+        companyName: branding?.companyName,
+        primary: branding?.primary,
+        headline: branding?.headline || reference.category || "Clonado",
+        contentLanguage: branding?.language || "es-AR",
+      });
+    } catch (err) {
+      console.warn("[Clone] Refinement failed, using original spec with appended instructions:", err.message);
+      // Fallback: append basic instructions if refinement fails
+      if (spec.generative_reconstruction) {
+        const repl = " CRITICAL: Replace any product/logo/text with the user's brand assets. Use brand colors.";
+        spec.generative_reconstruction.dalle_flux_natural_prompt =
+          (spec.generative_reconstruction.dalle_flux_natural_prompt || "") + repl;
+      }
+    }
     const aspectRatio = spec.meta_parameters?.aspect_ratio || "4:5";
-    const promptForImage = getImagePromptFromStructured(spec);
+    const promptForImage =
+      getFluxPromptFromSpec(spec) || getImagePromptFromStructured(spec);
     const imageDataUrl = await generateCreativeImageSeedream(
       promptForImage,
       aspectRatio,
@@ -1780,7 +1809,7 @@ export async function generateOneCreativeFromAngleBySlug(slug, angleIndex = 0) {
   try {
     if (row.sales_angles != null && row.sales_angles !== "")
       anglesList = JSON.parse(row.sales_angles);
-  } catch (_) {}
+  } catch (_) { }
   if (!Array.isArray(anglesList) || anglesList.length === 0)
     return { ok: false, error: "No sales angles" };
   const angle = anglesList[angleIndex] ?? anglesList[0];
@@ -1789,7 +1818,7 @@ export async function generateOneCreativeFromAngleBySlug(slug, angleIndex = 0) {
   let branding = {};
   try {
     if (row.branding != null && row.branding !== "") branding = JSON.parse(row.branding);
-  } catch (_) {}
+  } catch (_) { }
   const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
   const logoUrl = branding?.logo ? toAbsoluteImageUrl(branding.logo) : null;
   const productUrl = branding?.productImage ? toAbsoluteImageUrl(branding.productImage) : null;
@@ -1808,7 +1837,7 @@ export async function generateOneCreativeFromAngleBySlug(slug, angleIndex = 0) {
   let creativesList = [];
   try {
     if (row.creatives != null && row.creatives !== "") creativesList = JSON.parse(row.creatives);
-  } catch (_) {}
+  } catch (_) { }
   if (!Array.isArray(creativesList)) creativesList = [];
 
   try {
@@ -1816,7 +1845,8 @@ export async function generateOneCreativeFromAngleBySlug(slug, angleIndex = 0) {
       referenceAssets: hasLogoOrImages ? referenceAssets : null,
       productDescription: branding?.headline || branding?.productDescription || "",
     });
-    const promptForImage = getImagePromptFromStructured(spec);
+    const promptForImage =
+      getFluxPromptFromSpec(spec) || getImagePromptFromStructured(spec);
     const imageDataUrl = await generateCreativeImageSeedream(
       promptForImage,
       aspectRatio,
@@ -1948,7 +1978,7 @@ export async function getCreativeVersions(req, res) {
       if (row.creatives != null && row.creatives !== "") {
         creativesList = JSON.parse(row.creatives);
       }
-    } catch (_) {}
+    } catch (_) { }
     if (!Array.isArray(creativesList)) creativesList = [];
 
     let campaignsData = null;
@@ -1956,7 +1986,7 @@ export async function getCreativeVersions(req, res) {
       if (row.campaigns != null && row.campaigns !== "") {
         campaignsData = JSON.parse(row.campaigns);
       }
-    } catch (_) {}
+    } catch (_) { }
     const campaign = campaignsData?.campaigns?.[0] ?? null;
     const adSet = campaign?.adSets?.[0] ?? null;
     const adsByIndex = Array.isArray(adSet?.ads) ? adSet.ads : [];
@@ -1986,10 +2016,10 @@ export async function getCreativeVersions(req, res) {
           const imageUrl = c.imageUrl?.startsWith("http")
             ? c.imageUrl
             : baseUrl +
-              (c.imageUrl?.startsWith("/")
-                ? c.imageUrl
-                : "/" + (c.imageUrl || ""));
-          
+            (c.imageUrl?.startsWith("/")
+              ? c.imageUrl
+              : "/" + (c.imageUrl || ""));
+
           return {
             ...c,
             imageUrl,
@@ -2005,9 +2035,9 @@ export async function getCreativeVersions(req, res) {
         const imageUrl = c.imageUrl?.startsWith("http")
           ? c.imageUrl
           : baseUrl +
-            (c.imageUrl?.startsWith("/")
-              ? c.imageUrl
-              : "/" + (c.imageUrl || ""));
+          (c.imageUrl?.startsWith("/")
+            ? c.imageUrl
+            : "/" + (c.imageUrl || ""));
         const adFromCampaign = adsByIndex[i];
         const name =
           adFromCampaign?.name ??
@@ -2339,13 +2369,12 @@ async function continueWorkspaceCreationInBackground(params) {
     // Flujo: ICP → sales angles → creativos (sin headlines).
     const firstProfile = profileResults[0];
     const clientIdealSummary = firstProfile
-      ? `${firstProfile.name}, ${firstProfile.title}. ${
-          firstProfile.description || ""
+      ? `${firstProfile.name}, ${firstProfile.title}. ${firstProfile.description || ""
         }. Objetivos: ${(firstProfile.goals || [])
           .slice(0, 2)
           .join("; ")}. Dificultades: ${(firstProfile.painPoints || [])
-          .slice(0, 2)
-          .join("; ")}`.slice(0, 800)
+            .slice(0, 2)
+            .join("; ")}`.slice(0, 800)
       : "";
     const nicheOrSubniche = [params.companyName, params.headline]
       .filter(Boolean)
@@ -2442,7 +2471,7 @@ async function continueWorkspaceCreationInBackground(params) {
             referenceAssetsCampaign.other.length > 0
           );
         }
-      } catch (_) {}
+      } catch (_) { }
       const CREATIVE_ASPECT_RATIOS = ["4:5", "1:1", "9:16", "3:4"];
       let creativesList = [];
       try {
@@ -2452,26 +2481,26 @@ async function continueWorkspaceCreationInBackground(params) {
         );
         if (row?.creatives != null && row.creatives !== "")
           creativesList = JSON.parse(row.creatives);
-      } catch (_) {}
+      } catch (_) { }
       const modelUsed =
         process.env.OPENROUTER_IMAGE_MODEL ||
         "black-forest-labs/flux.2-max";
       const baseUrl = process.env.API_BASE_URL || "http://localhost:3000";
-      const welcomeCreativePromises = [0, 1, 2].map(async (i) => {
-        const angle = anglesList[i % anglesList.length];
+      // Usar solo ángulos únicos (hasta 3) para no repetir creativos/imágenes por ángulo
+      const anglesForWelcome = anglesList.slice(0, 3);
+      const welcomeCreativePromises = anglesForWelcome.map(async (angle, i) => {
         const chosenHeadline = angle?.hook ?? "";
         if (!chosenHeadline) return null;
         const profileIndex =
           profileResults.length > 0 ? i % profileResults.length : 0;
         const profile = profileResults[profileIndex] || null;
         const clientIdealSummaryForCreative = profile
-          ? `${profile.name}, ${profile.title}. ${
-              profile.description || ""
+          ? `${profile.name}, ${profile.title}. ${profile.description || ""
             }. Objetivos: ${(profile.goals || [])
               .slice(0, 2)
               .join("; ")}. Dificultades: ${(profile.painPoints || [])
-              .slice(0, 2)
-              .join("; ")}`.slice(0, 800)
+                .slice(0, 2)
+                .join("; ")}`.slice(0, 800)
           : "";
         const aspectRatio =
           CREATIVE_ASPECT_RATIOS[i % CREATIVE_ASPECT_RATIOS.length];
@@ -2492,7 +2521,9 @@ async function continueWorkspaceCreationInBackground(params) {
             contentLanguage: params.branding?.language || "es-AR",
             branding: params.branding,
           });
-          const promptForImage = getImagePromptFromStructured(creativePromptPayload);
+          const promptForImage =
+            getFluxPromptFromSpec(creativePromptPayload) ||
+            getImagePromptFromStructured(creativePromptPayload);
           const imageDataUrl = await generateCreativeImageSeedream(
             promptForImage,
             aspectRatio,
@@ -2535,46 +2566,46 @@ async function continueWorkspaceCreationInBackground(params) {
         }
         return null;
       });
-        const welcomeCreatives = (
-          await Promise.all(welcomeCreativePromises)
-        ).filter(Boolean);
-        for (const c of welcomeCreatives) {
-          creativesList.push(c);
-        }
-        if (welcomeCreatives.length > 0) {
-          try {
-            await run("UPDATE workspaces SET creatives = ? WHERE slug = ?", [
-              JSON.stringify(creativesList),
-              slug,
-            ]);
-            const campaignsPayload = buildCampaignsFromCreatives(
-              creativesList,
-              brandingForCampaigns,
-              slug,
-              baseUrl,
-            );
-            await run("UPDATE workspaces SET campaigns = ? WHERE slug = ?", [
-              JSON.stringify(campaignsPayload),
-              slug,
-            ]);
-            console.log(
-              "[Welcome campaign]",
-              welcomeCreatives.length,
-              "creatives saved for workspace",
-              slug,
-            );
-          } catch (dbErr) {
-            console.error(
-              "⚠️ Failed to persist creatives/campaigns to DB:",
-              dbErr.message,
-            );
-          }
-        } else {
-          console.warn(
-            "[Welcome campaign] No creatives to save for workspace",
+      const welcomeCreatives = (
+        await Promise.all(welcomeCreativePromises)
+      ).filter(Boolean);
+      for (const c of welcomeCreatives) {
+        creativesList.push(c);
+      }
+      if (welcomeCreatives.length > 0) {
+        try {
+          await run("UPDATE workspaces SET creatives = ? WHERE slug = ?", [
+            JSON.stringify(creativesList),
+            slug,
+          ]);
+          const campaignsPayload = buildCampaignsFromCreatives(
+            creativesList,
+            brandingForCampaigns,
+            slug,
+            baseUrl,
+          );
+          await run("UPDATE workspaces SET campaigns = ? WHERE slug = ?", [
+            JSON.stringify(campaignsPayload),
+            slug,
+          ]);
+          console.log(
+            "[Welcome campaign]",
+            welcomeCreatives.length,
+            "creatives saved for workspace",
             slug,
           );
+        } catch (dbErr) {
+          console.error(
+            "⚠️ Failed to persist creatives/campaigns to DB:",
+            dbErr.message,
+          );
         }
+      } else {
+        console.warn(
+          "[Welcome campaign] No creatives to save for workspace",
+          slug,
+        );
+      }
     }
   } catch (cpErr) {
     console.error("⚠️ Customer profiles generation failed:", cpErr.message);
@@ -2722,10 +2753,10 @@ export async function createWorkspace(req, res) {
         : null,
       components: branding?.components
         ? {
-            buttonPrimary: branding.components.buttonPrimary ?? null,
-            buttonSecondary: branding.components.buttonSecondary ?? null,
-            input: branding.components.input ?? null,
-          }
+          buttonPrimary: branding.components.buttonPrimary ?? null,
+          buttonSecondary: branding.components.buttonSecondary ?? null,
+          input: branding.components.input ?? null,
+        }
         : null,
     };
     const llmInput = {
@@ -2791,49 +2822,49 @@ export async function createWorkspace(req, res) {
 
     const rawColors = useFirecrawlColorsFirst
       ? {
-          primary:
-            branding?.colors?.primary ?? llmRefined?.colors?.primary ?? null,
-          secondary:
-            branding?.colors?.secondary ??
-            llmRefined?.colors?.secondary ??
-            null,
-          accent:
-            branding?.colors?.accent ?? llmRefined?.colors?.accent ?? null,
-          background:
-            branding?.colors?.background ??
-            llmRefined?.colors?.background ??
-            null,
-          textPrimary:
-            branding?.colors?.textPrimary ??
-            llmRefined?.colors?.textPrimary ??
-            null,
-          textSecondary:
-            branding?.colors?.textSecondary ??
-            llmRefined?.colors?.textSecondary ??
-            null,
-        }
+        primary:
+          branding?.colors?.primary ?? llmRefined?.colors?.primary ?? null,
+        secondary:
+          branding?.colors?.secondary ??
+          llmRefined?.colors?.secondary ??
+          null,
+        accent:
+          branding?.colors?.accent ?? llmRefined?.colors?.accent ?? null,
+        background:
+          branding?.colors?.background ??
+          llmRefined?.colors?.background ??
+          null,
+        textPrimary:
+          branding?.colors?.textPrimary ??
+          llmRefined?.colors?.textPrimary ??
+          null,
+        textSecondary:
+          branding?.colors?.textSecondary ??
+          llmRefined?.colors?.textSecondary ??
+          null,
+      }
       : {
-          primary:
-            llmRefined?.colors?.primary ?? branding?.colors?.primary ?? null,
-          secondary:
-            llmRefined?.colors?.secondary ??
-            branding?.colors?.secondary ??
-            null,
-          accent:
-            llmRefined?.colors?.accent ?? branding?.colors?.accent ?? null,
-          background:
-            llmRefined?.colors?.background ??
-            branding?.colors?.background ??
-            null,
-          textPrimary:
-            llmRefined?.colors?.textPrimary ??
-            branding?.colors?.textPrimary ??
-            null,
-          textSecondary:
-            llmRefined?.colors?.textSecondary ??
-            branding?.colors?.textSecondary ??
-            null,
-        };
+        primary:
+          llmRefined?.colors?.primary ?? branding?.colors?.primary ?? null,
+        secondary:
+          llmRefined?.colors?.secondary ??
+          branding?.colors?.secondary ??
+          null,
+        accent:
+          llmRefined?.colors?.accent ?? branding?.colors?.accent ?? null,
+        background:
+          llmRefined?.colors?.background ??
+          branding?.colors?.background ??
+          null,
+        textPrimary:
+          llmRefined?.colors?.textPrimary ??
+          branding?.colors?.textPrimary ??
+          null,
+        textSecondary:
+          llmRefined?.colors?.textSecondary ??
+          branding?.colors?.textSecondary ??
+          null,
+      };
 
     const fallbackPrimary = pickColor(
       rawColors.primary,

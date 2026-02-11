@@ -37,84 +37,92 @@
   },
   "home": {
     "hero": {
-      "title1": "Creatives that sell.",
-      "title2": "No designer.",
+      "title1": "Ad creatives ready to sell,",
+      "title2": "in minutes.",
+      "subtitle": "Generate ad images aligned to your brand without relying on designers, generic templates, or hours of trial and error with other AI's.",
       "phrase1": "One URL. Creatives ready.",
       "phrase2": "Less cost. More sales.",
       "phrase3": "Your brand. All networks.",
-      "inputSubtitle": "No credit card required • Ready in 2 minutes"
+      "inputSubtitle": "No credit card required · Automatic setup · Instant results",
+      "cta": "Create my first creatives"
     },
-    "placeholderUrl": "yoursite.com",
+    "placeholderUrl": "Paste your brand or product URL",
+    "demo": {
+      "title": "See what creating ads in minutes with your product's identity looks like",
+      "subtitle": "From a single prompt, your brand transforms into creatives ready to scale campaigns on any platform.",
+      "button": "See how they're made"
+    },
     "howItWorks": {
       "title": "How it works",
       "subtitle": "Three simple steps. Content with your brand.",
       "you": "You",
-      "card1Subtitle": "One URL. We extract your brand and generate.",
-      "card2TitleDesktop": "We read your brand",
       "colors": "Colors",
       "fonts": "Fonts",
-      "step1Title": "Analyze your brand",
-      "step1Desc": "Paste your site URL. Our AI reads your web and extracts logo, colors, fonts and style in seconds. No file uploads.",
-      "step2Title": "Generate creatives",
-      "step2Desc": "AI generates professional creatives tailored to your brand. From Stories to banners, all the formats you need.",
-      "step3Title": "Export and publish",
-      "step3Desc": "Download your creatives in any format. Ready for Instagram, Facebook, TikTok, LinkedIn and more.",
       "analyzing": "Analyzing your brand...",
       "readyToExport": "Ready to export",
       "creativesGenerated": "Creatives generated",
-      "card1Title": "Paste your URL",
-      "card1Desc": "Logo, colors and fonts. Everything from your web.",
-      "card2Title": "Creatives ready",
-      "card2Desc": "Images, copy and formats. With your brand, no designer.",
-      "card3Title": "Export",
-      "card3Desc": "Download in all formats. All networks."
+
+      "step1Title": "Analyze your offer",
+      "step1Desc": "Connect your brand, product or landing page.",
+      "step2Title": "Strategy + AI",
+      "step2Desc": "AI interprets your proposition, your identity and the ad objective.",
+      "step3Title": "Creative scale",
+      "step3Desc": "Generate multiple optimized creatives to test, iterate and scale campaigns.",
+
+      "card1Title": "Analyze your offer",
+      "card1Subtitle": "Connect your brand, product or landing page.",
+      "card1Desc": "Connect your brand, product or landing page.",
+
+      "card2TitleDesktop": "Strategy + AI",
+      "card2Title": "Creative scale",
+      "card2Desc": "AI interprets your proposition, your identity and the ad objective.",
+
+      "card3Title": "Creative scale",
+      "card3Desc": "Generate multiple optimized creatives to test, iterate and scale campaigns."
+    },
+    "scaleCampaigns": {
+      "title": "Scale campaigns without slowing down creativity",
+      "body1": "Test angles, formats and visual styles without depending on timelines, designers or slow processes.",
+      "body2": "Create dozens of creatives in minutes and let the data decide."
     },
     "oneBrand": {
-      "title": "One brand. All networks.",
-      "subtitle": "One place. All your networks. Less work, more recognition."
+      "title": "One system. Multiple platforms.",
+      "subtitle": "Creatives ready for Meta Ads, Google, TikTok, LinkedIn and more. Maintain visual consistency while adapting each ad to the right channel."
     },
     "brandFirst": {
-      "title": "Brand first. AI after.",
-      "imageAlt": "From generic ads to creatives with your brand: Brand first, AI after",
-      "subtitle1": "Generic AI doesn't sell.",
-      "subtitle2": "Yours does.",
-      "body": "We read your web first. Colors, fonts, tone. Everything we generate comes from your brand. Creatives that get recognized = more conversion. Whoever unifies first, wins. Keep using generic AI and you keep wasting money on ads that don't stand out."
+      "title": "This isn't automatic design. It's conversion-driven creativity.",
+      "imageAlt": "From generic ads to creatives with your brand: conversion-driven creativity",
+      "subtitle1": "Every creative is designed to serve a clear purpose:",
+      "subtitle2": "capture attention, communicate value and drive action.",
+      "body": "Less empty aesthetics. More ads that sell."
     },
     "faq": {
       "title": "Frequently asked questions",
       "subtitle": "We answer your questions. Decide with data.",
       "items": [
         {
-          "question": "What is ADNCreativo?",
-          "answer": "A tool that takes your site URL, extracts your brand (logo, colors, fonts) and generates creatives ready to publish. No briefs. No designer. Less cost, more speed."
+          "question": "Does it work for cold traffic?",
+          "answer": "Yes. ADNCreativo generates creatives designed to capture the attention of prospects who don't know you yet. Images and copy designed to stop the scroll and generate clicks from cold traffic campaigns."
         },
         {
-          "question": "Who uses it?",
-          "answer": "Marketing teams, agencies and brands that want to produce more creatives without depending on a designer or generic AI that doesn't convert."
+          "question": "Can I use the creatives in real campaigns?",
+          "answer": "Absolutely. Every creative is generated in the formats and specifications required by Meta Ads, Google, TikTok, LinkedIn and more. Download and publish directly."
         },
         {
-          "question": "Does it generate text and images?",
-          "answer": "Yes. Images, copy and formats for social. All aligned to your brand because the AI reads your web first."
+          "question": "Does it replace a designer or complement one?",
+          "answer": "It complements. ADNCreativo accelerates the production of variants to test, iterate and scale. If you have a designer, it frees their time for strategic tasks. If you don't, it gives you professional creatives in minutes."
         },
         {
-          "question": "How is it different from other AIs?",
-          "answer": "Other AIs give you generic creatives. ADNCreativo learns your brand from your URL and generates everything consistently. More recognition = better performance."
+          "question": "How many creatives can I generate?",
+          "answer": "It depends on your plan. From 50 to 250 creatives per month. Each generation produces variants in multiple formats (4:5, 1:1, 9:16, 3:4) so you can test quickly."
         },
         {
-          "question": "What networks and formats?",
-          "answer": "Instagram, Facebook, LinkedIn, X (Twitter), TikTok. Formats ready for each. One place, all networks."
+          "question": "Is it designed for scaling ads?",
+          "answer": "Exactly. The logic behind ADNCreativo is to give you creative speed to test more angles, more variants and more formats without bottlenecks. More creatives = more data = better decisions."
         },
         {
-          "question": "Can I use multiple brands or clients?",
-          "answer": "Yes. One account, multiple sites. Change the URL and generate for another brand in a tap."
-        },
-        {
-          "question": "Where is everything stored?",
-          "answer": "On our servers. You don't have to configure anything. Log in, paste URL, generate."
-        },
-        {
-          "question": "Why use it now?",
-          "answer": "Every day you publish creatives that aren't recognized as yours, you lose sales and recognition. Whoever unifies brand first, wins. The cost of not acting is to keep spending on ads that don't stand out."
+          "question": "Do I need prior advertising experience?",
+          "answer": "No. Just paste your brand or product URL and AI takes care of interpreting your proposition, your identity and the ad objective. Professional results without technical knowledge."
         }
       ]
     },
@@ -127,7 +135,7 @@
       "ctaTitleBrand": "on-brand",
       "ctaTitleSuffix": " AI content?",
       "ctaSubtitle": "Stop settling for generic content. Get creatives that match your brand.",
-      "disclaimer": "No credit card required • Ready in 2 minutes",
+      "disclaimer": "No credit card required · Automatic setup · Instant results",
       "privacy": "Privacy",
       "refundPolicy": "Refund Policy",
       "copyright": "© {{year}} Vibiz Inc. All rights reserved."
@@ -203,7 +211,22 @@
     "noCreatives": "No creatives yet. Use the «Generate 1 creative» button to create one from your headlines (images are generated in different formats: 4:5, 1:1, 9:16, 3:4).",
     "generateOne": "Generate 1 creative",
     "generating": "Generating…",
-    "unlock": "Unlock"
+    "errorGenerating": "Error generating. Make sure you have headlines or sales angles.",
+    "noHeadlinesOrAngles": "To generate creatives you need headlines or sales angles first.",
+    "generateSalesAngles": "Generate sales angles",
+    "generateSalesAnglesLoading": "Generating angles…",
+    "runFullGeneration": "Run full workspace generation",
+    "runFullGenerationLoading": "Starting…",
+    "fullGenerationStarted": "Workspace generation is running in the background. Refresh in a few minutes and try «Generate 1 creative» again.",
+    "unlock": "Unlock",
+    "properties": "Properties",
+    "aspectRatio": "Aspect Ratio",
+    "version": "Version",
+    "platform": "Platform",
+    "prompt": "Prompt",
+    "versionOf": "{{current}} of {{total}}",
+    "copyPrompt": "Copy prompt",
+    "resizeImage": "Resize image"
   },
   "gallery": {
     "title": "Reference Gallery",

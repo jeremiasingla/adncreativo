@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { analyzeImageToJson } from "../services/llm.service.js";
+import { analyzeImageToJson, generateCreativeImageSeedream } from "../services/llm.service.js";
 import { getAllReferences } from "../db/referenceGalleryDb.js";
 import { createReference } from "../db/referenceGalleryDb.js";
 import { uploadToBlob, uploadImageFromUrl } from "../utils/blobStorage.js";
@@ -31,7 +31,7 @@ export async function analyzeImage(req, res) {
     const json = await analyzeImageToJson(trimmed);
     return res.json({ success: true, data: json });
   } catch (err) {
-    const status = err.message?.includes("OPENROUTER_API_KEY")
+    const status = err.message?.includes("VERTEX_API_KEY")
       ? 503
       : err.message?.includes("required")
         ? 400
@@ -143,5 +143,43 @@ export async function createReferenceGalleryItem(req, res) {
   } catch (err) {
     console.error("createReferenceGalleryItem:", err.message);
     return res.status(500).json({ success: false, error: err.message });
+  }
+}
+
+/**
+ * POST /vision/generate-image
+ * Body: { prompt: string, aspectRatio?: string }
+ * Genera una imagen creativa usando FLUX (Seedream).
+ */
+export async function generateImage(req, res) {
+  try {
+    const { prompt, aspectRatio = "4:5" } = req.body || {};
+    if (!prompt || typeof prompt !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: "Se requiere 'prompt' en el body.",
+      });
+    }
+
+    const imageDataUrl = await generateCreativeImageSeedream(prompt, aspectRatio);
+    if (!imageDataUrl) {
+      return res.status(502).json({
+        success: false,
+        error: "No se pudo generar la imagen.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        imageUrl: imageDataUrl,
+      },
+    });
+  } catch (err) {
+    console.error("generateImage error:", err.message);
+    return res.status(500).json({
+      success: false,
+      error: err.message || "Error al generar la imagen.",
+    });
   }
 }

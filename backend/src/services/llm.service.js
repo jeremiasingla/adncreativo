@@ -110,9 +110,9 @@ function normalizeMessagesForModel(messages, model) {
       content:
         typeof userMsg.content === "object" && Array.isArray(userMsg.content)
           ? [
-              { type: "text", text: combined },
-              ...userMsg.content.filter((p) => p.type !== "text"),
-            ]
+            { type: "text", text: combined },
+            ...userMsg.content.filter((p) => p.type !== "text"),
+          ]
           : combined,
     },
   ];
@@ -120,10 +120,10 @@ function normalizeMessagesForModel(messages, model) {
 
 /**
  * Modelo único para texto/visión (branding, knowledge, perfiles, headlines, ángulos, creativos).
- * Variable: OPENROUTER_MODEL. Por defecto: google/gemini-3-flash-preview
+ * Por defecto: gemini-2.0-flash-lite-preview-02-05.
  */
 function getTextModel() {
-  return process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
+  return "gemini-2.0-flash-lite-preview-02-05";
 }
 
 function getKnowledgeBaseModel() {
@@ -140,14 +140,25 @@ function getHeadlinesModel() {
 
 /**
  * Modelo para tareas creativas: sales angles y prompts de imagen (visual spec).
- * Por defecto: Gemini 3 Pro (thinking). Variable: OPENROUTER_CREATIVE_MODEL.
+ * Por defecto: gemini-2.0-flash-lite-preview-02-05.
  */
 function getCreativeModel() {
-  return (
-    process.env.OPENROUTER_CREATIVE_MODEL ||
-    "google/gemini-3-pro-preview"
-  );
+  return "gemini-2.0-flash-lite-preview-02-05";
 }
+
+const BRAND_ADAPT_SYSTEM_PROMPT = `You are a Senior Creative Director and Prompt Engineer.
+Your goal is to adapt a "Visual DNA" (Creative Spec) from a reference advertisement to a specific brand.
+
+RULES:
+1. Replace ANY specific original brands, logos, or unique product features from the reference with the NEW brand's information.
+2. Use generic but descriptive terms for the brand's assets:
+   - Instead of "Nike logo", use "BRAND LOGO".
+   - Instead of "Coca-Cola bottle", use "BRAND PRODUCT".
+3. Integrate the new brand's colors and headline into the visual description.
+4. Maintain the same camera angle, lighting, mood, and composition as the reference.
+5. If the reference is in a different language, translate the visual descriptions to English, but keep the visible AD COPY in the requested content language.
+6. The output MUST be a valid JSON object following the IMG-2-JSON-V4 structure.
+7. Focus heavily on rewriting 'dalle_flux_natural_prompt' and 'midjourney_prompt' in 'generative_reconstruction'.`;
 
 /** True si el modelo soporta entrada multimodal (imagen). */
 function modelSupportsVision(model) {
@@ -171,62 +182,170 @@ export function getContentLanguage(brandingOrLang) {
   return "es-AR";
 }
 
-/** Modelo de respaldo en caso de 429 (rate limit). Debe ser gratuito. */
+/** Modelo de respaldo en caso de 429 (rate limit). */
 function getTextModelFallback() {
-  return process.env.OPENROUTER_MODEL_FALLBACK || "google/gemma-3-4b-it:free";
+  return "gemini-2.0-flash-lite-preview-02-05";
 }
 
-const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+const VERTEX_MODEL_URL = process.env.VERTEX_MODEL_URL;
+const VERTEX_API_KEY = process.env.VERTEX_API_KEY;
+const VERTEX_IMAGEN_URL = process.env.VERTEX_IMAGEN_URL;
+const VERTEX_IMAGEN_MODEL = process.env.VERTEX_IMAGEN_MODEL || "imagen-3.0-generate-001";
 
 /**
- * POST a OpenRouter chat/completions. En 429 (rate limit) o 402 (créditos) reintenta una vez con OPENROUTER_MODEL_FALLBACK.
- * Si el fallback es Gemma, normaliza mensajes (sin system) y quita response_format.
- * @returns {{ response: import("axios").AxiosResponse, modelUsed: string }}
+ * Genera una imagen corporativa/creativa usando Vertex AI Imagen 3.
+ * @param {string} prompt - Prompt en inglés.
+ * @param {string} aspectRatio - "1:1", "9:16", "16:9", "4:3", "3:4".
+ * @returns {Promise<string|null>} - data URL base64.
  */
-async function openRouterChatPost(requestBody, headers) {
-  const fallback = getTextModelFallback();
-  try {
-    const response = await axios.post(OPENROUTER_CHAT_URL, requestBody, {
-      headers,
-    });
-    return { response, modelUsed: requestBody.model };
-  } catch (err) {
-    const status = err.response?.status;
-    const useFallback =
-      (status === 429 || status === 402) &&
-      fallback &&
-      requestBody.model !== fallback;
-    if (useFallback) {
-      console.log(
-        "[LLM]",
-        status === 402 ? "402 insufficient credits" : "429 rate limit",
-        ", retrying with fallback model:",
-        fallback,
-      );
-      const fallbackBody = { ...requestBody, model: fallback };
-      delete fallbackBody.response_format;
-      if (Array.isArray(fallbackBody.messages)) {
-        fallbackBody.messages = normalizeMessagesForModel(
-          fallbackBody.messages,
-          fallback,
-        );
+async function vertexImagePost(prompt, aspectRatio = "1:1") {
+  // Imagen 3 supports specific ratios
+  const allowed = ["1:1", "9:16", "16:9", "4:3", "3:4"];
+  // Map some common variations
+  let ratio = aspectRatio;
+  if (ratio === "4:5") ratio = "3:4";
+  if (ratio === "21:9") ratio = "16:9";
+  if (!allowed.includes(ratio)) ratio = "1:1";
+
+  const url = `${VERTEX_IMAGEN_URL}?key=${VERTEX_API_KEY}`;
+  const body = {
+    instances: [
+      {
+        prompt: prompt,
       }
-      const response = await axios.post(OPENROUTER_CHAT_URL, fallbackBody, {
-        headers,
-      });
-      return { response, modelUsed: fallback };
+    ],
+    parameters: {
+      sampleCount: 1,
+      aspectRatio: ratio,
+      outputOptions: {
+        mimeType: "image/png"
+      }
     }
+  };
+
+  try {
+    const response = await axios.post(url, body);
+    const prediction = response.data?.predictions?.[0];
+    if (prediction?.bytesBase64Encoded) {
+      return `data:image/png;base64,${prediction.bytesBase64Encoded}`;
+    }
+    console.warn("[LLM] Vertex Imagen: No image in response", response.data);
+    return null;
+  } catch (err) {
+    console.error("[LLM] Vertex Imagen error:", err.response?.data || err.message);
+    return null;
+  }
+}
+
+/**
+ * Mapea mensajes formato OpenAI a formato Vertex AI (Gemini).
+ */
+function mapMessagesToVertex(messages) {
+  const contents = [];
+  let systemInstruction = null;
+
+  for (const m of messages) {
+    if (m.role === "system") {
+      systemInstruction = {
+        parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }]
+      };
+    } else {
+      const role = m.role === "assistant" ? "model" : "user";
+      const parts = [];
+      if (Array.isArray(m.content)) {
+        for (const p of m.content) {
+          if (p.type === "text") {
+            parts.push({ text: p.text });
+          } else if (p.type === "image_url") {
+            // Vertex requiere base64 directo o GCS. Si es data:image, lo extraemos.
+            const url = p.image_url?.url || "";
+            if (url.startsWith("data:")) {
+              const [header, data] = url.split(",");
+              const mimeType = header.split(";")[0].split(":")[1];
+              parts.push({
+                inlineData: {
+                  mimeType,
+                  data
+                }
+              });
+            } else {
+              // Si no es base64, intentamos pasarlo como texto o ignoramos si Vertex no llega a la URL
+              parts.push({ text: `[Image Reference: ${url}]` });
+            }
+          }
+        }
+      } else {
+        parts.push({ text: String(m.content) });
+      }
+      contents.push({ role, parts });
+    }
+  }
+  return { contents, systemInstruction };
+}
+
+/**
+ * POST a Vertex AI. Maneja el stream o respuesta única mapeando a formato OpenAI.
+ */
+async function vertexChatPost(requestBody) {
+  const { contents, systemInstruction } = mapMessagesToVertex(requestBody.messages);
+
+  const vertexBody = {
+    contents,
+    systemInstruction,
+    generationConfig: {
+      temperature: requestBody.temperature ?? 0.2,
+      maxOutputTokens: requestBody.max_tokens ?? 2048,
+      responseMimeType: requestBody.response_format?.type === "json_object" ? "application/json" : "text/plain",
+    }
+  };
+
+  const url = `${VERTEX_MODEL_URL}?key=${VERTEX_API_KEY}`;
+
+  try {
+    const response = await axios.post(url, vertexBody);
+
+    // Si la URL es de stream, los datos vienen en un array de chunks
+    let fullText = "";
+    let usage = { prompt_tokens: 0, completion_tokens: 0, total_cost: 0 };
+
+    if (Array.isArray(response.data)) {
+      for (const chunk of response.data) {
+        fullText += chunk.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        if (chunk.usageMetadata) {
+          usage.prompt_tokens = chunk.usageMetadata.promptTokenCount || usage.prompt_tokens;
+          usage.completion_tokens = chunk.usageMetadata.candidatesTokenCount || usage.completion_tokens;
+        }
+      }
+    } else {
+      fullText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (response.data.usageMetadata) {
+        usage.prompt_tokens = response.data.usageMetadata.promptTokenCount;
+        usage.completion_tokens = response.data.usageMetadata.candidatesTokenCount;
+      }
+    }
+
+    // Adaptar respuesta al formato que espera el resto del código (OpenAI-like)
+    return {
+      modelUsed: requestBody.model,
+      response: {
+        data: {
+          choices: [{ message: { content: fullText } }],
+          usage: {
+            prompt_tokens: usage.prompt_tokens,
+            completion_tokens: usage.completion_tokens,
+            total_cost: 0 // Vertex no devuelve costo directo fácilmente
+          }
+        }
+      }
+    };
+  } catch (err) {
+    console.error("[LLM] Vertex error:", err.response?.data || err.message);
     throw err;
   }
 }
 
 export async function refineBrandingWithLLM(input) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getTextModel();
-
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is missing");
-  }
 
   const buildUserContent = (includeScreenshot) => {
     const { screenshot, ...inputWithoutScreenshot } = input;
@@ -308,10 +427,6 @@ Example (structure only):
     ),
   });
 
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
 
   const hasScreenshot = Boolean(input?.screenshot);
   const { screenshot: _s, ...inputForText } = input;
@@ -335,20 +450,19 @@ Example (structure only):
     Boolean(input?.screenshot) && modelSupportsVision(model);
 
   try {
-    const result = await openRouterChatPost(
-      requestBody(includeScreenshot),
-      headers,
+    const result = await vertexChatPost(
+      requestBody(includeScreenshot)
     );
     response = result.response;
     modelUsed = result.modelUsed;
   } catch (err) {
-    const status = err.response?.status;
     if (process.env.NODE_ENV !== "production") {
-      console.error("[LLM] OpenRouter error:", err.message, "status:", status);
+      console.error("[LLM] Vertex error:", err.message);
     }
-    if (status === 400 && includeScreenshot) {
+    // Si falla con imagen, reintentamos sin imagen (Vertex a veces falla en multimodal si la imagen es pesada)
+    if (includeScreenshot) {
       try {
-        const result = await openRouterChatPost(requestBody(false), headers);
+        const result = await vertexChatPost(requestBody(false));
         response = result.response;
         modelUsed = result.modelUsed;
       } catch (retryErr) {
@@ -456,9 +570,7 @@ const IMG_2_JSON_V4_SYSTEM_PROMPT = `**System Role:** You are IMG-2-JSON-V4, a h
  * @returns {Promise<object>} - Objeto JSON con meta_parameters, technical_analysis, aesthetic_dna, composition_grid, entities, generative_reconstruction
  */
 export async function analyzeImageToJson(imageUrl) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getCreativeModel();
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing");
   if (!imageUrl || typeof imageUrl !== "string") throw new Error("imageUrl is required (data URL or https URL)");
 
   const userContent = [
@@ -471,14 +583,9 @@ export async function analyzeImageToJson(imageUrl) {
     messages: normalizeMessagesForModel(messages, model),
     response_format: modelSupportsVision(model) ? { type: "json_object" } : undefined,
   };
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-    "HTTP-Referer": process.env.APP_URL || "https://adncreativo.com",
-  };
 
   const startTime = Date.now();
-  const { response, modelUsed } = await openRouterChatPost(requestBody, headers);
+  const { response, modelUsed } = await vertexChatPost(requestBody);
 
   const usage = response.data?.usage;
   if (usage) {
@@ -631,12 +738,7 @@ export function normalizeVisualDnaToCreativeSpec(visualDna, branding = {}) {
 
 /** Genera la base de conocimiento del negocio a partir de url + branding + metadata (solo texto, sin imagen). */
 export async function generateKnowledgeBase(input) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getKnowledgeBaseModel();
-
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is missing");
-  }
 
   const startTime = Date.now();
   const text = JSON.stringify(input);
@@ -697,14 +799,9 @@ Return ONLY the document text. No preamble, no explanations, no metadata.`;
     messages: messagesForModel(model, kbSystemPrompt, [{ type: "text", text }]),
   };
 
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
 
-  const { response, modelUsed } = await openRouterChatPost(
-    requestBody,
-    headers,
+  const { response, modelUsed } = await vertexChatPost(
+    requestBody
   );
 
   // Trackear métricas de costo
@@ -734,12 +831,7 @@ Return ONLY the document text. No preamble, no explanations, no metadata.`;
 
 /** Genera 5 customer profiles (ICP) a partir de la base de conocimiento y branding. */
 export async function generateCustomerProfiles(input) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getProfilesModel();
-
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is missing");
-  }
 
   const startTime = Date.now();
   const currentDate = new Date();
@@ -824,14 +916,9 @@ If any required field is missing or the count is incorrect, the output is invali
     ),
   };
 
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
 
-  const { response, modelUsed } = await openRouterChatPost(
-    requestBody,
-    headers,
+  const { response, modelUsed } = await vertexChatPost(
+    requestBody
   );
 
   // Trackear métricas de costo
@@ -872,12 +959,7 @@ If any required field is missing or the count is incorrect, the output is invali
  * All internal prompts are in English; output language is contentLanguage (fallback Spanish Argentina).
  */
 export async function generateHeadlines(input) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getHeadlinesModel();
-
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is missing");
-  }
 
   const startTime = Date.now();
   const {
@@ -932,14 +1014,9 @@ ${voseoRule}
     ),
   };
 
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
 
-  const { response, modelUsed } = await openRouterChatPost(
-    requestBody,
-    headers,
+  const { response, modelUsed } = await vertexChatPost(
+    requestBody
   );
 
   // Trackear métricas de costo
@@ -986,9 +1063,7 @@ ${voseoRule}
  * @returns {Promise<SalesAngle[]>}
  */
 export async function generateSalesAngles(input) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getCreativeModel();
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing");
 
   const {
     companyName = "",
@@ -1049,15 +1124,10 @@ Generate 12–24 varied angles. Output ONLY a JSON object with key "angles" (arr
     ),
   };
 
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
 
   const startTime = Date.now();
-  const { response, modelUsed } = await openRouterChatPost(
-    requestBody,
-    headers,
+  const { response, modelUsed } = await vertexChatPost(
+    requestBody
   );
   const usage = response.data?.usage;
   if (usage) {
@@ -1115,12 +1185,7 @@ Generate 12–24 varied angles. Output ONLY a JSON object with key "angles" (arr
  * Para FLUX/DALL·E usar generative_reconstruction.dalle_flux_natural_prompt.
  */
 export async function generateCreativeImagePrompt(input) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getCreativeModel();
-
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is missing");
-  }
 
   const startTime = Date.now();
   const {
@@ -1275,14 +1340,9 @@ RULES: Use EXACT headline from input (contentLanguage). The headline/hook that a
     ),
   };
 
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
 
-  const { response, modelUsed } = await openRouterChatPost(
-    requestBody,
-    headers,
+  const { response, modelUsed } = await vertexChatPost(
+    requestBody
   );
 
   const usage = response.data?.usage;
@@ -1492,19 +1552,14 @@ export async function expandIdeaToVisualSpec(
   aspectRatio = "4:5",
   options = {},
 ) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getCreativeModel();
-
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is missing");
-  }
 
   const contentLanguage =
     typeof options === "string"
       ? getContentLanguage(options)
       : getContentLanguage(
-          options?.contentLanguage ?? options?.branding ?? "es-AR",
-        );
+        options?.contentLanguage ?? options?.branding ?? "es-AR",
+      );
 
   const startTime = Date.now();
   const ratio =
@@ -1531,14 +1586,9 @@ export async function expandIdeaToVisualSpec(
     response_format: { type: "json_object" },
   };
 
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
 
-  const { response, modelUsed } = await openRouterChatPost(
-    requestBody,
-    headers,
+  const { response, modelUsed } = await vertexChatPost(
+    requestBody
   );
 
   const usage = response.data?.usage;
@@ -1592,9 +1642,7 @@ export async function expandAngleToVisualSpec(
   aspectRatio = "4:5",
   options = null,
 ) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
   const model = getCreativeModel();
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is missing");
 
   const hookRaw = (angle?.hook || "").trim();
   const hook = hookRaw ? hookRaw.toUpperCase() : "";
@@ -1614,6 +1662,7 @@ export async function expandAngleToVisualSpec(
       : null;
   const hasLogo = Boolean(referenceAssets?.logo);
   const hasProduct = Boolean(referenceAssets?.product);
+
   const useBrandAware = hasLogo || hasProduct;
   const systemPrompt = useBrandAware
     ? VISUAL_ARCHITECT_BRAND_AWARE_SYSTEM_PROMPT
@@ -1653,16 +1702,9 @@ export async function expandAngleToVisualSpec(
     response_format: { type: "json_object" },
   };
 
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  };
-
   const startTime = Date.now();
-  const { response, modelUsed } = await openRouterChatPost(
-    requestBody,
-    headers,
-  );
+  const { response, modelUsed } = await vertexChatPost(requestBody);
+
   const usage = response.data?.usage;
   if (usage) {
     recordLLMRequest({
@@ -1700,6 +1742,58 @@ export async function expandAngleToVisualSpec(
       ` --ar ${ratio} --v 6.0 --style raw`;
   }
   return parsed;
+}
+
+/**
+ * Refines a Creative Spec (Visual DNA) by adapting it to a specific brand identity.
+ *
+ * @param {object} spec - Original Visual DNA (from reference).
+ * @param {object} branding - Brand identity object { companyName, primaryColor, headline, contentLanguage }.
+ * @returns {Promise<object>} - Refined Visual DNA.
+ */
+export async function refineCreativeSpecWithBranding(spec, branding) {
+  const model = getCreativeModel();
+  const startTime = Date.now();
+
+  const userMessage = [
+    `Original Spec: ${JSON.stringify(spec)}`,
+    `New Brand Name: ${branding?.companyName || "Generic Brand"}`,
+    `Brand Color: ${branding?.primary || "No specific color"}`,
+    `Mandatory Headline: ${branding?.headline || "No specific headline"}`,
+    `Content Language: ${branding?.contentLanguage || "es-AR"}`,
+    "Refine the spec to strip away original brand elements and replace them with this brand's identity.",
+  ].join("\n");
+
+  const requestBody = {
+    model,
+    temperature: 0.3,
+    max_tokens: 3000,
+    messages: [
+      { role: "system", content: BRAND_ADAPT_SYSTEM_PROMPT },
+      { role: "user", content: userMessage },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  const { response, modelUsed } = await vertexChatPost(requestBody);
+
+  const usage = response.data?.usage;
+  if (usage) {
+    recordLLMRequest({
+      model: modelUsed,
+      promptTokens: usage.prompt_tokens || 0,
+      completionTokens: usage.completion_tokens || 0,
+      totalCost: 0,
+      durationMs: Date.now() - startTime,
+      source: "refine_creative_spec",
+      workspaceSlug: null,
+    });
+  }
+
+  const content = response.data?.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Failed to refine creative spec");
+
+  return JSON.parse(sanitizeJsonControlChars(stripMarkdownJson(content)));
 }
 
 /**
@@ -1756,56 +1850,6 @@ export function getFluxPromptFromSpec(spec) {
   return parts.join(". ");
 }
 
-/**
- * Si OPENROUTER_FREE_ONLY=1 o true: solo imágenes ICP (avatar/hero) usan DiceBear/Picsum.
- * Los creativos (OPENROUTER_IMAGE_MODEL) no se ven afectados y usan el modelo configurado.
- */
-function isFreeOnlyMode() {
-  const v = (process.env.OPENROUTER_FREE_ONLY || "").toString().toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
-}
-
-/**
- * Modelo de imagen para creativos (Meta Ads). OPENROUTER_FREE_ONLY no aplica aquí:
- * los creativos usan siempre este modelo salvo que sea "placeholder"|"free"|"picsum".
- */
-const OPENROUTER_IMAGE_MODEL =
-  process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-4-pro-image-preview";
-
-function useFreeCreativeImage() {
-  const v = (
-    process.env.OPENROUTER_IMAGE_MODEL || "google/gemini-4-pro-image-preview"
-  )
-    .toLowerCase()
-    .trim();
-  return v === "placeholder" || v === "free" || v === "picsum" || v === "";
-}
-
-/** Dimensiones por aspect ratio para placeholder Picsum (creative). */
-const CREATIVE_PLACEHOLDER_DIMENSIONS = {
-  "1:1": [800, 800],
-  "4:5": [800, 1000],
-  "3:4": [750, 1000],
-  "9:16": [720, 1280],
-  "16:9": [1280, 720],
-  "4:3": [1067, 800],
-  "21:9": [1280, 549],
-};
-
-/**
- * Modelo de imagen para ICP (avatares y heroes).
- * FLUX.2 Klein 4B NO es gratis (~$0.015/imagen). Solo "dicebear"|"placeholder"|"free" = 0 cost.
- */
-const OPENROUTER_ICP_IMAGE_MODEL =
-  process.env.OPENROUTER_ICP_IMAGE_MODEL || "dicebear";
-
-function useFreeIcpImages() {
-  if (isFreeOnlyMode()) return true;
-  const v = (process.env.OPENROUTER_ICP_IMAGE_MODEL || "dicebear")
-    .toLowerCase()
-    .trim();
-  return v === "dicebear" || v === "placeholder" || v === "free" || v === "";
-}
 
 /** Convierte una URL de imagen en data URL base64. */
 async function fetchImageAsDataUrl(url) {
@@ -1851,7 +1895,7 @@ function buildReferenceAssetsOrder(referenceAssets) {
 }
 
 /**
- * Genera una imagen creativa con OpenRouter FLUX (ideal para Meta Ads / Instagram).
+ * Genera una imagen creativa con Vertex AI Imagen 3 (ideal para Meta Ads / Instagram).
  * @param {string} prompt - Prompt en inglés para la imagen
  * @param {string} [aspectRatio] - "4:5" | "3:4" | "1:1" | "9:16" | "16:9" etc.
  * @param {{ logo?: string|null, product?: string|null, other?: string[] } | { url: string }[] | null} [referenceAssetsOrImages] - Si es objeto { logo, product, other } se envían en ese orden con roles; si es array se mantiene compatibilidad.
@@ -1865,181 +1909,29 @@ export async function generateCreativeImageSeedream(
   opts = {},
 ) {
   const metricSource = opts?.source || "creative";
-  const allowedRatios = ["21:9", "16:9", "9:16", "4:5", "3:4", "4:3", "1:1"];
-  const requestedRatio =
-    aspectRatio && allowedRatios.includes(aspectRatio) ? aspectRatio : "4:5";
-
-  if (useFreeCreativeImage()) {
-    const [w, h] =
-      CREATIVE_PLACEHOLDER_DIMENSIONS[requestedRatio] ||
-      CREATIVE_PLACEHOLDER_DIMENSIONS["4:5"];
-    const seed = crypto
-      .createHash("md5")
-      .update(String(prompt || ""))
-      .digest("hex")
-      .slice(0, 16);
-    const url = `https://picsum.photos/seed/${seed}/${w}/${h}`;
-    console.log("[Creative image] Free placeholder (picsum):", requestedRatio);
-    try {
-      return await fetchImageAsDataUrl(url);
-    } catch (err) {
-      console.warn("[Creative image] Picsum fetch failed:", err.message);
-      return null;
-    }
-  }
-
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error(
-      "OPENROUTER_API_KEY is missing (required for FLUX creative images)",
-    );
-  }
-
-  let refUrls = [];
-  let promptPrefix = "";
-  const isAssetsObject =
-    referenceAssetsOrImages &&
-    typeof referenceAssetsOrImages === "object" &&
-    !Array.isArray(referenceAssetsOrImages) &&
-    ("logo" in referenceAssetsOrImages ||
-      "product" in referenceAssetsOrImages ||
-      "other" in referenceAssetsOrImages);
-  if (isAssetsObject) {
-    const built = buildReferenceAssetsOrder(referenceAssetsOrImages);
-    refUrls = built.urls;
-    promptPrefix = built.promptPrefix;
-  } else if (Array.isArray(referenceAssetsOrImages)) {
-    refUrls = referenceAssetsOrImages
-      .filter((img) => img?.url)
-      .map((img) => img.url);
-  }
-
-  const fullPrompt = promptPrefix + (prompt || "").trim() + NO_META_LOGO_SUFFIX;
-  const content = [{ type: "text", text: fullPrompt }];
-  refUrls.forEach((url) => {
-    content.push({ type: "image_url", image_url: { url } });
-  });
+  const fullPrompt = (prompt || "").trim() + NO_META_LOGO_SUFFIX;
 
   console.log(
-    "[Creative image] Model:",
-    OPENROUTER_IMAGE_MODEL,
-    "| Aspect:",
-    requestedRatio,
-    "| Ref images (logo/product):",
-    refUrls.length,
+    "[Creative image] Vertex Imagen 3 | Aspect:",
+    aspectRatio,
   );
 
   const startTime = Date.now();
-  const requestBody = {
-    model: OPENROUTER_IMAGE_MODEL,
-    modalities: ["image"],
-    max_tokens: 4096,
-    messages: [{ role: "user", content }],
-  };
-  if (requestedRatio) {
-    requestBody.image_config = { aspect_ratio: requestedRatio };
-  }
-
-  let response;
-  try {
-    response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      requestBody,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        validateStatus: () => true,
-      },
-    );
-  } catch (err) {
-    console.warn("[Creative image] OpenRouter request error:", err.message);
-    return null;
-  }
-
+  const imageDataUrl = await vertexImagePost(fullPrompt, aspectRatio);
   const durationMs = Date.now() - startTime;
 
-  const usage = response.data?.usage;
-  const totalCost = usage?.total_cost;
-  if (response.status === 200 && (usage || totalCost !== undefined)) {
+  if (imageDataUrl) {
     recordImageGeneration({
-      model: OPENROUTER_IMAGE_MODEL,
-      size: requestedRatio,
-      aspectRatio: requestedRatio,
+      model: VERTEX_IMAGEN_MODEL,
+      size: aspectRatio,
+      aspectRatio: aspectRatio,
       durationMs,
       source: metricSource,
-      estimatedUsd: totalCost ?? null,
+      estimatedUsd: 0,
     });
   }
 
-  if (response.status !== 200) {
-    const msg =
-      response.data?.error?.message ??
-      response.data?.message ??
-      response.statusText;
-    console.warn("[Creative image] OpenRouter error:", response.status, msg);
-    if (response.data && typeof response.data === "object") {
-      console.warn(
-        "[Creative image] Response data (keys):",
-        Object.keys(response.data),
-      );
-      if (response.data.error)
-        console.warn("[Creative image] Error object:", response.data.error);
-    }
-    return null;
-  }
-
-  const message = response.data?.choices?.[0]?.message;
-  const images = message?.images;
-  if (!Array.isArray(images) || images.length === 0) {
-    console.warn("[Creative image] No image in OpenRouter response");
-    console.warn(
-      "[Creative image] message keys:",
-      message ? Object.keys(message) : "no message",
-    );
-    console.warn(
-      "[Creative image] choices[0] keys:",
-      response.data?.choices?.[0]
-        ? Object.keys(response.data.choices[0])
-        : "no choice",
-    );
-    return null;
-  }
-
-  const first = images[0];
-  if (typeof first === "string" && first.startsWith("data:")) {
-    return first;
-  }
-  if (typeof first?.b64_json === "string") {
-    return `data:image/png;base64,${first.b64_json}`;
-  }
-  if (typeof first?.url === "string") {
-    return first.url;
-  }
-  const imageUrl =
-    typeof first?.image_url === "string"
-      ? first.image_url
-      : first?.image_url?.url;
-  if (
-    typeof imageUrl === "string" &&
-    (imageUrl.startsWith("http") || imageUrl.startsWith("data:"))
-  ) {
-    if (imageUrl.startsWith("data:")) return imageUrl;
-    try {
-      return await fetchImageAsDataUrl(imageUrl);
-    } catch (err) {
-      console.warn("[Creative image] Failed to fetch image_url:", err.message);
-      return null;
-    }
-  }
-  console.warn(
-    "[Creative image] Image item format not recognized. typeof first:",
-    typeof first,
-    "keys:",
-    typeof first === "object" && first !== null ? Object.keys(first) : "-",
-  );
-  return null;
+  return imageDataUrl;
 }
 
 /** @deprecated Usar generateCreativeImageSeedream. Conservado por compatibilidad. */
@@ -2056,164 +1948,28 @@ const DEBUG_ICP_IMAGE =
 /**
  * Genera una imagen para ICP (avatar o hero/banner).
  * Si OPENROUTER_ICP_IMAGE_MODEL es "dicebear"|"placeholder"|"free": usa avatares/banners gratis (DiceBear + Picsum).
- * Si no: usa OpenRouter FLUX (consume créditos).
+ * Si no: usa Vertex AI Imagen 3 (consume créditos).
  * @param {string} prompt - Descripción en texto para la imagen
  * @param {string} aspectRatio - "1:1" (avatar) o "21:9" (hero/banner)
  * @returns {Promise<string|null>} - data URL base64 (data:image/png;base64,...) o null
  */
 export async function generateProfileImage(prompt, aspectRatio = "1:1") {
-  if (useFreeIcpImages()) {
-    const seed = crypto
-      .createHash("md5")
-      .update(String(prompt || ""))
-      .digest("hex")
-      .slice(0, 16);
-    if (aspectRatio === "21:9" || aspectRatio === "16:9") {
-      const w = 840;
-      const h = 360;
-      const url = `https://picsum.photos/seed/${seed}/${w}/${h}`;
-      console.log("[ICP image] Free banner (picsum):", url);
-      try {
-        return await fetchImageAsDataUrl(url);
-      } catch (err) {
-        console.warn("[ICP image] Picsum fetch failed:", err.message);
-        return null;
-      }
-    }
-    const url = `https://api.dicebear.com/7.x/avataaars/png?seed=${seed}&size=256`;
-    console.log("[ICP image] Free avatar (dicebear):", url);
-    try {
-      return await fetchImageAsDataUrl(url);
-    } catch (err) {
-      console.warn("[ICP image] DiceBear fetch failed:", err.message);
-      return null;
-    }
-  }
-
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error("OPENROUTER_API_KEY is missing");
-  }
+  console.log("[ICP image] Vertex Imagen 3 | Aspect:", aspectRatio);
 
   const startTime = Date.now();
-  const requestBody = {
-    model: OPENROUTER_ICP_IMAGE_MODEL,
-    modalities: ["image"],
-    max_tokens: 4096,
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  };
+  const imageDataUrl = await vertexImagePost(prompt, aspectRatio);
+  const durationMs = Date.now() - startTime;
 
-  if (
-    aspectRatio &&
-    (aspectRatio === "21:9" || aspectRatio === "16:9" || aspectRatio === "1:1")
-  ) {
-    requestBody.image_config = { aspect_ratio: aspectRatio };
-  }
-
-  console.log("[ICP image] Request:", {
-    model: OPENROUTER_ICP_IMAGE_MODEL,
-    modalities: requestBody.modalities,
-    aspectRatio,
-    promptLength: prompt?.length ?? 0,
-    promptPreview: (prompt || "").slice(0, 80) + "...",
-  });
-
-  let response;
-  try {
-    response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      requestBody,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        validateStatus: () => true,
-      },
-    );
-  } catch (err) {
-    console.error("[ICP image] Request error:", err.message);
-    if (err.response) {
-      console.error("[ICP image] Response status:", err.response.status);
-      console.error(
-        "[ICP image] Response data:",
-        JSON.stringify(err.response.data, null, 2),
-      );
-    }
-    throw err;
-  }
-
-  // Trackear métricas (solo para respuestas exitosas con usage)
-  const usage = response.data?.usage;
-  if (usage && response.status === 200) {
-    const promptTokens = usage.prompt_tokens || 0;
-    const completionTokens = usage.completion_tokens || 0;
-    const totalCost = usage.total_cost || 0;
+  if (imageDataUrl) {
     recordImageGeneration({
-      model: OPENROUTER_ICP_IMAGE_MODEL,
+      model: VERTEX_IMAGEN_MODEL,
       size: aspectRatio,
       aspectRatio,
-      durationMs: Date.now() - startTime,
+      durationMs,
       source: "profiles",
-      estimatedUsd: totalCost,
+      estimatedUsd: 0,
     });
   }
 
-  console.log("[ICP image] Response status:", response.status);
-  if (response.status !== 200) {
-    console.error("[ICP image] Error response status:", response.status);
-    console.error(
-      "[ICP image] Error response data:",
-      JSON.stringify(response.data, null, 2),
-    );
-    console.error(
-      "[ICP image] Error response headers:",
-      JSON.stringify(response.headers, null, 2),
-    );
-  }
-
-  if (response.status !== 200) {
-    const msg =
-      response.data?.error?.message ??
-      response.data?.message ??
-      response.statusText;
-    const errorDetails = {
-      status: response.status,
-      message: msg,
-      data: response.data,
-      model: OPENROUTER_ICP_IMAGE_MODEL,
-      aspectRatio,
-    };
-    console.error(
-      "[ICP image] Full error details:",
-      JSON.stringify(errorDetails, null, 2),
-    );
-    throw new Error(`OpenRouter image: ${response.status} - ${msg}`);
-  }
-
-  const message = response.data?.choices?.[0]?.message;
-  const images = message?.images;
-  if (!Array.isArray(images) || images.length === 0) {
-    console.log(
-      "[ICP image] No images in response. message keys:",
-      message ? Object.keys(message) : "no message",
-    );
-    return null;
-  }
-  const first = images[0];
-  const url = first?.image_url?.url ?? first?.imageUrl?.url;
-  if (typeof url === "string" && url.startsWith("data:")) {
-    console.log("[ICP image] Got image, data URL length:", url.length);
-    return url;
-  }
-  console.log(
-    "[ICP image] First image structure:",
-    JSON.stringify(Object.keys(first || {})),
-  );
-  return null;
+  return imageDataUrl;
 }
