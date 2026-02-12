@@ -114,11 +114,11 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
             aria-label={t("sidebar.expand")}
           >
             <img
-              alt="Vibiz"
+              alt="Aura Studio"
               width={24}
               height={24}
               decoding="async"
-              src="/images/logo-vibiz-no-background.svg"
+              src="/images/favicon-red.svg"
               className="w-6 h-6 shrink-0 group-hover:hidden"
               style={{ color: "transparent" }}
             />
@@ -129,11 +129,11 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="flex items-center justify-center shrink-0 pl-1">
                 <img
-                  alt="Vibiz"
+                  alt="Aura Studio"
                   width={24}
                   height={24}
                   decoding="async"
-                  src="/images/logo-vibiz-no-background.svg"
+                  src="/images/favicon-red.svg"
                   className="w-6 h-6 shrink-0"
                   style={{ color: "transparent" }}
                 />

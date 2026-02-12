@@ -1001,7 +1001,7 @@ export default function Workspace() {
                 letterSpacing: "-0.16px",
                 textAlign: "start",
                 fontFamily:
-                  '"Inter Tight", "Inter Tight Fallback", ui-sans-serif, sans-serif, system-ui',
+                  '"Geist", ui-sans-serif, sans-serif, system-ui',
               }}
             >
               {isCreativeDetail ? (

@@ -533,9 +533,9 @@ export default function Home() {
                 </span>
               </div>
               <div className="card-figma p-5 w-full max-w-[220px]">
-                <div className="w-14 h-14 mx-auto mb-4 bg-cyan-50 rounded-xl flex items-center justify-center">
+                <div className="w-14 h-14 mx-auto mb-4 bg-red-50 rounded-xl flex items-center justify-center">
                   <svg
-                    className="w-7 h-7 text-cyan-500 animate-spin"
+                    className="w-7 h-7 text-primary animate-spin"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -691,7 +691,7 @@ export default function Home() {
                       <circle cx="18" cy="6" r="1.5" fill="currentColor" />
                     </svg>
                   </div>
-                  <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
+                  <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-sm">
                     <svg
                       className="w-4 h-4 text-white"
                       viewBox="0 0 24 24"
@@ -1044,18 +1044,18 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Vibiz logo */}
+              {/* Aura Studio logo */}
               <div className="flex items-center -ml-4 sm:-ml-6 md:-ml-8">
                 <div className="z-10 flex items-center justify-center rounded-full circle-figma size-14 sm:size-20 md:size-28 p-2 sm:p-3 md:p-4">
                   <img
-                    alt="Vibiz"
+                    alt="Aura Studio"
                     loading="lazy"
                     width="64"
                     height="64"
                     decoding="async"
                     className="w-full h-full object-contain"
                     style={{ color: "transparent" }}
-                    src="/images/logo-vibiz-no-background.svg"
+                    src="/images/aura-red.svg"
                   />
                 </div>
               </div>

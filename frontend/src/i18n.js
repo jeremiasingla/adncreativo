@@ -3,7 +3,7 @@ import { initReactI18next } from "react-i18next";
 import es from "./locales/es.json";
 import en from "./locales/en.json";
 
-const STORAGE_KEY = "adncreativo_lang";
+const STORAGE_KEY = "aura_studio_lang";
 
 function getStoredLanguage() {
   try {

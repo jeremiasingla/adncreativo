@@ -40,7 +40,7 @@ export default function Footer({ value = "", onChange = () => {}, onSubmit = (e)
       />
       <div
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/images/Footer.png')" }}
+        style={{ backgroundImage: "url('/images/bg-footer.webp')" }}
         aria-hidden
       />
       <div
@@ -77,7 +77,7 @@ export default function Footer({ value = "", onChange = () => {}, onSubmit = (e)
           <div className="flex flex-col items-center gap-4 sm:gap-6">
             <div className="flex items-center gap-4 sm:gap-6 flex-wrap justify-center">
               <a
-                href="https://discord.com/invite/N9dGY8gf3y"
+                href="#"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-black/90 hover:text-black transition-colors cursor-pointer"
@@ -88,7 +88,7 @@ export default function Footer({ value = "", onChange = () => {}, onSubmit = (e)
                 </svg>
               </a>
               <a
-                href="https://www.instagram.com/vibiz.ai/"
+                href="#"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-black/90 hover:text-black transition-colors cursor-pointer"
@@ -101,7 +101,7 @@ export default function Footer({ value = "", onChange = () => {}, onSubmit = (e)
                 </svg>
               </a>
               <a
-                href="https://www.tiktok.com/@vibiz.ai"
+                href="#"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-black/90 hover:text-black transition-colors cursor-pointer"
@@ -112,7 +112,7 @@ export default function Footer({ value = "", onChange = () => {}, onSubmit = (e)
                 </svg>
               </a>
               <a
-                href="https://x.com/vibiz_ai"
+                href="#"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-black/90 hover:text-black transition-colors cursor-pointer"
@@ -123,7 +123,7 @@ export default function Footer({ value = "", onChange = () => {}, onSubmit = (e)
                 </svg>
               </a>
               <a
-                href="https://www.linkedin.com/company/vibizai/"
+                href="#"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-black/90 hover:text-black transition-colors cursor-pointer"

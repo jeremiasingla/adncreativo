@@ -155,14 +155,14 @@ export default function Header({ onOpenSignIn }) {
             aria-label={t("nav.goHome")}
           >
             <img
-              alt="Vibiz"
+              alt="Aura Studio"
               loading="lazy"
-              width={100}
-              height={24}
+              width={scrolled ? 112 : 140}
+              height={scrolled ? 32 : 40}
               decoding="async"
-              className="object-contain vibiz-logo h-6 w-auto"
+              className={`object-contain vibiz-logo w-auto transition-all duration-300 ${scrolled ? "h-8" : "h-10"}`}
               style={{ color: "transparent" }}
-              src="/images/logo-vibiz-no-background.svg"
+              src="/images/aura-red.svg"
             />
           </Link>
           <button
@@ -199,14 +199,14 @@ export default function Header({ onOpenSignIn }) {
                 aria-label={t("nav.goHome")}
               >
                 <img
-                  alt="Vibiz"
+                  alt="Aura Studio"
                   loading="lazy"
-                  width={100}
-                  height={24}
+                  width={scrolled ? 100 : 125}
+                  height={scrolled ? 32 : 40}
                   decoding="async"
-                  className="object-contain vibiz-logo h-6 w-auto"
+                  className={`object-contain vibiz-logo w-auto transition-all duration-300 ${scrolled ? "h-8" : "h-10"}`}
                   style={{ color: "transparent" }}
-                  src="/images/logo-vibiz-no-background.svg"
+                  src="/images/aura-red.svg"
                 />
               </Link>
             </div>

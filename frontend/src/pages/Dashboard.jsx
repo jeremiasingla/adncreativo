@@ -109,7 +109,7 @@ export default function Dashboard() {
       <section className="relative min-h-screen w-full lg:min-h-0 lg:h-[100dvh] flex flex-col items-center justify-center isolate bg-white">
         <HeroBackground />
         <div
-          className="relative z-10 min-h-screen w-full lg:h-[100dvh] flex flex-col items-center justify-center"
+          className="relative z-10 min-h-screen w-full lg:h-[100dvh] flex flex-col justify-between"
           style={{
             paddingTop:
               "max(10rem, calc(env(safe-area-inset-top, 0px) + 10rem))",
@@ -117,61 +117,90 @@ export default function Dashboard() {
               "max(4rem, calc(env(safe-area-inset-bottom, 0px) + 4rem))",
           }}
         >
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center mt-8 sm:mt-12 lg:mt-0">
-            <h1
-              data-gsap="hero-title"
-              className="text-5xl sm:text-6xl md:text-7xl font-bold mb-3 sm:mb-4 text-black leading-tight font-serif text-center transition-[800ms] ease-out"
-              style={{ opacity: 1, transform: "translate(0px, 0px)" }}
-            >
-              <em>Bienvenido de nuevo, {displayName}!</em>
-            </h1>
-            <p
-              data-gsap="hero-subtitle"
-              className="text-lg sm:text-xl md:text-2xl text-black mb-6 sm:mb-8 transition-[800ms] ease-out"
-              style={{ opacity: 1, transform: "translate(0px, 0px)" }}
-            >
-              Ingresá tu sitio web para crear contenido acorde con tu marca o
-              seleccioná un espacio de trabajo.
-            </p>
-          </div>
+          {/* Contenido del hero (arriba) */}
+          <div className="flex flex-col items-center flex-shrink-0">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+              <h1
+                data-gsap="hero-title"
+                className="text-5xl sm:text-6xl md:text-7xl font-bold mb-3 sm:mb-4 text-black leading-tight font-serif text-center transition-[800ms] ease-out"
+                style={{ opacity: 1, transform: "translate(0px, 0px)" }}
+              >
+                <em>Bienvenido de nuevo, {displayName}!</em>
+              </h1>
+              <p
+                data-gsap="hero-subtitle"
+                className="text-lg sm:text-xl md:text-2xl text-black mb-6 sm:mb-8 transition-[800ms] ease-out"
+                style={{ opacity: 1, transform: "translate(0px, 0px)" }}
+              >
+                Ingresá tu sitio web para crear contenido acorde con tu marca o
+                seleccioná un espacio de trabajo.
+              </p>
+            </div>
 
-          <div
-            data-gsap="hero-input"
-            className="w-full px-4 sm:px-6 mb-8 sm:mb-12 lg:mb-0"
-          >
             <div
-              className="max-w-md mx-auto transition-[800ms] ease-out"
-              style={{ opacity: 1, transform: "translate(0px, 0px)" }}
+              data-gsap="hero-input"
+              className="w-full px-4 sm:px-6"
             >
-              <WebsiteUrlInput
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-                onSubmit={handleSubmit}
-                className="max-w-md mx-auto"
-              />
+              <div
+                className="max-w-md mx-auto transition-[800ms] ease-out"
+                style={{ opacity: 1, transform: "translate(0px, 0px)" }}
+              >
+                <WebsiteUrlInput
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  onSubmit={handleSubmit}
+                  className="max-w-md mx-auto"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Your Workspaces – cards como en la referencia */}
+          {/* Your Workspaces – caja full-width con efecto vidrio (abajo) */}
           {!workspacesLoading && workspaces.length > 0 && (
             <div
-              className="max-w-7xl mx-auto px-6 w-full mt-16"
+              className="w-full px-4 sm:px-6 flex-shrink-0"
               style={{
                 transition: "800ms ease-out",
                 opacity: 1,
                 transform: "translate(0px, 0px)",
               }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-sans text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  Tus espacios de trabajo
-                </h2>
-                <span className="font-sans text-sm text-muted-foreground">
-                  {workspaces.length}{" "}
-                  {workspaces.length === 1 ? "espacio" : "espacios"}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:hidden">
+              {/* Contenedor con efecto vidrio */}
+              <div 
+                className="max-w-7xl mx-auto rounded-2xl overflow-hidden"
+                style={{
+                  backdropFilter: "blur(4px) saturate(140%)",
+                  WebkitBackdropFilter: "blur(4x) saturate(140%)",
+                  background: "rgba(255, 255, 255, 0.5)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6)",
+                }}
+              >
+                {/* Header con título y badge de contador */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+                  <h2 className="font-sans text-base font-semibold text-foreground">
+                    Tus espacios de trabajo
+                  </h2>
+                  <div 
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-b from-background to-muted/30 border border-border/50 shadow-sm"
+                    style={{
+                      backdropFilter: "blur(8px)",
+                      WebkitBackdropFilter: "blur(8px)",
+                    }}
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <span className="font-mono text-sm font-medium text-foreground">
+                      {workspaces.length}
+                    </span>
+                    <span className="font-sans text-xs text-muted-foreground">
+                      {workspaces.length === 1 ? "espacio" : "espacios"}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Grid de workspaces */}
+                <div className="p-6">
+                <div className="grid grid-cols-1 gap-3 md:hidden">
                 {workspaces.map((ws) => (
                   <div key={ws.id} style={{ opacity: 1, transform: "none" }}>
                     <div
@@ -210,10 +239,10 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="hidden md:block">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  ))}
+                </div>
+                <div className="hidden md:block">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {workspaces.map((ws) => (
                     <div key={ws.id} style={{ opacity: 1, transform: "none" }}>
                       <div
@@ -252,7 +281,9 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    ))}
+                  </div>
+                </div>
                 </div>
               </div>
             </div>

@@ -106,7 +106,7 @@ const FORMALITY_OPTIONS = [
 ];
 
 const FONT_OPTIONS = [
-  "Inter",
+  "Geist",
   "Roboto",
   "Open Sans",
   "Lato",
@@ -135,7 +135,7 @@ const FONT_OPTIONS = [
   "Verdana",
 ];
 
-// Mismos estilos que el sidebar: gradient, sombras, tipografía (14px, 600, line-height 20px, letter-spacing -0.16px, Inter Tight)
+// Mismos estilos que el sidebar: gradient, sombras, tipografía (14px, 600, line-height 20px, letter-spacing -0.16px, Geist)
 const popupButtonPrimary =
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold leading-5 tracking-[-0.16px] font-sans text-center ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer bg-gradient-to-b from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:translate-y-[-1px] active:translate-y-[1px] active:shadow-[0_2px_8px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.1),inset_0_-1px_0_rgba(0,0,0,0.1)] border border-primary/50";
 const popupButtonIcon =
@@ -1224,7 +1224,7 @@ export default function BrandingView({ branding }) {
                           fontWeight: 400,
                           letterSpacing: "-0.16px",
                           fontFamily:
-                            '"Inter Tight", "Inter Tight Fallback", ui-sans-serif, sans-serif, system-ui',
+                            '"Geist", ui-sans-serif, sans-serif, system-ui',
                         }}
                         onClick={(e) => e.stopPropagation()}
                         role="dialog"

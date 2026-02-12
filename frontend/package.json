@@ -1,5 +1,5 @@
 {
-  "name": "brand-web",
+  "name": "aura-studio-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,6 +11,7 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.60.0",
     "@clerk/localizations": "^3.35.3",
+    "@paper-design/shaders-react": "^0.0.71",
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.0",
     "framer-motion": "^12.29.2",

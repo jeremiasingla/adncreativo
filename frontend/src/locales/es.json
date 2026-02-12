@@ -102,7 +102,7 @@
       "items": [
         {
           "question": "¿Sirve para tráfico frío?",
-          "answer": "Sí. ADNCreativo genera creativos pensados para captar la atención de prospectos que aún no te conocen. Imágenes y copy diseñados para detener el scroll y generar clics desde campañas de tráfico frío."
+          "answer": "Sí. Aura Studio genera creativos pensados para captar la atención de prospectos que aún no te conocen. Imágenes y copy diseñados para detener el scroll y generar clics desde campañas de tráfico frío."
         },
         {
           "question": "¿Puedo usar los creativos en campañas reales?",
@@ -110,7 +110,7 @@
         },
         {
           "question": "¿Reemplaza a un diseñador o lo complementa?",
-          "answer": "Lo complementa. ADNCreativo acelera la producción de variantes para testear, iterar y escalar. Si tenés diseñador, libera su tiempo para tareas estratégicas. Si no tenés, te da creativos profesionales en minutos."
+          "answer": "Lo complementa. Aura Studio acelera la producción de variantes para testear, iterar y escalar. Si tenés diseñador, libera su tiempo para tareas estratégicas. Si no tenés, te da creativos profesionales en minutos."
         },
         {
           "question": "¿Cuántos creativos puedo generar?",
@@ -118,7 +118,7 @@
         },
         {
           "question": "¿Está pensado para escalar ads?",
-          "answer": "Exactamente. La lógica detrás de ADNCreativo es darte velocidad creativa para testear más ángulos, más variantes y más formatos sin cuello de botella. Más creativos = más datos = mejores decisiones."
+          "answer": "Exactamente. La lógica detrás de Aura Studio es darte velocidad creativa para testear más ángulos, más variantes y más formatos sin cuello de botella. Más creativos = más datos = mejores decisiones."
         },
         {
           "question": "¿Necesito experiencia previa en publicidad?",
@@ -138,7 +138,7 @@
       "disclaimer": "No pedimos tarjeta · Configuración automática · Resultados inmediatos",
       "privacy": "Privacidad",
       "refundPolicy": "Política de reembolso",
-      "copyright": "© {{year}} Vibiz Inc. Todos los derechos reservados."
+      "copyright": "© {{year}} Aura Studio. Todos los derechos reservados."
     }
   },
   "pricing": {

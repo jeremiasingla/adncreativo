@@ -1949,7 +1949,7 @@ export async function generateOneCreativeFromAngleBySlug(slug, angleIndex = 0) {
 }
 
 /**
- * Devuelve los creativos del workspace en formato "versions" (compatible con ADNCreativo).
+ * Devuelve los creativos del workspace en formato "versions" (compatible con Aura Studio).
  * GET /workspaces/:slug/creatives/versions?adId=...&orgId=... (adId y orgId opcionales).
  */
 export async function getCreativeVersions(req, res) {

@@ -13,11 +13,28 @@ module.exports = {
         border: "var(--border)",
         ring: "var(--ring)",
         primary: {
-          DEFAULT: "#1e9df1",
+          DEFAULT: "#EA3019",
+          dark: "#A91D0B",
+          medium: "#C8240F",
+          light: "#FA351D",
           foreground: "#fff",
         },
-        secondary: "var(--secondary)",
-        "secondary-foreground": "var(--secondary-foreground)",
+        secondary: {
+          DEFAULT: "#121212",
+          foreground: "#fff",
+        },
+        gray: {
+          darkest: "#121212",
+          dark: "#2B2B2B",
+          medium: "#3D3D3D",
+          light: "#545454",
+        },
+        neutral: {
+          lightest: "#FFFFFF",
+          light: "#F7F7F7",
+          medium: "#F4F4F4",
+          dark: "#ECECEC",
+        },
       },
       keyframes: {
         float: {
@@ -50,8 +67,8 @@ module.exports = {
       },
       fontFamily: {
         sans: [
-          "var(--font-inter)",
-          "Inter Tight",
+          "var(--font-geist)",
+          "Geist",
           "ui-sans-serif",
           "sans-serif",
           "system-ui",
@@ -69,8 +86,8 @@ module.exports = {
           "serif",
         ],
         mono: [
-          "var(--font-jetbrains-mono)",
-          "JetBrains Mono",
+          "var(--font-geist-mono)",
+          "Geist Mono",
           "ui-monospace",
           "monospace",
         ],

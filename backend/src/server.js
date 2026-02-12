@@ -57,7 +57,7 @@ const icpHeroesDir = path.resolve(__dirname, "../storage/icp-heroes");
 app.use("/icp-avatars", express.static(icpAvatarsDir));
 app.use("/icp-heroes", express.static(icpHeroesDir));
 
-// Versiones de creativos (compatible ADNCreativo) – antes del static para que no capture /creatives/versions
+// Versiones de creativos (compatible Aura Studio) – antes del static para que no capture /creatives/versions
 // TEMPORALMENTE COMENTADO PARA DEBUG:
 // app.get("/creatives/versions", authMiddleware, getCreativeVersionsByOrgId);
 
@@ -95,7 +95,7 @@ if (frontendExists) {
   app.get("/", (_, res) =>
     res.status(404).json({
       error: "Not found",
-      message: "Usa la URL del frontend (adncreativo-frontend.vercel.app).",
+      message: "Usa la URL del frontend (aura-studio-frontend.vercel.app).",
     }),
   );
 }
