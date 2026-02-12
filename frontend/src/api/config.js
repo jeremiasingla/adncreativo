@@ -3,7 +3,8 @@
  * VITE_API_URL="" = rutas relativas (proxy de Vite en dev).
  */
 const env = import.meta.env.VITE_API_URL;
-export const API_BASE = env === "" ? "" : env;
+const apiBase = env === "" || typeof env === "undefined" ? "/api" : env;
+export const API_BASE = apiBase;
 
 export function apiUrl(path) {
   const p = path.startsWith("/") ? path : `/${path}`;

@@ -48,7 +48,7 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
   const [showUserPopup, setShowUserPopup] = React.useState(false);
   const userButtonRef = React.useRef(null);
   const popupRef = React.useRef(null);
-  
+
   const safeWorkspace = workspace ?? {};
   const { name: workspaceName = "Espacio", logoUrl, slug } = safeWorkspace;
   const displayName =
@@ -311,7 +311,9 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
       </nav>
 
       {/* Pie: usuario */}
-      <div className={`py-5 border-t border-neutral-100 space-y-3 ${pxBar} relative`}>
+      <div
+        className={`py-5 border-t border-neutral-100 space-y-3 ${pxBar} relative`}
+      >
         <div
           ref={userButtonRef}
           onClick={toggleUserPopup}
@@ -365,7 +367,9 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
               {/* User preview */}
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0 w-[22px] h-[22px] rounded-full overflow-hidden bg-neutral-200 text-neutral-700 flex items-center justify-center font-semibold text-[10px]">
-                  {(user?.name?.trim() || user?.email || "U").slice(0, 1).toUpperCase()}
+                  {(user?.name?.trim() || user?.email || "U")
+                    .slice(0, 1)
+                    .toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-medium text-neutral-900 truncate">
@@ -378,10 +382,7 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
               </div>
             </div>
             {/* Actions */}
-            <div
-              className="border-t border-neutral-100 py-1"
-              role="menu"
-            >
+            <div className="border-t border-neutral-100 py-1" role="menu">
               <Link
                 to="/billing"
                 role="menuitem"

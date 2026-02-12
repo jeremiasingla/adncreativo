@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useMemo, useCallback, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useCallback,
+  useState,
+  useEffect,
+} from "react";
 import { apiUrl } from "../api/config.js";
 
 const AuthContext = createContext(null);
@@ -29,7 +36,9 @@ export function AuthProvider({ children }) {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback(async (email, password) => {
@@ -70,14 +79,10 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(
     () => ({ user, loading, login, register, logout, setUser }),
-    [user, loading, login, register, logout, setUser]
+    [user, loading, login, register, logout, setUser],
   );
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

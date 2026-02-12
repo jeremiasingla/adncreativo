@@ -20,6 +20,10 @@ const Login = lazy(() => import("./pages/Login"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const OnboardingValidate = lazy(() => import("./pages/OnboardingValidate"));
 const Workspace = lazy(() => import("./pages/Workspace"));
+const AdminLayout = lazy(() => import("./components/AdminLayout"));
+const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const AdminUserDetail = lazy(() => import("./pages/AdminUserDetail"));
+const AdminOverview = lazy(() => import("./pages/AdminOverview"));
 
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
@@ -89,6 +93,31 @@ function AuthOnly({ children }) {
   return children;
 }
 
+function AdminOnly({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return <FullScreenLoadingSpinner />;
+  }
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (user.role !== "admin") {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+        <div className="max-w-md text-center">
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Acceso denegado
+          </h1>
+          <p className="text-sm text-gray-500 mt-2">
+            Este panel es solo para administradores.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  return children;
+}
+
 /** Evita que /login se trate como workspace. */
 function WorkspaceOrRedirect() {
   const { workspaceSlug } = useParams();
@@ -104,10 +133,12 @@ function AppLayout() {
   const firstSegment = segments[0];
   const navigate = useNavigate();
   const isWorkspaceRoute =
-    !["onboarding", "pricing", "login"].includes(firstSegment) &&
+    !["onboarding", "pricing", "login", "admin"].includes(firstSegment) &&
     segments.length >= 1;
   const hideHeader =
-    pathname === "/onboarding/step/validate" || isWorkspaceRoute;
+    pathname === "/onboarding/step/validate" ||
+    isWorkspaceRoute ||
+    firstSegment === "admin";
 
   const langKey = i18n.language?.startsWith("en") ? "en" : "es";
 
@@ -117,7 +148,27 @@ function AppLayout() {
       <Suspense fallback={<FullScreenLoadingSpinner />} key={langKey}>
         <Routes>
           <Route path="/" element={<RootRoute />} />
-          <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
+          <Route
+            path="/login"
+            element={
+              <GuestOnly>
+                <Login />
+              </GuestOnly>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <AdminOnly>
+                <AdminLayout />
+              </AdminOnly>
+            }
+          >
+            <Route index element={<Navigate to="/admin/users" replace />} />
+            <Route path="overview" element={<AdminOverview />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="users/:userId" element={<AdminUserDetail />} />
+          </Route>
           <Route path="/pricing" element={<Pricing />} />
           <Route
             path="/onboarding/step/validate"

@@ -31,9 +31,7 @@ export default function Login() {
     } catch (err) {
       const msg = err?.message || "invalid_credentials";
       setError(
-        msg === "invalid_credentials"
-          ? "Correo o contraseña incorrectos"
-          : msg
+        msg === "invalid_credentials" ? "Correo o contraseña incorrectos" : msg,
       );
     } finally {
       setLoading(false);
@@ -74,9 +72,7 @@ export default function Login() {
           </Link>
 
           <div className="w-full max-w-md mx-auto px-4 sm:px-6">
-            <h1
-              className="text-3xl sm:text-4xl font-bold mb-2 text-center font-instrument-serif bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-500 bg-clip-text text-transparent"
-            >
+            <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-center font-instrument-serif bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-500 bg-clip-text text-transparent">
               Iniciar sesión
             </h1>
             <p className="text-black/60 text-sm text-center mb-6">

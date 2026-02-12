@@ -6,9 +6,7 @@ import { apiUrl } from "./config.js";
  */
 export async function fetchWithAuth(input, init = {}) {
   const url =
-    typeof input === "string" && input.startsWith("/")
-      ? apiUrl(input)
-      : input;
+    typeof input === "string" && input.startsWith("/") ? apiUrl(input) : input;
   const opts = {
     ...init,
     credentials: init.credentials ?? "include",

@@ -38,11 +38,16 @@ export default function Header({ onOpenSignIn }) {
   const isHome = pathname === "/";
   const isPricing = pathname === "/pricing";
   const currentLang = i18nInstance.language?.startsWith("en") ? "en" : "es";
-  const currentLangLabel = HEADER_LANGUAGE_OPTIONS.find((o) => o.code === currentLang)?.label ?? "Español";
+  const currentLangLabel =
+    HEADER_LANGUAGE_OPTIONS.find((o) => o.code === currentLang)?.label ??
+    "Español";
   const [scrolled, setScrolled] = React.useState(false);
   const [showUserPopup, setShowUserPopup] = React.useState(false);
   const [languageOpen, setLanguageOpen] = React.useState(false);
-  const [popupPosition, setPopupPosition] = React.useState({ top: 0, right: 0 });
+  const [popupPosition, setPopupPosition] = React.useState({
+    top: 0,
+    right: 0,
+  });
   const avatarButtonRef = React.useRef(null);
   const popupRef = React.useRef(null);
   const languageButtonRef = React.useRef(null);
@@ -118,7 +123,8 @@ export default function Header({ onOpenSignIn }) {
     };
   }, [showUserPopup, languageOpen]);
 
-  const displayName = user?.name?.trim() || user?.email?.split("@")[0] || "Usuario";
+  const displayName =
+    user?.name?.trim() || user?.email?.split("@")[0] || "Usuario";
 
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const innerNavStyle = scrolled ? innerNavScrolled : innerNavInitial;
@@ -145,7 +151,10 @@ export default function Header({ onOpenSignIn }) {
 
   return (
     <>
-      <header className="fixed left-0 right-0 z-50 px-6 py-2" style={{ top: 40 }}>
+      <header
+        className="fixed left-0 right-0 z-50 px-6 py-2"
+        style={{ top: 40 }}
+      >
         <div className="md:hidden flex items-center justify-between">
           <Link
             to="/"
@@ -174,7 +183,19 @@ export default function Header({ onOpenSignIn }) {
             aria-label={t("nav.toggleMenu")}
             onClick={() => setMobileMenuOpen((o) => !o)}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" aria-hidden>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width={24}
+              height={24}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5"
+              aria-hidden
+            >
               <path d="M4 5h16" />
               <path d="M4 12h16" />
               <path d="M4 19h16" />
@@ -296,7 +317,9 @@ export default function Header({ onOpenSignIn }) {
                   aria-label={t("nav.userMenu")}
                   aria-expanded={showUserPopup}
                 >
-                  {(user?.name?.trim() || user?.email || "U").slice(0, 1).toUpperCase()}
+                  {(user?.name?.trim() || user?.email || "U")
+                    .slice(0, 1)
+                    .toUpperCase()}
                 </button>
               ) : (
                 <button
@@ -325,13 +348,16 @@ export default function Header({ onOpenSignIn }) {
               right: popupPosition.right,
               zIndex: 9999,
               animation: "fadeInUp 0.25s ease-out",
-              boxShadow: "0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)",
+              boxShadow:
+                "0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)",
             }}
           >
             <div className="cl-userButtonPopoverMain">
               <div className="flex items-center gap-3 px-4 pt-4 pb-3">
                 <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden bg-neutral-200 text-neutral-700 flex items-center justify-center text-sm font-medium">
-                  {(user?.name?.trim() || user?.email || "U").slice(0, 1).toUpperCase()}
+                  {(user?.name?.trim() || user?.email || "U")
+                    .slice(0, 1)
+                    .toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-medium text-neutral-900 truncate">
@@ -343,6 +369,26 @@ export default function Header({ onOpenSignIn }) {
                 </div>
               </div>
               <div role="menu" className="border-t border-border py-1">
+                {user?.role === "admin" && (
+                  <Link
+                    to="/admin"
+                    role="menuitem"
+                    onClick={() => setShowUserPopup(false)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+                  >
+                    <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-current">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 16 16"
+                        className="w-4 h-4"
+                        fill="currentColor"
+                      >
+                        <path d="M8 1.75a.75.75 0 0 1 .75.75v4.75h4.75a.75.75 0 0 1 0 1.5H8.75v4.75a.75.75 0 0 1-1.5 0V8.75H2.5a.75.75 0 0 1 0-1.5h4.75V2.5A.75.75 0 0 1 8 1.75Z" />
+                      </svg>
+                    </span>
+                    Panel admin
+                  </Link>
+                )}
                 <button
                   type="button"
                   role="menuitem"
@@ -353,8 +399,17 @@ export default function Header({ onOpenSignIn }) {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
                 >
                   <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-current">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-4 h-4" fill="currentColor">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M2.6 2.604A2.045 2.045 0 0 1 4.052 2h3.417c.544 0 1.066.217 1.45.604.385.387.601.911.601 1.458v.69c0 .413-.334.75-.746.75a.748.748 0 0 1-.745-.75v-.69a.564.564 0 0 0-.56-.562H4.051a.558.558 0 0 0-.56.563v7.875a.564.564 0 0 0 .56.562h3.417a.558.558 0 0 0 .56-.563v-.671c0-.415.333-.75.745-.75s.746.335.746.75v.671c0 .548-.216 1.072-.6 1.459a2.045 2.045 0 0 1-1.45.604H4.05a2.045 2.045 0 0 1-1.45-.604A2.068 2.068 0 0 1 2 11.937V4.064c0-.548.216-1.072.6-1.459Zm8.386 3.116a.743.743 0 0 1 1.055 0l1.74 1.75a.753.753 0 0 1 0 1.06l-1.74 1.75a.743.743 0 0 1-1.055 0 .753.753 0 0 1 0-1.06l.467-.47H5.858A.748.748 0 0 1 5.112 8c0-.414.334-.75.746-.75h5.595l-.467-.47a.753.753 0 0 1 0-1.06Z" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 16 16"
+                      className="w-4 h-4"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                        d="M2.6 2.604A2.045 2.045 0 0 1 4.052 2h3.417c.544 0 1.066.217 1.45.604.385.387.601.911.601 1.458v.69c0 .413-.334.75-.746.75a.748.748 0 0 1-.745-.75v-.69a.564.564 0 0 0-.56-.562H4.051a.558.558 0 0 0-.56.563v7.875a.564.564 0 0 0 .56.562h3.417a.558.558 0 0 0 .56-.563v-.671c0-.415.333-.75.745-.75s.746.335.746.75v.671c0 .548-.216 1.072-.6 1.459a2.045 2.045 0 0 1-1.45.604H4.05a2.045 2.045 0 0 1-1.45-.604A2.068 2.068 0 0 1 2 11.937V4.064c0-.548.216-1.072.6-1.459Zm8.386 3.116a.743.743 0 0 1 1.055 0l1.74 1.75a.753.753 0 0 1 0 1.06l-1.74 1.75a.743.743 0 0 1-1.055 0 .753.753 0 0 1 0-1.06l.467-.47H5.858A.748.748 0 0 1 5.112 8c0-.414.334-.75.746-.75h5.595l-.467-.47a.753.753 0 0 1 0-1.06Z"
+                      />
                     </svg>
                   </span>
                   {t("common.signOut")}
@@ -362,7 +417,7 @@ export default function Header({ onOpenSignIn }) {
               </div>
             </div>
           </div>,
-          document.body
+          document.body,
         )}
     </>
   );

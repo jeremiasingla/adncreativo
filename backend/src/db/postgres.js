@@ -2,6 +2,7 @@
  * Siempre usa Neon Postgres. Connection string: DATABASE_URL (Neon) o POSTGRES_URL.
  */
 import pg from "pg";
+import crypto from "crypto";
 const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
@@ -44,24 +45,108 @@ export async function query(sql, params) {
 let usersTableInitialized = false;
 let workspacesTableInitialized = false;
 let workspacesMigrationDone = false;
+let userSessionsTableInitialized = false;
 
 /** Crea la tabla users en Postgres si no existe (Neon/Vercel). Debe ejecutarse antes de initPostgresWorkspaces. */
 export async function initPostgresUsers() {
-  if (!pool || usersTableInitialized) return;
+  if (!pool) return;
+  try {
+    if (!usersTableInitialized) {
+      await query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          email TEXT UNIQUE NOT NULL,
+          password TEXT NOT NULL,
+          name TEXT,
+          role TEXT NOT NULL DEFAULT 'user',
+          created_at BIGINT NOT NULL,
+          last_login_at BIGINT,
+          last_login_ip TEXT,
+          last_login_user_agent TEXT
+        )
+      `);
+      usersTableInitialized = true;
+    }
+    await ensureUserColumns();
+  } catch (err) {
+    console.warn("⚠️ initPostgresUsers:", err.message);
+  }
+}
+
+export async function initUserSessions() {
+  if (!pool || userSessionsTableInitialized) return;
   try {
     await query(`
-      CREATE TABLE IF NOT EXISTS users (
+      CREATE TABLE IF NOT EXISTS user_sessions (
         id SERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        name TEXT,
-        role TEXT NOT NULL DEFAULT 'user',
+        user_id TEXT NOT NULL,
+        device_key TEXT NOT NULL,
+        ip TEXT,
+        user_agent TEXT,
+        first_seen_at BIGINT NOT NULL,
+        last_seen_at BIGINT NOT NULL,
         created_at BIGINT NOT NULL
       )
     `);
-    usersTableInitialized = true;
+    await query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS user_sessions_user_device_key
+       ON user_sessions (user_id, device_key)`,
+    );
+    userSessionsTableInitialized = true;
   } catch (err) {
-    console.warn("⚠️ initPostgresUsers:", err.message);
+    console.warn("⚠️ initUserSessions:", err.message);
+  }
+}
+
+function buildDeviceKey(ip, userAgent) {
+  const raw = `${ip || "unknown"}|${userAgent || "unknown"}`;
+  return crypto.createHash("sha1").update(raw).digest("hex");
+}
+
+export async function recordUserSession({ userId, ip, userAgent, now }) {
+  if (!userId) return;
+  const ts = now || Date.now();
+  const deviceKey = buildDeviceKey(ip, userAgent);
+  try {
+    await initPostgresUsers();
+    await initUserSessions();
+    await query(
+      `INSERT INTO user_sessions
+        (user_id, device_key, ip, user_agent, first_seen_at, last_seen_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (user_id, device_key)
+       DO UPDATE SET
+         ip = EXCLUDED.ip,
+         user_agent = EXCLUDED.user_agent,
+         last_seen_at = EXCLUDED.last_seen_at`,
+      [userId, deviceKey, ip || null, userAgent || null, ts, ts, ts],
+    );
+  } catch (err) {
+    console.warn("⚠️ recordUserSession:", err.message);
+  }
+}
+
+async function ensureUserColumns() {
+  const columns = [
+    { name: "last_login_at", type: "BIGINT" },
+    { name: "last_login_ip", type: "TEXT" },
+    { name: "last_login_user_agent", type: "TEXT" },
+    { name: "updated_at", type: "BIGINT" },
+    { name: "image_url", type: "TEXT" },
+  ];
+  for (const col of columns) {
+    try {
+      const info = await query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_name = 'users' AND column_name = $1`,
+        [col.name],
+      );
+      if (!info.rows || info.rows.length === 0) {
+        await query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+      }
+    } catch (err) {
+      console.warn("⚠️ ensureUserColumns:", err.message);
+    }
   }
 }
 
@@ -70,7 +155,7 @@ export async function initPostgresWorkspaces() {
   if (!pool || workspacesTableInitialized) return;
   try {
     await initPostgresUsers();
-    
+
     // Crear tabla si no existe
     await query(`
       CREATE TABLE IF NOT EXISTS workspaces (
@@ -89,7 +174,7 @@ export async function initPostgresWorkspaces() {
         clerk_org_id TEXT
       )
     `);
-    
+
     workspacesTableInitialized = true;
 
     await initReferenceGalleryTable();
@@ -150,12 +235,12 @@ async function runWorkspaceMigrations() {
         FROM information_schema.columns 
         WHERE table_name = 'workspaces' AND column_name = 'user_id'
       `);
-      
+
       if (columnInfo.rows && columnInfo.rows[0]) {
         const currentType = columnInfo.rows[0].data_type.toLowerCase();
-        
+
         // Si es integer, convertir a text
-        if (currentType === 'integer') {
+        if (currentType === "integer") {
           if (process.env.NODE_ENV !== "production") {
             console.log("[postgres] Migrating user_id from integer to text...");
           }
@@ -178,7 +263,7 @@ async function runWorkspaceMigrations() {
     } catch (migErr) {
       console.warn("[DEBUG] user_id migration:", migErr.message);
     }
-    
+
     // Verificar y agregar clerk_org_id si no existe
     try {
       const clerkOrgIdInfo = await query(`
@@ -186,7 +271,7 @@ async function runWorkspaceMigrations() {
         FROM information_schema.columns 
         WHERE table_name = 'workspaces' AND column_name = 'clerk_org_id'
       `);
-      
+
       if (!clerkOrgIdInfo.rows || clerkOrgIdInfo.rows.length === 0) {
         await query(`
           ALTER TABLE workspaces 

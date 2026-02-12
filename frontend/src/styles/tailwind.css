@@ -12,35 +12,35 @@
   --card-foreground: #121212;
   --popover: #ffffff;
   --popover-foreground: #121212;
-  --primary: #EA3019;
+  --primary: #ea3019;
   --primary-foreground: #fff;
-  --primary-dark: #A91D0B;
-  --primary-medium: #C8240F;
-  --primary-light: #FA351D;
+  --primary-dark: #a91d0b;
+  --primary-medium: #c8240f;
+  --primary-light: #fa351d;
   --secondary: #121212;
   --secondary-foreground: #fff;
   --muted: #f4f4f4;
   --muted-foreground: #545454;
-  --accent: #ECECEC;
-  --accent-foreground: #EA3019;
-  --destructive: #C8240F;
+  --accent: #ececec;
+  --accent-foreground: #ea3019;
+  --destructive: #c8240f;
   --destructive-foreground: #fff;
-  --border: #ECECEC;
+  --border: #ececec;
   --input: #f7f7f7;
-  --ring: #EA3019;
-  --chart-1: #EA3019;
+  --ring: #ea3019;
+  --chart-1: #ea3019;
   --chart-2: #00b87a;
   --chart-3: #f7b928;
   --chart-4: #17bf63;
-  --chart-5: #A91D0B;
+  --chart-5: #a91d0b;
   --sidebar: #f7f7f7;
   --sidebar-foreground: #121212;
-  --sidebar-primary: #EA3019;
+  --sidebar-primary: #ea3019;
   --sidebar-primary-foreground: #fff;
-  --sidebar-accent: #ECECEC;
-  --sidebar-accent-foreground: #EA3019;
-  --sidebar-border: #ECECEC;
-  --sidebar-ring: #EA3019;
+  --sidebar-accent: #ececec;
+  --sidebar-accent-foreground: #ea3019;
+  --sidebar-border: #ececec;
+  --sidebar-ring: #ea3019;
   --font-instrument-serif: "Instrument Serif", serif;
   --font-geist: "Geist", sans-serif;
   --font-geist-mono: "Geist Mono", monospace;
@@ -68,7 +68,7 @@
   --shadow-2xl: 0px 2px 2px 0px #12121240;
   --tracking-normal: 0em;
   --spacing: 0.25rem;
-  --info: #EA3019;
+  --info: #ea3019;
   --info-foreground: #fff;
   --success: #17bf63;
   --success-foreground: #fff;
@@ -352,18 +352,27 @@ html,
   background: #ffffff1f;
   border: 1px solid #fff3;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 8px 32px #0000001a, inset 0 1px #ffffff4d, inset 0 -1px #0000000d;
+  box-shadow:
+    0 8px 32px #0000001a,
+    inset 0 1px #ffffff4d,
+    inset 0 -1px #0000000d;
 }
 .glass-prompt-wrap:hover {
   background: #ffffff2e;
   border-color: #ffffff4d;
-  box-shadow: 0 12px 40px #0000001f, inset 0 1px #ffffff59, inset 0 -1px #0000000d;
+  box-shadow:
+    0 12px 40px #0000001f,
+    inset 0 1px #ffffff59,
+    inset 0 -1px #0000000d;
 }
 .glass-prompt-wrap:focus-within {
   background: #ffffff38;
   border-color: #ffffff59;
-  box-shadow: 0 16px 48px #00000026, 0 0 0 2px #EA301933,
-    inset 0 1px #fff6, inset 0 -1px #0000000d;
+  box-shadow:
+    0 16px 48px #00000026,
+    0 0 0 2px #ea301933,
+    inset 0 1px #fff6,
+    inset 0 -1px #0000000d;
 }
 .glass-prompt-wrap::before {
   content: "";
@@ -414,7 +423,8 @@ html,
 
 /* Animaciones para los orbes de fondo - cada uno con patrón único */
 @keyframes float-orb-1 {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   33% {
@@ -426,7 +436,8 @@ html,
 }
 
 @keyframes float-orb-2 {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   25% {
@@ -441,7 +452,8 @@ html,
 }
 
 @keyframes float-orb-3 {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   40% {
@@ -453,7 +465,8 @@ html,
 }
 
 @keyframes float-orb-4 {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   30% {
@@ -673,13 +686,20 @@ html,
 
 /* Botón Sign in del header: gradiente secondary (#121212), texto blanco, sombras fijas */
 .btn-signin-header {
-  background: linear-gradient(to bottom, #121212, #121212, rgba(18, 18, 18, 0.8));
+  background: linear-gradient(
+    to bottom,
+    #121212,
+    #121212,
+    rgba(18, 18, 18, 0.8)
+  );
   color: #fff;
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
     inset 0 -1px 0 rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 .btn-signin-header:hover {
   box-shadow:
@@ -729,7 +749,9 @@ html,
 .card-figma {
   border: var(--border-width-lg) solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 2px 8px #00000014, inset 0 1px #ffffff80;
+  box-shadow:
+    0 2px 8px #00000014,
+    inset 0 1px #ffffff80;
 }
 @supports (color: color-mix(in lab, red, red)) {
   .card-figma {
@@ -755,7 +777,9 @@ html,
     box-shadow var(--duration-fast) var(--ease-in-out),
     background var(--duration-fast) var(--ease-in-out);
   flex-shrink: 0;
-  box-shadow: 0 2px 8px #00000014, inset 0 1px #ffffff80;
+  box-shadow:
+    0 2px 8px #00000014,
+    inset 0 1px #ffffff80;
   border-radius: var(--radius-sm);
   background: linear-gradient(to bottom, var(--background), var(--muted));
   justify-content: center;
@@ -784,7 +808,9 @@ html,
 /* Circle Figma - mismos tokens que card-figma (var hex desde :root) */
 .circle-figma {
   border: var(--border-width-lg) solid var(--border);
-  box-shadow: 0 2px 8px #00000014, inset 0 1px #ffffff80;
+  box-shadow:
+    0 2px 8px #00000014,
+    inset 0 1px #ffffff80;
 }
 @supports (color: color-mix(in lab, red, red)) {
   .circle-figma {
@@ -799,4 +825,105 @@ html,
   .circle-figma {
     background: linear-gradient(to bottom, var(--background), var(--muted));
   }
+}
+
+/* ── Activity Heatmap (react-calendar-heatmap) ── */
+.activity-heatmap-wrapper .react-calendar-heatmap {
+  width: 100%;
+}
+.activity-heatmap-wrapper .react-calendar-heatmap text {
+  fill: #6b7280;
+  font-size: 10px;
+}
+.activity-heatmap-wrapper .react-calendar-heatmap rect:hover {
+  stroke: rgba(255, 255, 255, 0.3);
+  stroke-width: 1px;
+}
+.react-calendar-heatmap .heatmap-level-0 {
+  fill: #161b22;
+}
+.react-calendar-heatmap .heatmap-level-1 {
+  fill: #0e4429;
+}
+.react-calendar-heatmap .heatmap-level-2 {
+  fill: #006d32;
+}
+.react-calendar-heatmap .heatmap-level-3 {
+  fill: #26a641;
+}
+.react-calendar-heatmap .heatmap-level-4 {
+  fill: #39d353;
+}
+
+/* Legend swatches */
+.heatmap-swatch-0 {
+  background-color: #161b22;
+}
+.heatmap-swatch-1 {
+  background-color: #0e4429;
+}
+.heatmap-swatch-2 {
+  background-color: #006d32;
+}
+.heatmap-swatch-3 {
+  background-color: #26a641;
+}
+.heatmap-swatch-4 {
+  background-color: #39d353;
+}
+
+/* ── Admin theme (light/dark) ── */
+.admin-theme {
+  background-color: #0f0f0f;
+  color: #e5e7eb;
+}
+
+.admin-theme[data-admin-theme="light"] {
+  background-color: #f7f7f7;
+  color: #111827;
+}
+
+.admin-theme[data-admin-theme="light"] .text-white {
+  color: #111827 !important;
+}
+.admin-theme[data-admin-theme="light"] .text-gray-100 {
+  color: #111827 !important;
+}
+.admin-theme[data-admin-theme="light"] .text-gray-200 {
+  color: #1f2937 !important;
+}
+.admin-theme[data-admin-theme="light"] .text-gray-300 {
+  color: #374151 !important;
+}
+.admin-theme[data-admin-theme="light"] .text-gray-400 {
+  color: #4b5563 !important;
+}
+.admin-theme[data-admin-theme="light"] .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.admin-theme[data-admin-theme="light"] .border-white\/10 {
+  border-color: #e5e7eb !important;
+}
+.admin-theme[data-admin-theme="light"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e5e7eb !important;
+}
+
+.admin-theme[data-admin-theme="light"] .bg-\[\#0f0f0f\] {
+  background-color: #f7f7f7 !important;
+}
+.admin-theme[data-admin-theme="light"] .bg-\[\#15161a\] {
+  background-color: #ffffff !important;
+}
+.admin-theme[data-admin-theme="light"] .bg-\[\#1a1a1f\] {
+  background-color: #ffffff !important;
+}
+.admin-theme[data-admin-theme="light"] .bg-\[\#1a1b20\] {
+  background-color: #ffffff !important;
+}
+.admin-theme[data-admin-theme="light"] .bg-\[\#1b1c21\] {
+  background-color: #ffffff !important;
+}
+.admin-theme[data-admin-theme="light"] .bg-\[\#111216\] {
+  background-color: #f3f4f6 !important;
 }

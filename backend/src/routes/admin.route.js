@@ -6,11 +6,36 @@ import {
   getLLMMetricsEndpoint,
   getImageMetricsEndpoint,
   clearMetrics,
+  listUsers,
+  getUserDetail,
+  getUserActivity,
+  resetUserPassword,
+  changeUserRole,
 } from "../controllers/admin.controller.js";
 
 const router = express.Router();
 
 router.get("/admin/metrics", authMiddleware, requireAdmin, getMetrics);
+router.get("/admin/users", authMiddleware, requireAdmin, listUsers);
+router.get("/admin/users/:id", authMiddleware, requireAdmin, getUserDetail);
+router.get(
+  "/admin/users/:id/activity",
+  authMiddleware,
+  requireAdmin,
+  getUserActivity,
+);
+router.put(
+  "/admin/users/:id/password",
+  authMiddleware,
+  requireAdmin,
+  resetUserPassword,
+);
+router.put(
+  "/admin/users/:id/role",
+  authMiddleware,
+  requireAdmin,
+  changeUserRole,
+);
 router.get(
   "/admin/metrics/llm",
   authMiddleware,

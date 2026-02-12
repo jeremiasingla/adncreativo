@@ -1,4 +1,4 @@
-import { query, initPostgresUsers } from "../db/postgres.js";
+import { query, initPostgresUsers, recordUserSession } from "../db/postgres.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {
@@ -23,7 +23,7 @@ function setTokens(res, user) {
   const refreshToken = jwt.sign(
     { id: user.id, email: user.email, type: "refresh" },
     REFRESH_SECRET,
-    { expiresIn: REFRESH_TOKEN_TTL }
+    { expiresIn: REFRESH_TOKEN_TTL },
   );
   res.cookie("accessToken", accessToken, {
     ...COOKIE_OPTIONS,
@@ -33,6 +33,14 @@ function setTokens(res, user) {
     ...COOKIE_OPTIONS,
     maxAge: REFRESH_COOKIE_MAX_AGE,
   });
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (forwarded) return forwarded.split(",")[0].trim();
+  const realIp = req.headers["x-real-ip"];
+  if (realIp) return realIp.trim();
+  return req.ip || null;
 }
 
 export async function register(req, res) {
@@ -64,10 +72,18 @@ export async function register(req, res) {
 
     const hashed = await bcrypt.hash(password, 10);
     const createdAt = Date.now();
+    const updatedAt = createdAt;
     const role = "user";
     const insertRes = await query(
-      "INSERT INTO users (email, password, name, role, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id",
-      [normalizedEmail, hashed, name?.trim() || null, role, createdAt]
+      "INSERT INTO users (email, password, name, role, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
+      [
+        normalizedEmail,
+        hashed,
+        name?.trim() || null,
+        role,
+        createdAt,
+        updatedAt,
+      ],
     );
     const user = {
       id: insertRes.rows[0].id,
@@ -96,13 +112,32 @@ export async function login(req, res) {
 
     const loginRes = await query(
       "SELECT id, email, password, name, role FROM users WHERE email = $1",
-      [normalizedEmail]
+      [normalizedEmail],
     );
     const row = loginRes.rows[0];
     if (!row) return res.status(401).json({ error: "invalid_credentials" });
 
     const ok = await bcrypt.compare(password, row.password);
     if (!ok) return res.status(401).json({ error: "invalid_credentials" });
+
+    const lastLoginAt = Date.now();
+    const lastLoginIp = getClientIp(req);
+    const lastLoginUserAgent = req.headers["user-agent"] || null;
+    try {
+      await query(
+        "UPDATE users SET last_login_at = $1, last_login_ip = $2, last_login_user_agent = $3, updated_at = $4 WHERE id = $5",
+        [lastLoginAt, lastLoginIp, lastLoginUserAgent, lastLoginAt, row.id],
+      );
+    } catch (err) {
+      console.warn("⚠️ last_login update:", err?.message);
+    }
+
+    recordUserSession({
+      userId: row.id,
+      ip: lastLoginIp,
+      userAgent: lastLoginUserAgent,
+      now: lastLoginAt,
+    });
 
     const user = {
       id: row.id,
@@ -129,7 +164,7 @@ export async function refresh(req, res) {
 
     const refreshRes = await query(
       "SELECT id, email, name, role FROM users WHERE id = $1",
-      [payload.id]
+      [payload.id],
     );
     const row = refreshRes.rows[0];
     if (!row) return res.status(401).json({ error: "unauthorized" });

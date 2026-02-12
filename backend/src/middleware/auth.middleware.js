@@ -1,6 +1,14 @@
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/auth.config.js";
-import { query } from "../db/postgres.js";
+import { query, recordUserSession } from "../db/postgres.js";
+
+function getClientIp(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (forwarded) return forwarded.split(",")[0].trim();
+  const realIp = req.headers["x-real-ip"];
+  if (realIp) return realIp.trim();
+  return req.ip || null;
+}
 
 /**
  * Verifica JWT desde cookie accessToken o header Authorization Bearer.
@@ -27,7 +35,7 @@ export async function authMiddleware(req, res, next) {
   try {
     const result = await query(
       "SELECT id, email, name, role FROM users WHERE id = $1",
-      [userId]
+      [userId],
     );
     const row = result.rows[0];
     if (!row) return res.status(401).json({ error: "unauthorized" });
@@ -38,6 +46,9 @@ export async function authMiddleware(req, res, next) {
       name: row.name,
       role: row.role || "user",
     };
+    const ip = getClientIp(req);
+    const userAgent = req.headers["user-agent"] || null;
+    recordUserSession({ userId: row.id, ip, userAgent, now: Date.now() });
     return next();
   } catch (err) {
     console.error("authMiddleware:", err?.message);

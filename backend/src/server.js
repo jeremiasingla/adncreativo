@@ -17,6 +17,9 @@ initPostgresWorkspaces().catch((err) =>
 
 const app = express();
 
+// Trust proxy headers (Vercel/Reverse proxy) to get real client IP
+app.set("trust proxy", 1);
+
 // CORS completo: permite todos los orígenes con credenciales
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -80,6 +83,8 @@ if (frontendExists) {
       "/",
       "/app",
       "/app/*",
+      "/admin",
+      "/admin/*",
       "/login",
       "/onboarding",
       "/onboarding/*",
