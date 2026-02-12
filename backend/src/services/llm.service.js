@@ -110,9 +110,9 @@ function normalizeMessagesForModel(messages, model) {
       content:
         typeof userMsg.content === "object" && Array.isArray(userMsg.content)
           ? [
-            { type: "text", text: combined },
-            ...userMsg.content.filter((p) => p.type !== "text"),
-          ]
+              { type: "text", text: combined },
+              ...userMsg.content.filter((p) => p.type !== "text"),
+            ]
           : combined,
     },
   ];
@@ -120,10 +120,10 @@ function normalizeMessagesForModel(messages, model) {
 
 /**
  * Modelo único para texto/visión (branding, knowledge, perfiles, headlines, ángulos, creativos).
- * Por defecto: gemini-2.0-flash-lite-preview-02-05.
+ * Por defecto: gemini-2.5-flash-lite.
  */
 function getTextModel() {
-  return "gemini-2.0-flash-lite-preview-02-05";
+  return "gemini-2.5-flash-lite";
 }
 
 function getKnowledgeBaseModel() {
@@ -140,10 +140,10 @@ function getHeadlinesModel() {
 
 /**
  * Modelo para tareas creativas: sales angles y prompts de imagen (visual spec).
- * Por defecto: gemini-2.0-flash-lite-preview-02-05.
+ * Por defecto: gemini-2.5-flash-lite.
  */
 function getCreativeModel() {
-  return "gemini-2.0-flash-lite-preview-02-05";
+  return "gemini-2.5-flash-lite";
 }
 
 const BRAND_ADAPT_SYSTEM_PROMPT = `You are a Senior Creative Director and Prompt Engineer.
@@ -184,13 +184,14 @@ export function getContentLanguage(brandingOrLang) {
 
 /** Modelo de respaldo en caso de 429 (rate limit). */
 function getTextModelFallback() {
-  return "gemini-2.0-flash-lite-preview-02-05";
+  return "gemini-2.5-flash-lite";
 }
 
 const VERTEX_MODEL_URL = process.env.VERTEX_MODEL_URL;
 const VERTEX_API_KEY = process.env.VERTEX_API_KEY;
 const VERTEX_IMAGEN_URL = process.env.VERTEX_IMAGEN_URL;
-const VERTEX_IMAGEN_MODEL = process.env.VERTEX_IMAGEN_MODEL || "imagen-3.0-generate-001";
+const VERTEX_IMAGEN_MODEL =
+  process.env.VERTEX_IMAGEN_MODEL || "imagen-3.0-generate-001";
 
 /**
  * Genera una imagen corporativa/creativa usando Vertex AI Imagen 3.
@@ -212,15 +213,15 @@ async function vertexImagePost(prompt, aspectRatio = "1:1") {
     instances: [
       {
         prompt: prompt,
-      }
+      },
     ],
     parameters: {
       sampleCount: 1,
       aspectRatio: ratio,
       outputOptions: {
-        mimeType: "image/png"
-      }
-    }
+        mimeType: "image/png",
+      },
+    },
   };
 
   try {
@@ -232,7 +233,10 @@ async function vertexImagePost(prompt, aspectRatio = "1:1") {
     console.warn("[LLM] Vertex Imagen: No image in response", response.data);
     return null;
   } catch (err) {
-    console.error("[LLM] Vertex Imagen error:", err.response?.data || err.message);
+    console.error(
+      "[LLM] Vertex Imagen error:",
+      err.response?.data || err.message,
+    );
     return null;
   }
 }
@@ -247,7 +251,14 @@ function mapMessagesToVertex(messages) {
   for (const m of messages) {
     if (m.role === "system") {
       systemInstruction = {
-        parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }]
+        parts: [
+          {
+            text:
+              typeof m.content === "string"
+                ? m.content
+                : JSON.stringify(m.content),
+          },
+        ],
       };
     } else {
       const role = m.role === "assistant" ? "model" : "user";
@@ -265,8 +276,8 @@ function mapMessagesToVertex(messages) {
               parts.push({
                 inlineData: {
                   mimeType,
-                  data
-                }
+                  data,
+                },
               });
             } else {
               // Si no es base64, intentamos pasarlo como texto o ignoramos si Vertex no llega a la URL
@@ -287,7 +298,9 @@ function mapMessagesToVertex(messages) {
  * POST a Vertex AI. Maneja el stream o respuesta única mapeando a formato OpenAI.
  */
 async function vertexChatPost(requestBody) {
-  const { contents, systemInstruction } = mapMessagesToVertex(requestBody.messages);
+  const { contents, systemInstruction } = mapMessagesToVertex(
+    requestBody.messages,
+  );
 
   const vertexBody = {
     contents,
@@ -295,8 +308,11 @@ async function vertexChatPost(requestBody) {
     generationConfig: {
       temperature: requestBody.temperature ?? 0.2,
       maxOutputTokens: requestBody.max_tokens ?? 2048,
-      responseMimeType: requestBody.response_format?.type === "json_object" ? "application/json" : "text/plain",
-    }
+      responseMimeType:
+        requestBody.response_format?.type === "json_object"
+          ? "application/json"
+          : "text/plain",
+    },
   };
 
   const url = `${VERTEX_MODEL_URL}?key=${VERTEX_API_KEY}`;
@@ -312,15 +328,18 @@ async function vertexChatPost(requestBody) {
       for (const chunk of response.data) {
         fullText += chunk.candidates?.[0]?.content?.parts?.[0]?.text || "";
         if (chunk.usageMetadata) {
-          usage.prompt_tokens = chunk.usageMetadata.promptTokenCount || usage.prompt_tokens;
-          usage.completion_tokens = chunk.usageMetadata.candidatesTokenCount || usage.completion_tokens;
+          usage.prompt_tokens =
+            chunk.usageMetadata.promptTokenCount || usage.prompt_tokens;
+          usage.completion_tokens =
+            chunk.usageMetadata.candidatesTokenCount || usage.completion_tokens;
         }
       }
     } else {
       fullText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || "";
       if (response.data.usageMetadata) {
         usage.prompt_tokens = response.data.usageMetadata.promptTokenCount;
-        usage.completion_tokens = response.data.usageMetadata.candidatesTokenCount;
+        usage.completion_tokens =
+          response.data.usageMetadata.candidatesTokenCount;
       }
     }
 
@@ -333,10 +352,10 @@ async function vertexChatPost(requestBody) {
           usage: {
             prompt_tokens: usage.prompt_tokens,
             completion_tokens: usage.completion_tokens,
-            total_cost: 0 // Vertex no devuelve costo directo fácilmente
-          }
-        }
-      }
+            total_cost: 0, // Vertex no devuelve costo directo fácilmente
+          },
+        },
+      },
     };
   } catch (err) {
     console.error("[LLM] Vertex error:", err.response?.data || err.message);
@@ -427,7 +446,6 @@ Example (structure only):
     ),
   });
 
-
   const hasScreenshot = Boolean(input?.screenshot);
   const { screenshot: _s, ...inputForText } = input;
   const textPayload = JSON.stringify(inputForText);
@@ -450,9 +468,7 @@ Example (structure only):
     Boolean(input?.screenshot) && modelSupportsVision(model);
 
   try {
-    const result = await vertexChatPost(
-      requestBody(includeScreenshot)
-    );
+    const result = await vertexChatPost(requestBody(includeScreenshot));
     response = result.response;
     modelUsed = result.modelUsed;
   } catch (err) {
@@ -571,17 +587,27 @@ const IMG_2_JSON_V4_SYSTEM_PROMPT = `**System Role:** You are IMG-2-JSON-V4, a h
  */
 export async function analyzeImageToJson(imageUrl) {
   const model = getCreativeModel();
-  if (!imageUrl || typeof imageUrl !== "string") throw new Error("imageUrl is required (data URL or https URL)");
+  if (!imageUrl || typeof imageUrl !== "string")
+    throw new Error("imageUrl is required (data URL or https URL)");
 
   const userContent = [
-    { type: "text", text: "Analyze this image and output exactly one valid JSON object following the schema. No markdown, no preamble, no explanation." },
+    {
+      type: "text",
+      text: "Analyze this image and output exactly one valid JSON object following the schema. No markdown, no preamble, no explanation.",
+    },
     { type: "image_url", image_url: { url: imageUrl } },
   ];
-  const messages = messagesForModel(model, IMG_2_JSON_V4_SYSTEM_PROMPT, userContent);
+  const messages = messagesForModel(
+    model,
+    IMG_2_JSON_V4_SYSTEM_PROMPT,
+    userContent,
+  );
   const requestBody = {
     model,
     messages: normalizeMessagesForModel(messages, model),
-    response_format: modelSupportsVision(model) ? { type: "json_object" } : undefined,
+    response_format: modelSupportsVision(model)
+      ? { type: "json_object" }
+      : undefined,
   };
 
   const startTime = Date.now();
@@ -617,18 +643,23 @@ export function buildClonePromptFromDna(visualDna, branding = {}) {
   const fluxPrompt =
     recon.flux_natural_prompt ||
     recon.dalle_flux_natural_prompt ||
-    (recon.mj_v6_prompt ? recon.mj_v6_prompt.replace(/--ar\s+[\d:]+.*$/i, "").trim() : "");
+    (recon.mj_v6_prompt
+      ? recon.mj_v6_prompt.replace(/--ar\s+[\d:]+.*$/i, "").trim()
+      : "");
   const meta = visualDna?.meta_parameters || {};
   let aspectRatio = "4:5";
   if (meta.aspect_ratio) {
-    const ar = String(meta.aspect_ratio).replace(/^--ar\s+/i, "").trim();
+    const ar = String(meta.aspect_ratio)
+      .replace(/^--ar\s+/i, "")
+      .trim();
     if (/^\d+:\d+$/.test(ar)) aspectRatio = ar;
   }
   const brandLine = branding?.companyName
     ? ` Brand: ${branding.companyName}.`
     : "";
   const colorLine =
-    branding?.primary && /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", ""))
+    branding?.primary &&
+    /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", ""))
       ? ` Use brand color ${branding.primary} for key accents where appropriate.`
       : "";
   const prompt = [
@@ -655,51 +686,96 @@ export function buildClonePromptFromDna(visualDna, branding = {}) {
 export function normalizeVisualDnaToCreativeSpec(visualDna, branding = {}) {
   if (!visualDna || typeof visualDna !== "object") {
     return {
-      meta_parameters: { aspect_ratio: "4:5", stylize_value: 250, chaos_level: "Med" },
-      technical_analysis: { medium: "Commercial Photography", camera_lens: "35mm", depth_of_field: "", lighting_type: "Soft key light", image_quality: "8k" },
-      aesthetic_dna: { art_style_reference: "", dominant_colors_hex: [], key_visual_tokens: [], mood: "" },
-      composition_grid: { A1_A3_Upper_Third: "", B1_B3_Middle_Third: "", C1_C3_Lower_Third: "" },
+      meta_parameters: {
+        aspect_ratio: "4:5",
+        stylize_value: 250,
+        chaos_level: "Med",
+      },
+      technical_analysis: {
+        medium: "Commercial Photography",
+        camera_lens: "35mm",
+        depth_of_field: "",
+        lighting_type: "Soft key light",
+        image_quality: "8k",
+      },
+      aesthetic_dna: {
+        art_style_reference: "",
+        dominant_colors_hex: [],
+        key_visual_tokens: [],
+        mood: "",
+      },
+      composition_grid: {
+        A1_A3_Upper_Third: "",
+        B1_B3_Middle_Third: "",
+        C1_C3_Lower_Third: "",
+      },
       entities: [],
-      generative_reconstruction: { midjourney_prompt: "", dalle_flux_natural_prompt: "" },
+      generative_reconstruction: {
+        midjourney_prompt: "",
+        dalle_flux_natural_prompt: "",
+      },
     };
   }
   const meta = visualDna.meta_parameters || {};
   let aspectRatio = "4:5";
   if (meta.aspect_ratio) {
-    const ar = String(meta.aspect_ratio).replace(/^--ar\s+/i, "").trim();
+    const ar = String(meta.aspect_ratio)
+      .replace(/^--ar\s+/i, "")
+      .trim();
     if (/^\d+:\d+$/.test(ar)) aspectRatio = ar;
   }
   const tech = visualDna.technical_analysis || {};
-  const lighting = tech.lighting && typeof tech.lighting === "object"
-    ? [tech.lighting.setup, tech.lighting.color_temp].filter(Boolean).join(", ")
-    : (tech.lighting_type || tech.lighting || "");
+  const lighting =
+    tech.lighting && typeof tech.lighting === "object"
+      ? [tech.lighting.setup, tech.lighting.color_temp]
+          .filter(Boolean)
+          .join(", ")
+      : tech.lighting_type || tech.lighting || "";
   const optics = typeof tech.optics === "string" ? tech.optics : "";
   const aesthetic = visualDna.aesthetic_dna || {};
-  const palette = Array.isArray(aesthetic.palette) ? aesthetic.palette : (aesthetic.dominant_colors_hex || []);
-  const materials = Array.isArray(aesthetic.materials) ? aesthetic.materials : [];
+  const palette = Array.isArray(aesthetic.palette)
+    ? aesthetic.palette
+    : aesthetic.dominant_colors_hex || [];
+  const materials = Array.isArray(aesthetic.materials)
+    ? aesthetic.materials
+    : [];
   const tokens = aesthetic.key_visual_tokens || materials.slice(0, 8);
   const grid = visualDna.composition_grid || {};
-  const entitiesRaw = Array.isArray(visualDna.entities) ? visualDna.entities : [];
+  const entitiesRaw = Array.isArray(visualDna.entities)
+    ? visualDna.entities
+    : [];
   const recon = visualDna.generative_reconstruction || {};
   const mjRaw = recon.mj_v6_prompt || recon.midjourney_prompt || "";
-  const midjourney_prompt = typeof mjRaw === "string" && mjRaw.trim()
-    ? mjRaw.replace(/\s*--ar\s+[\d:]+\s*/gi, " ").replace(/\s*--v\s+[\d.]+\s*/gi, " ").replace(/\s*--style\s+raw\s*/gi, " ").trim() + ` --ar ${aspectRatio} --v 6.0 --style raw`
-    : "";
-  let fluxPrompt = recon.flux_natural_prompt || recon.dalle_flux_natural_prompt || "";
+  const midjourney_prompt =
+    typeof mjRaw === "string" && mjRaw.trim()
+      ? mjRaw
+          .replace(/\s*--ar\s+[\d:]+\s*/gi, " ")
+          .replace(/\s*--v\s+[\d.]+\s*/gi, " ")
+          .replace(/\s*--style\s+raw\s*/gi, " ")
+          .trim() + ` --ar ${aspectRatio} --v 6.0 --style raw`
+      : "";
+  let fluxPrompt =
+    recon.flux_natural_prompt || recon.dalle_flux_natural_prompt || "";
   const replaceInstruction =
     " CRITICAL: Replace any product or logo visible in the scene with the user's brand assets provided in the reference images (first reference = logo, second = product). Keep the same camera angle, materials, and mood.";
   if (branding?.companyName || branding?.primary) {
     fluxPrompt = (fluxPrompt || "").trim() + replaceInstruction;
     if (branding.companyName) fluxPrompt += ` Brand: ${branding.companyName}.`;
-    if (branding.primary && /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", "")))
+    if (
+      branding.primary &&
+      /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", ""))
+    )
       fluxPrompt += ` Use brand color ${branding.primary} for key accents where appropriate.`;
   }
-  const dalle_flux_natural_prompt = fluxPrompt.trim() || "Recreate this exact composition, lighting, and style.";
+  const dalle_flux_natural_prompt =
+    fluxPrompt.trim() ||
+    "Recreate this exact composition, lighting, and style.";
 
   return {
     meta_parameters: {
       aspect_ratio: aspectRatio,
-      stylize_value: typeof meta.stylize_value === "number" ? meta.stylize_value : 250,
+      stylize_value:
+        typeof meta.stylize_value === "number" ? meta.stylize_value : 250,
       chaos_level: meta.chaos_level || "Med",
     },
     technical_analysis: {
@@ -710,7 +786,8 @@ export function normalizeVisualDnaToCreativeSpec(visualDna, branding = {}) {
       image_quality: tech.image_quality || "8k sharp",
     },
     aesthetic_dna: {
-      art_style_reference: meta.rendering_engine_vibe || aesthetic.art_style_reference || "",
+      art_style_reference:
+        meta.rendering_engine_vibe || aesthetic.art_style_reference || "",
       dominant_colors_hex: palette,
       key_visual_tokens: tokens,
       mood: aesthetic.mood || "",
@@ -730,7 +807,9 @@ export function normalizeVisualDnaToCreativeSpec(visualDna, branding = {}) {
       lighting_interaction: e.lighting_interaction ?? "",
     })),
     generative_reconstruction: {
-      midjourney_prompt: midjourney_prompt || `/imagine prompt: ${tech.medium || "Commercial"} --ar ${aspectRatio} --v 6.0 --style raw`,
+      midjourney_prompt:
+        midjourney_prompt ||
+        `/imagine prompt: ${tech.medium || "Commercial"} --ar ${aspectRatio} --v 6.0 --style raw`,
       dalle_flux_natural_prompt,
     },
   };
@@ -799,10 +878,7 @@ Return ONLY the document text. No preamble, no explanations, no metadata.`;
     messages: messagesForModel(model, kbSystemPrompt, [{ type: "text", text }]),
   };
 
-
-  const { response, modelUsed } = await vertexChatPost(
-    requestBody
-  );
+  const { response, modelUsed } = await vertexChatPost(requestBody);
 
   // Trackear métricas de costo
   const usage = response.data?.usage;
@@ -916,10 +992,7 @@ If any required field is missing or the count is incorrect, the output is invali
     ),
   };
 
-
-  const { response, modelUsed } = await vertexChatPost(
-    requestBody
-  );
+  const { response, modelUsed } = await vertexChatPost(requestBody);
 
   // Trackear métricas de costo
   const usage = response.data?.usage;
@@ -1014,10 +1087,7 @@ ${voseoRule}
     ),
   };
 
-
-  const { response, modelUsed } = await vertexChatPost(
-    requestBody
-  );
+  const { response, modelUsed } = await vertexChatPost(requestBody);
 
   // Trackear métricas de costo
   const usage = response.data?.usage;
@@ -1124,11 +1194,8 @@ Generate 12–24 varied angles. Output ONLY a JSON object with key "angles" (arr
     ),
   };
 
-
   const startTime = Date.now();
-  const { response, modelUsed } = await vertexChatPost(
-    requestBody
-  );
+  const { response, modelUsed } = await vertexChatPost(requestBody);
   const usage = response.data?.usage;
   if (usage) {
     recordLLMRequest({
@@ -1340,10 +1407,7 @@ RULES: Use EXACT headline from input (contentLanguage). The headline/hook that a
     ),
   };
 
-
-  const { response, modelUsed } = await vertexChatPost(
-    requestBody
-  );
+  const { response, modelUsed } = await vertexChatPost(requestBody);
 
   const usage = response.data?.usage;
   if (usage) {
@@ -1558,8 +1622,8 @@ export async function expandIdeaToVisualSpec(
     typeof options === "string"
       ? getContentLanguage(options)
       : getContentLanguage(
-        options?.contentLanguage ?? options?.branding ?? "es-AR",
-      );
+          options?.contentLanguage ?? options?.branding ?? "es-AR",
+        );
 
   const startTime = Date.now();
   const ratio =
@@ -1586,10 +1650,7 @@ export async function expandIdeaToVisualSpec(
     response_format: { type: "json_object" },
   };
 
-
-  const { response, modelUsed } = await vertexChatPost(
-    requestBody
-  );
+  const { response, modelUsed } = await vertexChatPost(requestBody);
 
   const usage = response.data?.usage;
   if (usage) {
@@ -1850,7 +1911,6 @@ export function getFluxPromptFromSpec(spec) {
   return parts.join(". ");
 }
 
-
 /** Convierte una URL de imagen en data URL base64. */
 async function fetchImageAsDataUrl(url) {
   const res = await axios.get(url, { responseType: "arraybuffer" });
@@ -1911,10 +1971,7 @@ export async function generateCreativeImageSeedream(
   const metricSource = opts?.source || "creative";
   const fullPrompt = (prompt || "").trim() + NO_META_LOGO_SUFFIX;
 
-  console.log(
-    "[Creative image] Vertex Imagen 3 | Aspect:",
-    aspectRatio,
-  );
+  console.log("[Creative image] Vertex Imagen 3 | Aspect:", aspectRatio);
 
   const startTime = Date.now();
   const imageDataUrl = await vertexImagePost(fullPrompt, aspectRatio);
