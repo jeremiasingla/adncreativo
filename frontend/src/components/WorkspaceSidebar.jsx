@@ -1,7 +1,6 @@
 import React from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useClerk } from "@clerk/clerk-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
   IconHouse,
@@ -13,7 +12,6 @@ import {
   IconPanelLeftClose,
   IconPanelLeftOpen,
   IconSparkles,
-  IconSettings,
   IconCreditCard,
   IconLogOut,
 } from "./icons";
@@ -44,7 +42,6 @@ const navButtonCollapsed =
 
 export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
   const { t } = useTranslation();
-  const { openUserProfile } = useClerk();
   const { user, logout } = useAuth();
   const { workspaceSlug } = useParams();
   const { pathname } = useLocation();
@@ -351,7 +348,7 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
           )}
         </div>
 
-        {/* Popover tipo Clerk: User button popover */}
+        {/* User menu popover */}
         {showUserPopup && (
           <div
             ref={popupRef}
@@ -367,19 +364,8 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
             <div className="p-3">
               {/* User preview */}
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0 w-[22px] h-[22px] rounded-full overflow-hidden bg-neutral-100">
-                  {user?.imageUrl ? (
-                    <img
-                      src={user.imageUrl}
-                      alt={displayName}
-                      title={displayName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-[10px]">
-                      {displayName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                <div className="flex-shrink-0 w-[22px] h-[22px] rounded-full overflow-hidden bg-neutral-200 text-neutral-700 flex items-center justify-center font-semibold text-[10px]">
+                  {(user?.name?.trim() || user?.email || "U").slice(0, 1).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-medium text-neutral-900 truncate">
@@ -396,18 +382,6 @@ export default function WorkspaceSidebar({ workspace, collapsed, onCollapse }) {
               className="border-t border-neutral-100 py-1"
               role="menu"
             >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setShowUserPopup(false);
-                  openUserProfile?.();
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-              >
-                <IconSettings className="w-4 h-4 shrink-0 text-neutral-500" />
-                <span>{t("common.manageAccount")}</span>
-              </button>
               <Link
                 to="/billing"
                 role="menuitem"

@@ -1,13 +1,17 @@
 import React, { memo } from "react";
+import { useTranslation } from "react-i18next";
 
 function WebsiteUrlInput({
   value,
   onChange,
   onSubmit,
-  placeholder = "tusitio.com",
+  placeholder,
   className = "",
   disabled = false,
 }) {
+  const { t } = useTranslation();
+  const inputPlaceholder = placeholder ?? t("home.placeholderUrl");
+
   return (
     <form onSubmit={onSubmit} className={className}>
       <div className="group relative z-10 flex w-full items-center rounded-lg border border-white/20 bg-white/70 backdrop-blur-sm transition-all outline-none focus-within:ring-2 focus-within:ring-ring/40 focus-within:border-primary/50 px-4 py-2 gap-3">
@@ -15,7 +19,7 @@ function WebsiteUrlInput({
           type="text"
           value={value}
           onChange={onChange}
-          placeholder={placeholder}
+          placeholder={inputPlaceholder}
           disabled={disabled}
           className="flex-1 bg-transparent text-foreground placeholder:text-muted-foreground text-base outline-none h-8 disabled:opacity-60 disabled:cursor-not-allowed"
         />

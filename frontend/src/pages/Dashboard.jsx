@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import gsap from "gsap";
 import { useAuth } from "../contexts/AuthContext";
 import { fetchWithAuth } from "../api/fetchWithAuth";
@@ -36,6 +37,7 @@ function ChevronRightIcon({ className }) {
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const pageRef = useRef(null);
@@ -145,12 +147,14 @@ export default function Dashboard() {
                 className="max-w-md mx-auto transition-[800ms] ease-out"
                 style={{ opacity: 1, transform: "translate(0px, 0px)" }}
               >
-                <WebsiteUrlInput
-                  value={websiteUrl}
-                  onChange={(e) => setWebsiteUrl(e.target.value)}
-                  onSubmit={handleSubmit}
-                  className="max-w-md mx-auto"
-                />
+                <div className="w-full relative rounded-xl p-1 transition-all duration-300 glass-prompt-wrap hover:scale-[1.005]">
+                  <WebsiteUrlInput
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    onSubmit={handleSubmit}
+                    placeholder={t("home.placeholderUrl")}
+                  />
+                </div>
               </div>
             </div>
           </div>

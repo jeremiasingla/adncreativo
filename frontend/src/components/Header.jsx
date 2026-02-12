@@ -2,7 +2,6 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { UserAvatar, useClerk } from "@clerk/clerk-react";
 import { useAuth } from "../contexts/AuthContext";
 import { setLanguage } from "../i18n";
 
@@ -38,7 +37,6 @@ export default function Header({ onOpenSignIn }) {
   const { user, logout } = useAuth();
   const isHome = pathname === "/";
   const isPricing = pathname === "/pricing";
-  const { openUserProfile } = useClerk();
   const currentLang = i18nInstance.language?.startsWith("en") ? "en" : "es";
   const currentLangLabel = HEADER_LANGUAGE_OPTIONS.find((o) => o.code === currentLang)?.label ?? "Español";
   const [scrolled, setScrolled] = React.useState(false);
@@ -294,11 +292,11 @@ export default function Header({ onOpenSignIn }) {
                   ref={avatarButtonRef}
                   type="button"
                   onClick={() => setShowUserPopup((prev) => !prev)}
-                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-8 w-8 flex items-center justify-center"
+                  className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-8 w-8 flex items-center justify-center bg-neutral-200 text-neutral-700 text-xs font-medium"
                   aria-label={t("nav.userMenu")}
                   aria-expanded={showUserPopup}
                 >
-                  <UserAvatar className="h-8 w-8" aria-hidden />
+                  {(user?.name?.trim() || user?.email || "U").slice(0, 1).toUpperCase()}
                 </button>
               ) : (
                 <button
@@ -332,35 +330,19 @@ export default function Header({ onOpenSignIn }) {
           >
             <div className="cl-userButtonPopoverMain">
               <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-                <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden bg-neutral-100">
-                  <UserAvatar className="h-full w-full" />
+                <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden bg-neutral-200 text-neutral-700 flex items-center justify-center text-sm font-medium">
+                  {(user?.name?.trim() || user?.email || "U").slice(0, 1).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13px] font-medium text-neutral-900 truncate" data-variant="subtitle" data-color="inherit">
+                  <div className="text-[13px] font-medium text-neutral-900 truncate">
                     {displayName}
                   </div>
-                  <div className="text-[13px] text-neutral-500 truncate" data-variant="body" data-color="secondary">
+                  <div className="text-[13px] text-neutral-500 truncate">
                     {user?.email || ""}
                   </div>
                 </div>
               </div>
               <div role="menu" className="border-t border-border py-1">
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setShowUserPopup(false);
-                    openUserProfile?.();
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                >
-                  <span className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-current">
-                    <svg fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-4 h-4">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M6.559 2.536A.667.667 0 0 1 7.212 2h1.574a.667.667 0 0 1 .653.536l.22 1.101c.466.178.9.429 1.287.744l1.065-.36a.667.667 0 0 1 .79.298l.787 1.362a.666.666 0 0 1-.136.834l-.845.742c.079.492.079.994 0 1.486l.845.742a.666.666 0 0 1 .137.833l-.787 1.363a.667.667 0 0 1-.791.298l-1.065-.36c-.386.315-.82.566-1.286.744l-.22 1.101a.666.666 0 0 1-.654.536H7.212a.666.666 0 0 1-.653-.536l-.22-1.101a4.664 4.664 0 0 1-1.287-.744l-1.065.36a.666.666 0 0 1-.79-.298L2.41 10.32a.667.667 0 0 1 .136-.834l.845-.743a4.7 4.7 0 0 1 0-1.485l-.845-.742a.667.667 0 0 1-.137-.833l.787-1.363a.667.667 0 0 1 .791-.298l1.065.36c.387-.315.821-.566 1.287-.744l.22-1.101ZM7.999 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
-                    </svg>
-                  </span>
-                  {t("common.manageAccount")}
-                </button>
                 <button
                   type="button"
                   role="menuitem"

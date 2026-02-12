@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { fetchWithAuth } from "../api/fetchWithAuth";
 import BrandingView from "../components/BrandingView";
+import WebsiteUrlInput from "../components/WebsiteUrlInput";
 
 const heroBackground = (
   <>
@@ -59,6 +61,7 @@ function buildValidateUrl(websiteUrl, state) {
 }
 
 export default function OnboardingValidate() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const websiteUrl = searchParams.get("websiteUrl")?.trim() || null;
@@ -325,48 +328,23 @@ export default function OnboardingValidate() {
                         nuevo.
                       </p>
                     </div>
-                    <form onSubmit={handleTryAgain} className="space-y-4">
+                    <div className="space-y-4">
                       <p className="text-sm font-medium text-foreground">
                         Probá con otra URL:
                       </p>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <input
-                          type="text"
+                      <div className="w-full max-w-md mx-auto relative rounded-xl p-1 transition-all duration-300 glass-prompt-wrap hover:scale-[1.005]">
+                        <WebsiteUrlInput
                           value={retryUrl}
                           onChange={(e) => setRetryUrl(e.target.value)}
-                          placeholder="www.tusitio.com"
-                          className="flex-1 min-w-0 h-14 text-base rounded-lg border border-border bg-card px-4 py-3 text-foreground placeholder:text-muted-foreground shadow-sm outline-none transition-[color,box-shadow] focus:border-ring focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          onSubmit={handleTryAgain}
+                          placeholder={t("home.placeholderUrl")}
                         />
-                        <button
-                          type="submit"
-                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold h-14 px-6 bg-gradient-to-b from-primary via-primary to-primary/80 text-primary-foreground shadow-[0_4px_12px_rgba(0,0,0,0.15),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.25),inset_0_-1px_0_rgba(0,0,0,0.1)] hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-[0_2px_8px_rgba(0,0,0,0.15)] border border-primary/50 transition-all shrink-0"
-                        >
-                          <span className="hidden sm:inline">
-                            Intentar de nuevo
-                          </span>
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="sm:ml-2 shrink-0"
-                            aria-hidden
-                          >
-                            <path d="M5 12h14" />
-                            <path d="m12 5 7 7-7 7" />
-                          </svg>
-                        </button>
                       </div>
                       <p className="text-xs text-muted-foreground text-center">
                         Podés ingresar una URL de sitio web o de perfil de
                         Instagram
                       </p>
-                    </form>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-gradient-to-br from-slate-200/60 via-slate-100/40 to-card rounded-2xl p-8 shadow-lg border border-border">

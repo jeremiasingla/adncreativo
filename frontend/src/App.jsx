@@ -1,10 +1,11 @@
 import React, { Suspense, lazy } from "react";
-import ReactDOM from "react-dom";
 import {
   BrowserRouter,
   Routes,
   Route,
   useLocation,
+  useParams,
+  useNavigate,
   Navigate,
 } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -88,31 +89,35 @@ function AuthOnly({ children }) {
   return children;
 }
 
+/** Evita que /login se trate como workspace. */
+function WorkspaceOrRedirect() {
+  const { workspaceSlug } = useParams();
+  if (workspaceSlug === "login") return <Navigate to="/login" replace />;
+  return <Workspace />;
+}
+
 function AppLayout() {
   const { i18n } = useTranslation();
   const location = useLocation();
   const pathname = location.pathname;
   const segments = pathname.split("/").filter(Boolean);
   const firstSegment = segments[0];
+  const navigate = useNavigate();
   const isWorkspaceRoute =
-    !["onboarding", "pricing"].includes(firstSegment) && segments.length >= 1;
+    !["onboarding", "pricing", "login"].includes(firstSegment) &&
+    segments.length >= 1;
   const hideHeader =
     pathname === "/onboarding/step/validate" || isWorkspaceRoute;
-
-  const [showAuthModal, setShowAuthModal] = React.useState(false);
-  const [isSignUp, setIsSignUp] = React.useState(false);
 
   const langKey = i18n.language?.startsWith("en") ? "en" : "es";
 
   return (
     <div className="min-h-screen bg-white">
-      {!hideHeader && <Header onOpenSignIn={() => {
-        setShowAuthModal(true);
-        setIsSignUp(false);
-      }} />}
+      {!hideHeader && <Header onOpenSignIn={() => navigate("/login")} />}
       <Suspense fallback={<FullScreenLoadingSpinner />} key={langKey}>
         <Routes>
           <Route path="/" element={<RootRoute />} />
+          <Route path="/login" element={<GuestOnly><Login /></GuestOnly>} />
           <Route path="/pricing" element={<Pricing />} />
           <Route
             path="/onboarding/step/validate"
@@ -126,24 +131,12 @@ function AppLayout() {
             path="/:workspaceSlug/*"
             element={
               <AuthOnly>
-                <Workspace />
+                <WorkspaceOrRedirect />
               </AuthOnly>
             }
           />
         </Routes>
       </Suspense>
-      
-      {showAuthModal &&
-        ReactDOM.createPortal(
-          <Suspense fallback={<FullScreenLoadingSpinner />}>
-            <Login
-              onClose={() => setShowAuthModal(false)}
-              isSignUp={isSignUp}
-              setIsSignUp={setIsSignUp}
-            />
-          </Suspense>,
-          document.body
-        )}
     </div>
   );
 }

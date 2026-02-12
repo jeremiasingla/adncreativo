@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import { clerkMiddleware } from "@clerk/express";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -8,7 +7,6 @@ import workspaceRouter from "./routes/workspace.route.js";
 import authRouter from "./routes/auth.route.js";
 import adminRouter from "./routes/admin.route.js";
 import visionRouter from "./routes/vision.route.js";
-import { authMiddleware } from "./middleware/auth.middleware.js";
 import fs from "fs";
 import { initPostgresWorkspaces } from "./db/postgres.js";
 
@@ -38,7 +36,6 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
-app.use(clerkMiddleware());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -84,7 +81,6 @@ if (frontendExists) {
       "/app",
       "/app/*",
       "/login",
-      "/register",
       "/onboarding",
       "/onboarding/*",
     ],

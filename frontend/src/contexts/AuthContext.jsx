@@ -1,35 +1,76 @@
-import React, { createContext, useContext, useMemo, useCallback } from "react";
-import { useClerk, useUser } from "@clerk/clerk-react";
+import React, { createContext, useContext, useMemo, useCallback, useState, useEffect } from "react";
+import { apiUrl } from "../api/config.js";
 
 const AuthContext = createContext(null);
 
-const noop = () => {};
-
 export function AuthProvider({ children }) {
-  const { isLoaded, user: clerkUser } = useUser();
-  const { signOut } = useClerk();
-  const user = clerkUser
-    ? {
-        id: clerkUser.id,
-        name: clerkUser.fullName || clerkUser.firstName || "",
-        email: clerkUser.primaryEmailAddress?.emailAddress || "",
-        imageUrl: clerkUser.imageUrl || "",
-        role:
-          clerkUser.publicMetadata?.role ||
-          clerkUser.privateMetadata?.role ||
-          clerkUser.unsafeMetadata?.role ||
-          "user",
+  const [user, setUserState] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const setUser = useCallback((u) => {
+    setUserState(u);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(apiUrl("/auth/me"), { credentials: "include" });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json();
+          setUserState(data.user || null);
+        } else {
+          setUserState(null);
+        }
+      } catch (_) {
+        if (!cancelled) setUserState(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    : null;
-  const loading = !isLoaded;
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const login = useCallback(async (email, password) => {
+    const res = await fetch(apiUrl("/auth/login"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "login_failed");
+    setUserState(data.user || null);
+    return data.user;
+  }, []);
+
+  const register = useCallback(async (email, password, name) => {
+    const res = await fetch(apiUrl("/auth/register"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password, name }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "register_failed");
+    setUserState(data.user || null);
+    return data.user;
+  }, []);
 
   const logout = useCallback(async () => {
-    await signOut();
-  }, [signOut]);
+    try {
+      await fetch(apiUrl("/auth/logout"), {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (_) {}
+    setUserState(null);
+  }, []);
 
   const value = useMemo(
-    () => ({ user, loading, logout, setUser: noop }),
-    [user, loading, logout]
+    () => ({ user, loading, login, register, logout, setUser }),
+    [user, loading, login, register, logout, setUser]
   );
 
   return (

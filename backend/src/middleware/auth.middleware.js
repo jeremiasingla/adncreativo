@@ -1,24 +1,46 @@
-import { clerkClient, getAuth } from "@clerk/express";
+import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../config/auth.config.js";
+import { query } from "../db/postgres.js";
 
+/**
+ * Verifica JWT desde cookie accessToken o header Authorization Bearer.
+ * Carga el usuario desde Postgres y asigna req.user.
+ */
 export async function authMiddleware(req, res, next) {
-  const { userId } = getAuth(req);
-  if (!userId) return res.status(401).json({ error: "unauthorized" });
+  let token =
+    req.cookies?.accessToken ||
+    (req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7)
+      : null);
+  if (!token) return res.status(401).json({ error: "unauthorized" });
+
+  let payload;
   try {
-    const clerkUser = await clerkClient.users.getUser(userId);
-    const role =
-      clerkUser.publicMetadata?.role ||
-      clerkUser.privateMetadata?.role ||
-      clerkUser.unsafeMetadata?.role ||
-      "user";
+    payload = jwt.verify(token, JWT_SECRET);
+  } catch (_) {
+    return res.status(401).json({ error: "unauthorized" });
+  }
+
+  const userId = payload.id;
+  if (!userId) return res.status(401).json({ error: "unauthorized" });
+
+  try {
+    const result = await query(
+      "SELECT id, email, name, role FROM users WHERE id = $1",
+      [userId]
+    );
+    const row = result.rows[0];
+    if (!row) return res.status(401).json({ error: "unauthorized" });
+
     req.user = {
-      id: clerkUser.id,
-      email: clerkUser.primaryEmailAddress?.emailAddress || null,
-      name: clerkUser.fullName || clerkUser.firstName || null,
-      role,
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      role: row.role || "user",
     };
     return next();
   } catch (err) {
-    console.error("❌ authMiddleware clerk:", err?.message);
+    console.error("authMiddleware:", err?.message);
     return res.status(401).json({ error: "unauthorized" });
   }
 }

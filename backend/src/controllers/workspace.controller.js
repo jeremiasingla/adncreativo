@@ -1,7 +1,6 @@
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import { clerkClient } from "@clerk/express";
 import { get, all, run } from "../db/workspaceDb.js";
 import { scrapeWithFirecrawl } from "../services/firecrawl.service.js";
 import { generateWorkspaceSlug } from "../utils/slug.js";
@@ -2789,31 +2788,12 @@ export async function createWorkspace(req, res) {
       });
     }
 
-    // Extraer companyName temprano para crear la organización de Clerk
     const tempCompanyName =
       llmRefined?.companyName ||
       branding.companyName ||
       branding.name ||
       logoAlt ||
       parsedUrl.hostname;
-
-    // Crear organización de Clerk lo antes posible (solo necesita companyName)
-    let clerkOrgId = null;
-    try {
-      const organization = await clerkClient.organizations.createOrganization({
-        name: tempCompanyName,
-        createdBy: userId,
-        publicMetadata: {
-          workspaceSlug: slug,
-          websiteUrl: parsedUrl.href,
-        },
-      });
-      clerkOrgId = organization.id;
-      console.log(`[createWorkspace] Created Clerk organization early: ${clerkOrgId} for workspace: ${slug}`);
-    } catch (orgError) {
-      console.error("[createWorkspace] Failed to create Clerk organization:", orgError);
-      // Continuar sin clerk_org_id
-    }
 
     const pickColor = (...values) => values.find((v) => v) || null;
 
@@ -2957,7 +2937,7 @@ export async function createWorkspace(req, res) {
 
     const createdAt = Math.floor(Date.now() / 1000);
 
-    // Insertar workspace con branding y clerk_org_id ya creado
+    // Insertar workspace con branding
     await run(
       `INSERT INTO workspaces (user_id, slug, url, branding, screenshot_path, knowledge_base, clerk_org_id, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -2968,7 +2948,7 @@ export async function createWorkspace(req, res) {
         JSON.stringify(normalizedBranding),
         screenshotPath,
         "",
-        clerkOrgId,
+        null,
         createdAt,
       ],
     );
