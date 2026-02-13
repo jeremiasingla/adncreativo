@@ -5,6 +5,7 @@ import ActivityHeatmap from "../components/ActivityHeatmap";
 import { AdminFullScreenSpinner } from "../components/LoadingSpinner";
 import {
   DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSection,
@@ -262,11 +263,10 @@ function ChangeRoleModal({ userId, currentRole, onClose, onChanged }) {
           {["user", "admin"].map((r) => (
             <label
               key={r}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
-                role === r
-                  ? "border-purple-500 bg-purple-500/10"
-                  : "border-white/10 hover:border-white/20"
-              }`}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${role === r
+                ? "border-purple-500 bg-purple-500/10"
+                : "border-white/10 hover:border-white/20"
+                }`}
             >
               <input
                 type="radio"
@@ -310,11 +310,7 @@ export default function AdminUserDetail() {
   const [loading, setLoading] = React.useState(true);
   const [activityMap, setActivityMap] = React.useState({});
   const [activityLoading, setActivityLoading] = React.useState(true);
-  const [actionsOpen, setActionsOpen] = React.useState(false);
-  const [deviceMenuId, setDeviceMenuId] = React.useState(null);
-  const [emailMenuOpen, setEmailMenuOpen] = React.useState(false);
   const [modal, setModal] = React.useState(null); // "password" | "role" | null
-  const actionsRef = React.useRef(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -358,17 +354,6 @@ export default function AdminUserDetail() {
     };
   }, [userId]);
 
-  React.useEffect(() => {
-    function handleClick(e) {
-      if (actionsRef.current && !actionsRef.current.contains(e.target))
-        setActionsOpen(false);
-      if (!e.target.closest("[data-device-menu]")) setDeviceMenuId(null);
-      if (!e.target.closest("[data-email-menu]")) setEmailMenuOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
   const user = detail?.user;
   const workspaces = detail?.workspaces || [];
   const sessions = detail?.sessions || [];
@@ -387,7 +372,7 @@ export default function AdminUserDetail() {
   const initials = getInitials(userName, userEmail);
 
   return (
-    <div>
+    <div style={{ fontFamily: "'Geist', sans-serif" }}>
       {/* Modals */}
       {modal === "password" && (
         <ResetPasswordModal userId={user.id} onClose={() => setModal(null)} />
@@ -409,19 +394,37 @@ export default function AdminUserDetail() {
       <Link
         to="/admin/users"
         className="text-sm text-gray-500 hover:text-white transition-colors"
+        style={{ fontFamily: "'Geist', sans-serif" }}
       >
         ← Usuarios
       </Link>
 
       {/* Header */}
-      <div className="mt-5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center text-lg font-semibold text-gray-300">
+      <div
+        className="mt-5 flex items-center justify-between"
+        style={{ fontFamily: "'Geist', sans-serif" }}
+      >
+        <div
+          className="flex items-center gap-4"
+          style={{ fontFamily: "'Geist', sans-serif" }}
+        >
+          <div
+            className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center text-lg font-semibold text-gray-300"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
             {initials}
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-white">{userName}</h1>
-            <p className="text-sm text-gray-500">
+          <div style={{ fontFamily: "'Geist', sans-serif" }}>
+            <h1
+              className="text-2xl font-semibold text-white"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
+              {userName}
+            </h1>
+            <p
+              className="text-sm text-gray-500"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
               Última actividad{" "}
               {user.last_sign_in_at
                 ? formatRelative(user.last_sign_in_at)
@@ -430,283 +433,322 @@ export default function AdminUserDetail() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3" ref={actionsRef}>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setActionsOpen((v) => !v)}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
-              aria-haspopup="true"
-              aria-expanded={actionsOpen}
-            >
-              Acciones
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        <div className="flex items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                style={{
+                  boxSizing: "border-box",
+                  borderWidth: "1px",
+                  borderStyle: "solid",
+                  borderColor: "rgba(234, 48, 25, 0.5)",
+                  fontSize: "14px",
+                  margin: 0,
+                  padding: "0 16px",
+                  appearance: "button",
+                  // backgroundColor: "transparent", // Handled by data state if needed, or stick to styles
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  height: "32px",
+                  flexShrink: 0,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  whiteSpace: "nowrap",
+                  borderRadius: "8px",
+                  backgroundImage:
+                    "linear-gradient(rgb(234, 48, 25), rgb(234, 48, 25), rgba(234, 48, 25, 0.8))",
+                  lineHeight: "20px",
+                  fontWeight: 600,
+                  color: "rgb(255, 255, 255)",
+                  boxShadow:
+                    "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.157) 0px 2.66172px 9.32345px 0px, rgba(255, 255, 255, 0.125) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.1) 0px -1px 0px 0px inset",
+                  outline: "transparent solid 2px",
+                  outlineOffset: "2px",
+                  transitionProperty: "all",
+                  transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+                  transitionDuration: "150ms",
+                  transform: "matrix(1, 0, 0, 1, 0, 0.669138)",
+                  textAlign: "center",
+                  letterSpacing: "-0.16px",
+                  fontFamily:
+                    "Geist, sans-serif, ui-sans-serif, sans-serif, system-ui",
+                }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-            <DropdownMenu open={actionsOpen} className="right-0 top-10">
-              <DropdownMenuContent>
-                <DropdownMenuSection label="Neutral actions">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      navigator.clipboard.writeText(user.id || "");
-                      setActionsOpen(false);
-                    }}
-                    icon={
-                      <svg
-                        className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M6 3.25H4.75C3.64543 3.25 2.75 4.14543 2.75 5.25V11.25C2.75 12.3546 3.64543 13.25 4.75 13.25H11.25C12.3546 13.25 13.25 12.3546 13.25 11.25V5.25C13.25 4.14543 12.3546 3.25 11.25 3.25H10M5.75 2.75L6.28576 4.0894C6.56615 4.79036 7.24504 5.25 8 5.25C8.75496 5.25 9.43385 4.79036 9.71424 4.0894L10.25 2.75H5.75Z"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                        <path
-                          d="M5.5 7.75H10.5"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          vectorEffect="non-scaling-stroke"
-                          opacity="0"
-                          pathLength="1"
-                          strokeDashoffset="0px"
-                          strokeDasharray="0px 1px"
-                        ></path>
-                        <path
-                          d="M5.5 10.25H8.5"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          vectorEffect="non-scaling-stroke"
-                          opacity="0"
-                          pathLength="1"
-                          strokeDashoffset="0px"
-                          strokeDasharray="0px 1px"
-                        ></path>
-                      </svg>
-                    }
-                  >
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-ceramic-label-2 text-[--menu-label-color]">
-                        Copiar ID de usuario
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    as={Link}
-                    to={`/admin/users/${user.id}`}
-                    onClick={() => setActionsOpen(false)}
-                    icon={
-                      <svg
-                        className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M11.1786 12.1788C10.4001 11.3023 9.26453 10.75 8 10.75C6.73547 10.75 5.59993 11.3023 4.82141 12.1788M11.1786 12.1788C12.4375 11.2197 13.25 9.70474 13.25 8C13.25 5.10051 10.8995 2.75 8 2.75C5.10051 2.75 2.75 5.10051 2.75 8C2.75 9.70474 3.56251 11.2197 4.82141 12.1788M11.1786 12.1788C10.2963 12.8509 9.19476 13.25 8 13.25C6.80524 13.25 5.7037 12.8509 4.82141 12.1788M9.25 7C9.25 7.69036 8.69036 8.25 8 8.25C7.30964 8.25 6.75 7.69036 6.75 7C6.75 6.30964 7.30964 5.75 8 5.75C8.69036 5.75 9.25 6.30964 9.25 7Z"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                      </svg>
-                    }
-                  >
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-ceramic-label-2 text-[--menu-label-color]">
-                        Ver perfil
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setActionsOpen(false)}
-                    icon={
-                      <svg
-                        className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <circle
-                          cx="10"
-                          cy="10"
-                          r="8"
-                          fill="var(--_ceramic-icon-fill, color-mix(in srgb, currentColor 15%, transparent))"
-                        ></circle>
-                        <path
-                          d="M3.39786 13C2.98178 12.0858 2.75 11.07 2.75 10C2.75 5.99594 5.99594 2.75 10 2.75C14.0041 2.75 17.25 5.99594 17.25 10C17.25 11.07 17.0182 12.0858 16.6021 13"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeDasharray="0.25 3"
-                        ></path>
-                        <circle
-                          cx="10"
-                          cy="8.5"
-                          r="1.75"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></circle>
-                        <path
-                          d="M9.99986 12.75C7.08699 12.75 6.24655 13.723 5.27858 15.2106L5.16028 15.3982C6.4437 16.5496 8.14003 17.25 9.99995 17.25C11.8609 17.25 13.5581 16.5488 14.8418 15.3963L14.6957 15.1716C13.7383 13.706 12.8872 12.75 9.99986 12.75Z"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                      </svg>
-                    }
-                  >
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-ceramic-label-2 text-[--menu-label-color]">
-                        Suplantar usuario
-                      </span>
-                      <span
-                        className="relative inline-flex shrink-0 items-center rounded-sm text-ceramic-label-4 border border-dashed border-ceramic-blue/56 px-[calc(theme(spacing.1)-1px)] py-[calc(theme(spacing[0.5])-1px)] text-ceramic-info ceramic-icon-fill-blue/16"
-                        data-slot="badge"
-                      >
-                        <span className="px-0.5">Add-on</span>
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                </DropdownMenuSection>
-                <DropdownMenuSeparator />
-                <DropdownMenuSection label="Destructive actions">
-                  <DropdownMenuItem
-                    variant="negative"
-                    onClick={() => setActionsOpen(false)}
-                    icon={
-                      <svg
-                        className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M5.25 7.75H3.75V11.25C3.75 12.3546 4.64543 13.25 5.75 13.25H10.25C11.3546 13.25 12.25 12.3546 12.25 11.25V7.75H10.75M5.25 7.75V5.5C5.25 3.98122 6.48122 2.75 8 2.75C9.51878 2.75 10.75 3.98122 10.75 5.5V7.75M5.25 7.75H10.75"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                      </svg>
-                    }
-                  >
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-ceramic-label-2 text-[--menu-label-color]">
-                        Bloquear
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="negative"
-                    onClick={() => setActionsOpen(false)}
-                    icon={
-                      <svg
-                        className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M4.28769 4.28769L11.7123 11.7123M13.25 8C13.25 10.8995 10.8995 13.25 8 13.25C5.10051 13.25 2.75 10.8995 2.75 8C2.75 5.10051 5.10051 2.75 8 2.75C10.8995 2.75 13.25 5.10051 13.25 8Z"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                      </svg>
-                    }
-                  >
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-ceramic-label-2 text-[--menu-label-color]">
-                        Banear
-                      </span>
-                      <span
-                        className="relative inline-flex shrink-0 items-center rounded-sm text-ceramic-label-4 overflow-hidden px-1 py-0.5 text-ceramic-white shadow-[inset_0_2px_0_rgba(43,117,225,0.35)] ring-1 ring-inset ring-ceramic-black/[0.42] bg-[linear-gradient(120deg,rgb(73,90,193)_0%,rgb(64,63,115)_16%,rgb(99,131,162)_50%,rgb(81,36,82)_87%,rgb(132,61,112)_100%)]"
-                        data-slot="badge"
-                      >
-                        <span className="px-0.5">Pro</span>
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    variant="negative"
-                    onClick={() => setActionsOpen(false)}
-                    icon={
-                      <svg
-                        className="overflow-visible mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M13.5 5.25H12.5H10.5M3 5.25H4H6M6 5.25V4.75C6 3.64543 6.89543 2.75 8 2.75H8.5C9.60457 2.75 10.5 3.64543 10.5 4.75V5.25M6 5.25H10.5"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          style={{
-                            transform: "none",
-                            transformOrigin: "50% 50%",
-                            transformBox: "fill-box",
-                          }}
-                        ></path>
-                        <path
-                          d="M13.5 5.25H12.5L11.6095 12.374C11.5469 12.8745 11.1215 13.25 10.6172 13.25H5.88278C5.37846 13.25 4.95306 12.8745 4.8905 12.374L4 5.25H3"
-                          stroke="var(--_ceramic-icon-stroke)"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                      </svg>
-                    }
-                  >
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-ceramic-label-2 text-[--menu-label-color]">
-                        Eliminar usuario
-                      </span>
-                    </div>
-                  </DropdownMenuItem>
-                </DropdownMenuSection>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                Acciones
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="mt-2">
+              <DropdownMenuSection label="Neutral actions">
+                <DropdownMenuItem
+                  onClick={() => {
+                    navigator.clipboard.writeText(user.id || "");
+                  }}
+                  icon={
+                    <svg
+                      className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M6 3.25H4.75C3.64543 3.25 2.75 4.14543 2.75 5.25V11.25C2.75 12.3546 3.64543 13.25 4.75 13.25H11.25C12.3546 13.25 13.25 12.3546 13.25 11.25V5.25C13.25 4.14543 12.3546 3.25 11.25 3.25H10M5.75 2.75L6.28576 4.0894C6.56615 4.79036 7.24504 5.25 8 5.25C8.75496 5.25 9.43385 4.79036 9.71424 4.0894L10.25 2.75H5.75Z"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      ></path>
+                      <path
+                        d="M5.5 7.75H10.5"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        vectorEffect="non-scaling-stroke"
+                        opacity="0"
+                        pathLength="1"
+                        strokeDashoffset="0px"
+                        strokeDasharray="0px 1px"
+                      ></path>
+                      <path
+                        d="M5.5 10.25H8.5"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        vectorEffect="non-scaling-stroke"
+                        opacity="0"
+                        pathLength="1"
+                        strokeDashoffset="0px"
+                        strokeDasharray="0px 1px"
+                      ></path>
+                    </svg>
+                  }
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-ceramic-label-2 text-[--menu-label-color]">
+                      Copiar ID de usuario
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  as={Link}
+                  to={`/admin/users/${user.id}`}
+                  icon={
+                    <svg
+                      className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M11.1786 12.1788C10.4001 11.3023 9.26453 10.75 8 10.75C6.73547 10.75 5.59993 11.3023 4.82141 12.1788M11.1786 12.1788C12.4375 11.2197 13.25 9.70474 13.25 8C13.25 5.10051 10.8995 2.75 8 2.75C5.10051 2.75 2.75 5.10051 2.75 8C2.75 9.70474 3.56251 11.2197 4.82141 12.1788M11.1786 12.1788C10.2963 12.8509 9.19476 13.25 8 13.25C6.80524 13.25 5.7037 12.8509 4.82141 12.1788M9.25 7C9.25 7.69036 8.69036 8.25 8 8.25C7.30964 8.25 6.75 7.69036 6.75 7C6.75 6.30964 7.30964 5.75 8 5.75C8.69036 5.75 9.25 6.30964 9.25 7Z"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      ></path>
+                    </svg>
+                  }
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-ceramic-label-2 text-[--menu-label-color]">
+                      Ver perfil
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  icon={
+                    <svg
+                      className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <circle
+                        cx="10"
+                        cy="10"
+                        r="8"
+                        fill="var(--_ceramic-icon-fill, color-mix(in srgb, currentColor 15%, transparent))"
+                      ></circle>
+                      <path
+                        d="M3.39786 13C2.98178 12.0858 2.75 11.07 2.75 10C2.75 5.99594 5.99594 2.75 10 2.75C14.0041 2.75 17.25 5.99594 17.25 10C17.25 11.07 17.0182 12.0858 16.6021 13"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeDasharray="0.25 3"
+                      ></path>
+                      <circle
+                        cx="10"
+                        cy="8.5"
+                        r="1.75"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      ></circle>
+                      <path
+                        d="M9.99986 12.75C7.08699 12.75 6.24655 13.723 5.27858 15.2106L5.16028 15.3982C6.4437 16.5496 8.14003 17.25 9.99995 17.25C11.8609 17.25 13.5581 16.5488 14.8418 15.3963L14.6957 15.1716C13.7383 13.706 12.8872 12.75 9.99986 12.75Z"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      ></path>
+                    </svg>
+                  }
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-ceramic-label-2 text-[--menu-label-color]">
+                      Suplantar usuario
+                    </span>
+                    <span
+                      className="relative inline-flex shrink-0 items-center rounded-sm text-ceramic-label-4 border border-dashed border-ceramic-blue/56 px-[calc(theme(spacing.1)-1px)] py-[calc(theme(spacing[0.5])-1px)] text-ceramic-info ceramic-icon-fill-blue/16"
+                      data-slot="badge"
+                    >
+                      <span className="px-0.5">Add-on</span>
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuSection>
+              <DropdownMenuSeparator />
+              <DropdownMenuSection label="Destructive actions">
+                <DropdownMenuItem
+                  variant="negative"
+                  icon={
+                    <svg
+                      className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M5.25 7.75H3.75V11.25C3.75 12.3546 4.64543 13.25 5.75 13.25H10.25C11.3546 13.25 12.25 12.3546 12.25 11.25V7.75H10.75M5.25 7.75V5.5C5.25 3.98122 6.48122 2.75 8 2.75C9.51878 2.75 10.75 3.98122 10.75 5.5V7.75M5.25 7.75H10.75"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      ></path>
+                    </svg>
+                  }
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-ceramic-label-2 text-[--menu-label-color]">
+                      Bloquear
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="negative"
+                  icon={
+                    <svg
+                      className="mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M4.28769 4.28769L11.7123 11.7123M13.25 8C13.25 10.8995 10.8995 13.25 8 13.25C5.10051 13.25 2.75 10.8995 2.75 8C2.75 5.10051 5.10051 2.75 8 2.75C10.8995 2.75 13.25 5.10051 13.25 8Z"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      ></path>
+                    </svg>
+                  }
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-ceramic-label-2 text-[--menu-label-color]">
+                      Banear
+                    </span>
+                    <span
+                      className="relative inline-flex shrink-0 items-center rounded-sm text-ceramic-label-4 overflow-hidden px-1 py-0.5 text-ceramic-white shadow-[inset_0_2px_0_rgba(43,117,225,0.35)] ring-1 ring-inset ring-ceramic-black/[0.42] bg-[linear-gradient(120deg,rgb(73,90,193)_0%,rgb(64,63,115)_16%,rgb(99,131,162)_50%,rgb(81,36,82)_87%,rgb(132,61,112)_100%)]"
+                      data-slot="badge"
+                    >
+                      <span className="px-0.5">Pro</span>
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="negative"
+                  icon={
+                    <svg
+                      className="overflow-visible mt-0.5 size-4 text-[--menu-icon-color] group-data-[focused]/menu-item:text-[--menu-icon-hover-color]"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M13.5 5.25H12.5H10.5M3 5.25H4H6M6 5.25V4.75C6 3.64543 6.89543 2.75 8 2.75H8.5C9.60457 2.75 10.5 3.64543 10.5 4.75V5.25M6 5.25H10.5"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          transform: "none",
+                          transformOrigin: "50% 50%",
+                          transformBox: "fill-box",
+                        }}
+                      ></path>
+                      <path
+                        d="M13.5 5.25H12.5L11.6095 12.374C11.5469 12.8745 11.1215 13.25 10.6172 13.25H5.88278C5.37846 13.25 4.95306 12.8745 4.8905 12.374L4 5.25H3"
+                        stroke="var(--_ceramic-icon-stroke)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      ></path>
+                    </svg>
+                  }
+                >
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-ceramic-label-2 text-[--menu-label-color]">
+                      Eliminar usuario
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuSection>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="mt-6 flex items-center gap-6 border-b border-white/10">
-        <span className="text-sm text-white pb-3 border-b-2 border-white">
+      <div
+        className="mt-6 flex items-center gap-6 border-b border-white/10"
+        style={{ fontFamily: "'Geist', sans-serif" }}
+      >
+        <span
+          className="text-sm text-white pb-3 border-b-2 border-white"
+          style={{ fontFamily: "'Geist', sans-serif" }}
+        >
           Perfil
         </span>
       </div>
 
       {/* Content */}
-      <div className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
+      <div
+        className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8"
+        style={{ fontFamily: "'Geist', sans-serif" }}
+      >
         {/* Left column */}
-        <div className="space-y-6">
+        <div
+          className="space-y-6"
+          style={{ fontFamily: "'Geist', sans-serif" }}
+        >
           {/* Activity Heatmap */}
           <ActivityHeatmap
             activityMap={activityMap}
@@ -714,24 +756,45 @@ export default function AdminUserDetail() {
           />
 
           {/* Personal info */}
-          <div className="bg-[#15161a] border border-white/10 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white mb-4">
+          <div
+            className="bg-[#15161a] border border-white/10 rounded-xl p-5"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
+            <h3
+              className="text-sm font-semibold text-white mb-4"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
               Información personal
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
               <div>
-                <label className="text-xs text-gray-500 block mb-1">
+                <label
+                  className="text-xs text-gray-500 block mb-1"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   First name
                 </label>
-                <div className="rounded-lg bg-[#0f0f0f] border border-white/10 px-3 py-2 text-sm text-gray-300">
+                <div
+                  className="rounded-lg bg-[#0f0f0f] border border-white/10 px-3 py-2 text-sm text-gray-300"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   {user.first_name || "-"}
                 </div>
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1">
+                <label
+                  className="text-xs text-gray-500 block mb-1"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   Last name
                 </label>
-                <div className="rounded-lg bg-[#0f0f0f] border border-white/10 px-3 py-2 text-sm text-gray-300">
+                <div
+                  className="rounded-lg bg-[#0f0f0f] border border-white/10 px-3 py-2 text-sm text-gray-300"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   {user.last_name || "-"}
                 </div>
               </div>
@@ -739,12 +802,24 @@ export default function AdminUserDetail() {
           </div>
 
           {/* Email addresses */}
-          <div className="bg-[#15161a] border border-white/10 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-white mb-4">
+          <div
+            className="bg-[#15161a] border border-white/10 rounded-xl p-5"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
+            <h3
+              className="text-sm font-semibold text-white mb-4"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
               Direcciones de correo
             </h3>
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <div className="flex items-center gap-3">
+            <div
+              className="flex items-center justify-between gap-3 text-sm"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
+              <div
+                className="flex items-center gap-3"
+                style={{ fontFamily: "'Geist', sans-serif" }}
+              >
                 <svg
                   className="w-4 h-4 text-gray-500 shrink-0"
                   fill="none"
@@ -758,59 +833,62 @@ export default function AdminUserDetail() {
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                <span className="text-gray-300">{userEmail}</span>
-                <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                <span
+                  className="text-gray-300"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
+                  {userEmail}
+                </span>
+                <span
+                  className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-green-500/20 text-green-400"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   Principal
                 </span>
               </div>
-              <div className="relative" data-email-menu>
-                <button
-                  type="button"
-                  className="inline-flex items-center justify-between rounded-md p-1 text-gray-200 hover:bg-white/10"
-                  aria-label="Acciones"
-                  aria-haspopup="true"
-                  aria-expanded={emailMenuOpen}
-                  onClick={() => setEmailMenuOpen((prev) => !prev)}
-                >
-                  <span className="flex items-center whitespace-nowrap p-1">
-                    <span>
-                      <svg
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        aria-hidden="true"
-                        className="w-4 h-4"
-                      >
-                        <path
-                          d="M4 8.01001V8.02001"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                        <path
-                          d="M8 8V8.01"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                        <path
-                          d="M12 8V8.01"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        ></path>
-                      </svg>
-                    </span>
-                  </span>
-                </button>
-                <DropdownMenu
-                  open={emailMenuOpen}
-                  className="right-0 top-8"
-                  maxHeight="336px"
-                >
-                  <DropdownMenuContent>
+              <div className="relative">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-between rounded-md p-1 text-gray-200 hover:bg-white/10 data-[state=open]:bg-white/10"
+                      aria-label="Acciones"
+                    >
+                      <span className="flex items-center whitespace-nowrap p-1">
+                        <span>
+                          <svg
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden="true"
+                            className="w-4 h-4"
+                          >
+                            <path
+                              d="M4 8.01001V8.02001"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            ></path>
+                            <path
+                              d="M8 8V8.01"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            ></path>
+                            <path
+                              d="M12 8V8.01"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            ></path>
+                          </svg>
+                        </span>
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="mt-2" align="end" maxHeight="336px">
                     <DropdownMenuSection label="Neutral actions">
                       <DropdownMenuItem
                         aria-disabled="true"
@@ -848,27 +926,54 @@ export default function AdminUserDetail() {
           </div>
 
           {/* Password */}
-          <div className="bg-[#15161a] border border-white/10 rounded-xl p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-white">Contraseña</h3>
+          <div
+            className="bg-[#15161a] border border-white/10 rounded-xl p-5"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
+              <h3
+                className="text-sm font-semibold text-white"
+                style={{ fontFamily: "'Geist', sans-serif" }}
+              >
+                Contraseña
+              </h3>
               <button
                 type="button"
                 className="text-xs text-purple-400 hover:text-purple-300"
                 onClick={() => setModal("password")}
+                style={{ fontFamily: "'Geist', sans-serif" }}
               >
                 + Configurar contraseña
               </button>
             </div>
-            <div className="mt-3 text-sm text-gray-500 text-center py-2">
+            <div
+              className="mt-3 text-sm text-gray-500 text-center py-2"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
               ••••••••
             </div>
           </div>
 
           {/* Devices */}
-          <section className="bg-[#111216] border border-white/10 rounded-2xl">
-            <header className="flex items-center justify-between px-6 py-4">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base font-medium text-white">
+          <section
+            className="bg-[#111216] border border-white/10 rounded-2xl"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
+            <header
+              className="flex items-center justify-between px-6 py-4"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
+              <div
+                className="min-w-0 flex-1"
+                style={{ fontFamily: "'Geist', sans-serif" }}
+              >
+                <h3
+                  className="text-base font-medium text-white"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   Dispositivos
                 </h3>
               </div>
@@ -968,61 +1073,49 @@ export default function AdminUserDetail() {
                             <td className="px-6 py-4 text-right w-[10%]">
                               <div
                                 className="relative inline-flex"
-                                data-device-menu
                               >
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center justify-between rounded-md p-1 text-gray-200 hover:bg-white/10"
-                                  aria-label="Acciones"
-                                  aria-haspopup="true"
-                                  aria-expanded={deviceMenuId === session.id}
-                                  onClick={() =>
-                                    setDeviceMenuId(
-                                      deviceMenuId === session.id
-                                        ? null
-                                        : session.id,
-                                    )
-                                  }
-                                >
-                                  <span className="flex items-center whitespace-nowrap p-1">
-                                    <span>
-                                      <svg
-                                        viewBox="0 0 16 16"
-                                        fill="none"
-                                        aria-hidden="true"
-                                        className="w-4 h-4"
-                                      >
-                                        <path
-                                          d="M4 8.01001V8.02001"
-                                          stroke="currentColor"
-                                          strokeWidth="2.5"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        ></path>
-                                        <path
-                                          d="M8 8V8.01"
-                                          stroke="currentColor"
-                                          strokeWidth="2.5"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        ></path>
-                                        <path
-                                          d="M12 8V8.01"
-                                          stroke="currentColor"
-                                          strokeWidth="2.5"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        ></path>
-                                      </svg>
-                                    </span>
-                                  </span>
-                                </button>
-                                <DropdownMenu
-                                  open={deviceMenuId === session.id}
-                                  className="right-0 mt-2"
-                                  width="16.0625rem"
-                                >
-                                  <DropdownMenuContent className="p-1">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center justify-between rounded-md p-1 text-gray-200 hover:bg-white/10 data-[state=open]:bg-white/10"
+                                      aria-label="Acciones"
+                                    >
+                                      <span className="flex items-center whitespace-nowrap p-1">
+                                        <span>
+                                          <svg
+                                            viewBox="0 0 16 16"
+                                            fill="none"
+                                            aria-hidden="true"
+                                            className="w-4 h-4"
+                                          >
+                                            <path
+                                              d="M4 8.01001V8.02001"
+                                              stroke="currentColor"
+                                              strokeWidth="2.5"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            ></path>
+                                            <path
+                                              d="M8 8V8.01"
+                                              stroke="currentColor"
+                                              strokeWidth="2.5"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            ></path>
+                                            <path
+                                              d="M12 8V8.01"
+                                              stroke="currentColor"
+                                              strokeWidth="2.5"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            ></path>
+                                          </svg>
+                                        </span>
+                                      </span>
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent className="p-1" align="end">
                                     <DropdownMenuSection label="Destructive actions">
                                       <DropdownMenuItem variant="negative">
                                         <div className="flex items-baseline gap-2">
@@ -1048,19 +1141,38 @@ export default function AdminUserDetail() {
         </div>
 
         {/* Right sidebar */}
-        <aside className="space-y-5">
-          <div className="bg-[#1b1c21] border border-white/10 rounded-xl p-4">
-            <dl className="border-b border-white/10 pb-3">
+        <aside
+          className="space-y-5"
+          style={{ fontFamily: "'Geist', sans-serif" }}
+        >
+          <div
+            className="bg-[#1b1c21] border border-white/10 rounded-xl p-4"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
+            <dl
+              className="border-b border-white/10 pb-3"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
               <div className="pb-3">
-                <dt className="mb-1 text-xs font-medium text-gray-500">
+                <dt
+                  className="mb-1 text-xs font-medium text-gray-500"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   ID de usuario
                 </dt>
                 <dd className="flex items-center gap-2">
-                  <div className="flex-1 overflow-hidden text-sm text-gray-200">
-                    <code className="font-mono text-sm">
+                  <div
+                    className="flex-1 overflow-hidden text-sm text-gray-200"
+                    style={{ fontFamily: "'Geist', sans-serif" }}
+                  >
+                    <code
+                      className="font-mono text-sm"
+                      style={{ fontFamily: "'Geist', sans-serif" }}
+                    >
                       <abbr
                         title={user.id}
                         className="underline decoration-dotted"
+                        style={{ fontFamily: "'Geist', sans-serif" }}
                       >
                         {truncateId(user.id)}
                       </abbr>
@@ -1071,50 +1183,104 @@ export default function AdminUserDetail() {
               </div>
 
               <div className="border-t border-white/10 pt-4 pb-3">
-                <dt className="mb-1 text-xs font-medium text-gray-500">
+                <dt
+                  className="mb-1 text-xs font-medium text-gray-500"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   Email principal
                 </dt>
                 <dd className="flex items-center gap-2">
-                  <div className="flex-1 overflow-hidden text-sm text-gray-200">
-                    <span className="block truncate">{userEmail}</span>
+                  <div
+                    className="flex-1 overflow-hidden text-sm text-gray-200"
+                    style={{ fontFamily: "'Geist', sans-serif" }}
+                  >
+                    <span
+                      className="block truncate"
+                      style={{ fontFamily: "'Geist', sans-serif" }}
+                    >
+                      {userEmail}
+                    </span>
                   </div>
                   <CopyButton text={userEmail} />
                 </dd>
               </div>
 
               <div className="border-t border-white/10 pt-4 pb-3">
-                <dt className="mb-1 text-xs font-medium text-gray-500">
+                <dt
+                  className="mb-1 text-xs font-medium text-gray-500"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   Usuario desde
                 </dt>
-                <dd className="text-sm text-gray-200">
+                <dd
+                  className="text-sm text-gray-200"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   {formatDate(user.created_at)}
                 </dd>
               </div>
 
               <div className="border-t border-white/10 pt-4 pb-3">
-                <dt className="mb-1 text-xs font-medium text-gray-500">MRR</dt>
-                <dd className="text-sm text-gray-200">$0.00</dd>
+                <dt
+                  className="mb-1 text-xs font-medium text-gray-500"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
+                  MRR
+                </dt>
+                <dd
+                  className="text-sm text-gray-200"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
+                  $0.00
+                </dd>
               </div>
 
               <div className="border-t border-white/10 pt-4 pb-3">
-                <dt className="mb-1 text-xs font-medium text-gray-500">
+                <dt
+                  className="mb-1 text-xs font-medium text-gray-500"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   Ingresos de por vida
                 </dt>
-                <dd className="text-sm text-gray-200">$0.00</dd>
+                <dd
+                  className="text-sm text-gray-200"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
+                  $0.00
+                </dd>
               </div>
 
               <div className="border-t border-white/10 pt-4">
-                <dt className="mb-1 text-xs font-medium text-gray-500">
+                <dt
+                  className="mb-1 text-xs font-medium text-gray-500"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   LTV estimado
                 </dt>
-                <dd className="text-sm text-gray-200">$0.00</dd>
+                <dd
+                  className="text-sm text-gray-200"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
+                  $0.00
+                </dd>
               </div>
             </dl>
 
-            <dl className="pt-4">
-              <div className="text-xs text-gray-500">
-                <dt className="inline">Perfil actualizado </dt>
-                <dd className="inline text-gray-200">
+            <dl className="pt-4" style={{ fontFamily: "'Geist', sans-serif" }}>
+              <div
+                className="text-xs text-gray-500"
+                style={{ fontFamily: "'Geist', sans-serif" }}
+              >
+                <dt
+                  className="inline"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
+                  Perfil actualizado{" "}
+                </dt>
+                <dd
+                  className="inline text-gray-200"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
+                >
                   {user.updated_at ? formatRelative(user.updated_at) : "-"}
                 </dd>
               </div>
@@ -1122,22 +1288,40 @@ export default function AdminUserDetail() {
           </div>
 
           {/* Workspaces */}
-          <div className="bg-[#15161a] border border-white/10 rounded-xl p-5">
-            <div className="text-xs text-gray-500 mb-3">
+          <div
+            className="bg-[#15161a] border border-white/10 rounded-xl p-5"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
+            <div
+              className="text-xs text-gray-500 mb-3"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
               Espacios de trabajo ({workspaces.length})
             </div>
             {workspaces.length === 0 ? (
-              <div className="text-sm text-gray-500">
+              <div
+                className="text-sm text-gray-500"
+                style={{ fontFamily: "'Geist', sans-serif" }}
+              >
                 Sin espacios de trabajo.
               </div>
             ) : (
-              <ul className="space-y-2">
+              <ul
+                className="space-y-2"
+                style={{ fontFamily: "'Geist', sans-serif" }}
+              >
                 {workspaces.map((ws) => (
-                  <li key={ws.id}>
-                    <div className="text-sm text-gray-200 font-medium">
+                  <li key={ws.id} style={{ fontFamily: "'Geist', sans-serif" }}>
+                    <div
+                      className="text-sm text-gray-200 font-medium"
+                      style={{ fontFamily: "'Geist', sans-serif" }}
+                    >
                       {ws.slug}
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div
+                      className="text-xs text-gray-500 truncate"
+                      style={{ fontFamily: "'Geist', sans-serif" }}
+                    >
                       {ws.url}
                     </div>
                   </li>

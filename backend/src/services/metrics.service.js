@@ -1,31 +1,8 @@
 /**
- * Métricas de generación de imágenes (creativos, welcome campaign, etc.).
- * Solo lectura vía getImageMetrics(); escritura vía recordImageGeneration().
+ * Métricas de admistración (LLM, Imágenes, Créditos, Revenue).
+ * Lee y escribe directamente en Postgres.
  */
-
-/** Eventos de generación de imagen (en memoria; se pierden al reiniciar). */
-const imageEvents = [];
-
-/** Eventos de llamadas LLM (en memoria). */
-const llmEvents = [];
-
-/** Estimación USD por tamaño (Imagen 3 / Vertex AI). */
-const SIZE_TO_ESTIMATED_USD = {
-  "1:1": 0.03,
-  "4:5": 0.03,
-  "3:4": 0.03,
-  "16:9": 0.03,
-  "9:16": 0.03,
-  "1024x1024": 0.03,
-  "1024x1536": 0.03,
-  "1536x1024": 0.03,
-};
-
-/** Precios Vertex AI (Gemini 2.0 Flash Lite aproximado por 1M tokens). */
-const VERTEX_LLM_PRICING = {
-  input: 0.075 / 1000000,
-  output: 0.3 / 1000000,
-};
+import { query } from "../db/postgres.js";
 
 /**
  * Registra una llamada LLM con su costo.
@@ -38,7 +15,7 @@ const VERTEX_LLM_PRICING = {
  * @param {string} [opts.source] - Origen: "branding" | "profiles" | "headlines" | "creative_image"
  * @param {string} [opts.workspaceSlug] - Slug del workspace relacionado
  */
-export function recordLLMRequest({
+export async function recordLLMRequest({
   model,
   promptTokens,
   completionTokens,
@@ -47,29 +24,31 @@ export function recordLLMRequest({
   source = "unknown",
   workspaceSlug = null,
 }) {
-  let cost = totalCost;
-  // Si el costo es 0 (Vertex AI) y es Gemini Flash Lite, calculamos estimado
-  if (cost === 0 && (model || "").includes("gemini")) {
-    cost =
-      promptTokens * VERTEX_LLM_PRICING.input +
-      completionTokens * VERTEX_LLM_PRICING.output;
-  }
+  try {
+    const user_id = "system"; // TODO: Si tuviéramos acceso al requerimiento actual, podríamos guardar el user_id
 
-  llmEvents.push({
-    model,
-    promptTokens,
-    completionTokens,
-    totalTokens: promptTokens + completionTokens,
-    totalCost: cost,
-    durationMs,
-    source,
-    workspaceSlug,
-    timestamp: new Date().toISOString(),
-  });
-  if (process.env.NODE_ENV !== "production" || process.env.LOG_METRICS === "1") {
-    console.log(
-      `[Metrics] LLM Request - ${source} | Model: ${model} | Tokens: ${promptTokens + completionTokens} | Cost: $${cost.toFixed(6)} | Duration: ${durationMs}ms`,
+    await query(
+      `INSERT INTO llm_request_logs 
+       (user_id, feature_name, status, latency_ms, tokens_used, credits_cost, error_message, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+      [
+        user_id,
+        source, // feature_name
+        "success", // status
+        durationMs,
+        promptTokens + completionTokens,
+        0, // credits_cost (calcular si aplica)
+        null // error_message
+      ]
     );
+
+    if (process.env.NODE_ENV !== "production" || process.env.LOG_METRICS === "1") {
+      console.log(
+        `[Metrics] LLM Request - ${source} | Model: ${model} | Tokens: ${promptTokens + completionTokens} | Cost: $${totalCost.toFixed(6)} | Duration: ${durationMs}ms`
+      );
+    }
+  } catch (err) {
+    console.error("❌ Error recording LLM metrics:", err.message);
   }
 }
 
@@ -83,7 +62,7 @@ export function recordLLMRequest({
  * @param {string} [opts.source] - Origen.
  * @param {number} [opts.estimatedUsd] - Costo estimado o real
  */
-export function recordImageGeneration({
+export async function recordImageGeneration({
   model,
   size,
   aspectRatio,
@@ -91,171 +70,320 @@ export function recordImageGeneration({
   source = "creative",
   estimatedUsd = null,
 }) {
-  // Imagen 3 en Vertex cuesta aprox $0.03 por imagen generada con éxito
-  const cost = estimatedUsd ?? SIZE_TO_ESTIMATED_USD[size] ?? 0.03;
-  imageEvents.push({
-    model,
-    size,
-    aspectRatio: aspectRatio ?? null,
-    durationMs,
-    estimatedUsd: cost,
-    imageCount: 1,
-    source,
-    timestamp: new Date().toISOString(),
-  });
-  console.log(
-    `[Metrics] Image Gen - ${source} | Model: ${model} | Size: ${size} | Cost: $${cost.toFixed(4)} | Duration: ${durationMs}ms`,
-  );
-}
+  try {
+    const user_id = "system";
+    const cost = estimatedUsd ?? 0.03;
 
-/**
- * Devuelve métricas de LLM para el admin.
- * @returns {object} Resumen y lista de eventos.
- */
-export function getLLMMetrics() {
-  const totalRequests = llmEvents.length;
-  const totalCost = llmEvents.reduce((s, e) => s + e.totalCost, 0);
-  const totalTokens = llmEvents.reduce((s, e) => s + e.totalTokens, 0);
-  const totalDurationMs = llmEvents.reduce((s, e) => s + e.durationMs, 0);
+    await query(
+      `INSERT INTO image_generation_logs
+       (user_id, feature_name, status, latency_ms, credits_cost, error_message, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+      [
+        user_id,
+        source,
+        "success",
+        durationMs,
+        5, // credits_cost default
+        null
+      ]
+    );
 
-  const byModel = {};
-  const bySource = {};
-  const byWorkspace = {};
-
-  for (const e of llmEvents) {
-    // Por modelo
-    if (!byModel[e.model])
-      byModel[e.model] = { requests: 0, cost: 0, tokens: 0 };
-    byModel[e.model].requests++;
-    byModel[e.model].cost += e.totalCost;
-    byModel[e.model].tokens += e.totalTokens;
-
-    // Por origen
-    if (!bySource[e.source])
-      bySource[e.source] = { requests: 0, cost: 0, tokens: 0 };
-    bySource[e.source].requests++;
-    bySource[e.source].cost += e.totalCost;
-    bySource[e.source].tokens += e.totalTokens;
-
-    // Por workspace
-    if (e.workspaceSlug) {
-      if (!byWorkspace[e.workspaceSlug])
-        byWorkspace[e.workspaceSlug] = { requests: 0, cost: 0, tokens: 0 };
-      byWorkspace[e.workspaceSlug].requests++;
-      byWorkspace[e.workspaceSlug].cost += e.totalCost;
-      byWorkspace[e.workspaceSlug].tokens += e.totalTokens;
+    if (process.env.NODE_ENV !== "production" || process.env.LOG_METRICS === "1") {
+      console.log(
+        `[Metrics] Image Gen - ${source} | Model: ${model} | Size: ${size} | Cost: $${cost.toFixed(4)} | Duration: ${durationMs}ms`
+      );
     }
+  } catch (err) {
+    console.error("❌ Error recording Image metrics:", err.message);
   }
-
-  return {
-    note: "Costos basados en precios oficiales de Vertex AI (Gemini Flash Lite e Imagen 3)",
-    summary: {
-      totalRequests,
-      totalCost: Math.round(totalCost * 10000) / 10000,
-      totalTokens,
-      totalDurationMs,
-      totalDurationFormatted: formatDuration(totalDurationMs),
-      avgCostPerRequest:
-        totalRequests > 0
-          ? Math.round((totalCost / totalRequests) * 10000) / 10000
-          : 0,
-      byModel: Object.fromEntries(
-        Object.entries(byModel).map(([k, v]) => [
-          k,
-          { ...v, cost: Math.round(v.cost * 10000) / 10000 },
-        ]),
-      ),
-      bySource: Object.fromEntries(
-        Object.entries(bySource).map(([k, v]) => [
-          k,
-          { ...v, cost: Math.round(v.cost * 10000) / 10000 },
-        ]),
-      ),
-      byWorkspace: Object.fromEntries(
-        Object.entries(byWorkspace).map(([k, v]) => [
-          k,
-          { ...v, cost: Math.round(v.cost * 10000) / 10000 },
-        ]),
-      ),
-    },
-    events: [...llmEvents].reverse().slice(0, 50), // Últimos 50 eventos
-  };
 }
 
 /**
- * Devuelve métricas de imágenes para el admin.
- * @returns {object} Resumen y lista de eventos.
+ * Devuelve todas las métricas del dashboard admin.
+ * Consulta la base de datos para cada sección.
  */
-export function getImageMetrics() {
-  const totalImages = imageEvents.length;
-  const totalEstimatedUsd = imageEvents.reduce((s, e) => s + e.estimatedUsd, 0);
-  const totalDurationMs = imageEvents.reduce((s, e) => s + e.durationMs, 0);
-
-  const byModel = {};
-  const bySize = {};
-  const bySource = {};
-  for (const e of imageEvents) {
-    byModel[e.model] = (byModel[e.model] || 0) + 1;
-    bySize[e.size] = (bySize[e.size] || 0) + 1;
-    bySource[e.source] = (bySource[e.source] || 0) + 1;
-  }
-
-  return {
-    note: "Vertex AI Imagen 3 tiene un costo fijo por imagen generada ($0.03).",
-    summary: {
-      totalImages,
-      totalEstimatedUsd: Math.round(totalEstimatedUsd * 100) / 100,
-      totalDurationMs,
-      totalDurationFormatted: formatDuration(totalDurationMs),
-      byModel,
-      bySize,
-      bySource,
-    },
-    events: [...imageEvents].reverse(),
+export async function getAllMetrics() {
+  // LLM
+  let llm = {
+    totalRequests: 0,
+    successCount: 0,
+    failureCount: 0,
+    avgLatency: 0,
   };
-}
+  try {
+    const res = await query(`
+      SELECT
+        COUNT(*) AS "totalRequests",
+        COUNT(*) FILTER (WHERE status = 'success') AS "successCount",
+        COUNT(*) FILTER (WHERE status != 'success') AS "failureCount",
+        COALESCE(ROUND(AVG(latency_ms)::numeric, 1), 0) AS "avgLatency"
+      FROM llm_request_logs;
+    `);
+    if (res.rows && res.rows[0]) {
+      llm = {
+        totalRequests: Number(res.rows[0].totalRequests),
+        successCount: Number(res.rows[0].successCount),
+        failureCount: Number(res.rows[0].failureCount),
+        avgLatency: Number(res.rows[0].avgLatency),
+      };
+    }
+  } catch (e) { console.error("Metrics LLM:", e.message); }
 
-/**
- * Devuelve métricas combinadas (LLM + Images)
- */
-export function getAllMetrics() {
-  const llm = getLLMMetrics();
-  const images = getImageMetrics();
-  const totalCost = llm.summary.totalCost + images.summary.totalEstimatedUsd;
+  // Images
+  let images = {
+    totalGenerated: 0,
+    successCount: 0,
+    failureCount: 0,
+    avgLatency: 0,
+  };
+  try {
+    const res = await query(`
+      SELECT
+        COUNT(*) AS "totalGenerated",
+        COUNT(*) FILTER (WHERE status = 'success') AS "successCount",
+        COUNT(*) FILTER (WHERE status != 'success') AS "failureCount",
+        COALESCE(ROUND(AVG(latency_ms)::numeric, 1), 0) AS "avgLatency"
+      FROM image_generation_logs;
+    `);
+    if (res.rows && res.rows[0]) {
+      images = {
+        totalGenerated: Number(res.rows[0].totalGenerated),
+        successCount: Number(res.rows[0].successCount),
+        failureCount: Number(res.rows[0].failureCount),
+        avgLatency: Number(res.rows[0].avgLatency),
+      };
+    }
+  } catch (e) { console.error("Metrics Images:", e.message); }
+
+  // Credits
+  let credits = {
+    issued: 0,
+    consumed: 0,
+    expired: 0,
+    issuedPeriod: "últimos 30 días",
+  };
+  try {
+    const res = await query(`
+      SELECT
+        COALESCE(SUM(amount) FILTER (WHERE amount > 0 AND type != 'expiration'), 0) AS "issued",
+        COALESCE(ABS(SUM(amount) FILTER (WHERE type = 'consumption')), 0) AS "consumed",
+        COALESCE(ABS(SUM(amount) FILTER (WHERE type = 'expiration')), 0) AS "expired"
+      FROM user_credits
+      WHERE created_at >= NOW() - INTERVAL '30 days'
+    `);
+    if (res.rows && res.rows[0]) {
+      credits = {
+        issued: Number(res.rows[0].issued),
+        consumed: Number(res.rows[0].consumed),
+        expired: Number(res.rows[0].expired),
+        issuedPeriod: "últimos 30 días",
+      };
+    }
+  } catch (e) { console.error("Metrics Credits:", e.message); }
+
+  // Revenue
+  let revenue = {
+    mrr: 0,
+    mrrTrend: "0%",
+    mrrTrendUp: true,
+    recharges: 0,
+    rechargeCount: 0,
+    subscriptions: 0,
+    activeSubscribers: 0,
+    arpu: 0,
+  };
+  try {
+    const mrrRes = await query(`
+      SELECT COALESCE(SUM(amount_cents), 0) / 100.0 AS "mrr"
+      FROM subscriptions
+      WHERE status = 'active'
+    `);
+
+    // Recargas este mes
+    const recRes = await query(`
+      SELECT
+        COALESCE(SUM(amount_cents), 0) / 100.0 AS "recharges",
+        COUNT(*) AS "rechargeCount"
+      FROM payments
+      WHERE type = 'recharge' AND status = 'succeeded' 
+        AND created_at >= date_trunc('month', NOW())
+    `);
+
+    // Subscripciones este mes
+    const subsRes = await query(`
+      SELECT COALESCE(SUM(amount_cents), 0) / 100.0 AS "subscriptions"
+      FROM payments
+      WHERE type = 'subscription' AND status = 'succeeded' 
+        AND created_at >= date_trunc('month', NOW())
+    `);
+
+    const actSubsRes = await query(`
+      SELECT COUNT(*) AS "activeSubscribers"
+      FROM subscriptions
+      WHERE status = 'active'
+    `);
+
+    // ARPU = Revenue / Active Users
+    const arpuRes = await query(`
+      SELECT
+        (COALESCE(SUM(amount_cents), 0) / 100.0) / NULLIF(COUNT(DISTINCT user_id),0) AS "arpu"
+      FROM payments
+      WHERE status = 'succeeded' AND created_at >= date_trunc('month', NOW())
+    `);
+
+    const mrr = Number(mrrRes.rows?.[0]?.mrr || 0);
+
+    revenue = {
+      mrr,
+      mrrTrend: "+0%", // Placeholder
+      mrrTrendUp: true,
+      recharges: Number(recRes.rows?.[0]?.recharges || 0),
+      rechargeCount: Number(recRes.rows?.[0]?.rechargeCount || 0),
+      subscriptions: Number(subsRes.rows?.[0]?.subscriptions || 0),
+      activeSubscribers: Number(actSubsRes.rows?.[0]?.activeSubscribers || 0),
+      arpu: Number(arpuRes.rows?.[0]?.arpu || 0),
+    };
+  } catch (e) { console.error("Metrics Revenue:", e.message); }
+
+  // Top users
+  let topUsers = [];
+  try {
+    const res = await query(`
+      SELECT u.id, u.name AS first_name, '' AS last_name, u.email, ABS(SUM(c.amount)) AS credits_used
+      FROM users u
+      JOIN user_credits c ON c.user_id = u.id AND c.type = 'consumption'
+      GROUP BY u.id, u.name, u.email
+      ORDER BY credits_used DESC
+      LIMIT 5
+    `);
+    topUsers = res.rows || [];
+  } catch (e) { console.error("Metrics TopUsers:", e.message); }
+
+  // Top features
+  let topFeatures = [];
+  try {
+    const res = await query(`
+      SELECT feature_name AS name, COUNT(*) AS count
+      FROM (
+        SELECT feature_name FROM llm_request_logs
+        UNION ALL
+        SELECT feature_name FROM image_generation_logs
+      ) combined
+      GROUP BY feature_name
+      ORDER BY count DESC
+      LIMIT 8
+    `);
+    const labelMap = {
+      ad_copy_generation: "Generación de copy",
+      image_generation: "Generación de imagen",
+      ad_variation: "Variaciones de anuncio",
+      headline_generation: "Generación de títulos",
+      audience_suggestion: "Sugerencia de audiencia",
+      sales_angles: "Ángulos de venta",
+      branding: "Extracción Branding",
+      profiles: "Perfiles Cliente",
+      knowledgeBase: "Base Conocimiento"
+    };
+    topFeatures = (res.rows || []).map((f) => ({
+      ...f,
+      label: labelMap[f.name] || f.name,
+      count: Number(f.count),
+    }));
+  } catch (e) { console.error("Metrics TopFeatures:", e.message); }
+
+  // Alerts
+  let alerts = [];
+  try {
+    const failedPayments = await query(`
+      SELECT COUNT(*) AS failed_count
+      FROM payments
+      WHERE status = 'failed' AND created_at >= NOW() - INTERVAL '24 hours'
+    `);
+    const count = Number(failedPayments.rows?.[0]?.failed_count || 0);
+    if (count > 0) {
+      alerts.push({
+        severity: "critical",
+        message: `${count} pagos fallidos en las últimas 24 horas`,
+        time: "hace 2h", // TODO: Calcular tiempo real relativo
+        actionLabel: "Ver pagos",
+        actionUrl: "/admin/payments",
+      });
+    }
+  } catch (e) { console.error("Metrics Alerts:", e.message); }
 
   return {
-    totalCost: Math.round(totalCost * 10000) / 10000,
-    remaining: Math.round((4.63 - totalCost) * 100) / 100, // Actualizar con balance real
     llm,
     images,
+    credits,
+    revenue,
+    topUsers,
+    topFeatures,
+    alerts,
   };
-}
-
-function formatDuration(ms) {
-  if (ms < 1000) return `${ms} ms`;
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  if (m > 0) return `${m} m ${s % 60} s`;
-  return `${s} s`;
 }
 
 /**
- * Limpia todas las métricas almacenadas (LLM e imágenes)
+ * Devuelve métricas detalladas de LLM para admin.
  */
-export function clearAllMetrics() {
-  const clearedLLMCount = llmEvents.length;
-  const clearedImageCount = imageEvents.length;
+export async function getLLMMetrics() {
+  const summaryRes = await query(`
+    SELECT
+      COUNT(*) AS "totalRequests",
+      COALESCE(SUM(tokens_used), 0) AS "totalTokens",
+      COALESCE(SUM(latency_ms), 0) AS "totalDurationMs"
+    FROM llm_request_logs
+  `);
 
-  llmEvents.length = 0;
-  imageEvents.length = 0;
+  const eventsRes = await query(`
+    SELECT * FROM llm_request_logs ORDER BY created_at DESC LIMIT 50
+  `);
 
-  console.log(
-    `[Metrics] Cleared all metrics - LLM events: ${clearedLLMCount}, Image events: ${clearedImageCount}`,
-  );
+  const row = summaryRes.rows[0];
+  const totalRequests = Number(row.totalRequests);
+  const totalTokens = Number(row.totalTokens);
 
   return {
-    clearedLLMEvents: clearedLLMCount,
-    clearedImageEvents: clearedImageCount,
-    message: "All metrics cleared successfully",
+    summary: {
+      totalRequests,
+      totalTokens,
+      totalDurationMs: Number(row.totalDurationMs),
+    },
+    events: eventsRes.rows
   };
+}
+
+/**
+ * Devuelve métricas detalladas de Imágenes para admin.
+ */
+export async function getImageMetrics() {
+  const summaryRes = await query(`
+    SELECT
+      COUNT(*) AS "totalImages",
+      COALESCE(SUM(latency_ms), 0) AS "totalDurationMs"
+    FROM image_generation_logs
+  `);
+
+  const eventsRes = await query(`
+    SELECT * FROM image_generation_logs ORDER BY created_at DESC LIMIT 50
+  `);
+
+  const row = summaryRes.rows[0];
+  const totalImages = Number(row.totalImages);
+
+  return {
+    summary: {
+      totalImages,
+      totalDurationMs: Number(row.totalDurationMs),
+    },
+    events: eventsRes.rows
+  };
+}
+
+/**
+ * Limpia todas las métricas (Logs únicamente). Use con precaución.
+ */
+export async function clearAllMetrics() {
+  await query("TRUNCATE TABLE llm_request_logs");
+  await query("TRUNCATE TABLE image_generation_logs");
+  return { message: "Logs truncated" };
 }

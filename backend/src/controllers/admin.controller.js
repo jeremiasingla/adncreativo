@@ -9,9 +9,10 @@ import bcrypt from "bcryptjs";
 import geoip from "geoip-lite";
 
 /**
- * Transforma un usuario de nuestra BD al formato Clerk-like
+ * Transforma un usuario de nuestra BD al formato standard para el Admin Dashboard.
+ * Mantiene compatibilidad con la estructura que espera el frontend actual.
  */
-function toClerkFormat(user) {
+function toAdminUserFormat(user) {
   const nameParts = (user.name || "").trim().split(/\s+/);
   const firstName = nameParts[0] || null;
   const lastName = nameParts.slice(1).join(" ") || null;
@@ -39,24 +40,24 @@ function toClerkFormat(user) {
     backup_code_enabled: false,
     email_addresses: user.email
       ? [
-          {
-            id: `idn_${baseId}`,
-            object: "email_address",
-            email_address: user.email,
-            reserved: false,
-            verification: {
-              object: "verification",
-              status: "verified",
-              strategy: "admin",
-              attempts: null,
-              expire_at: null,
-            },
-            linked_to: [],
-            matches_sso_connection: false,
-            created_at: user.created_at || Date.now(),
-            updated_at: user.updated_at || user.created_at || Date.now(),
+        {
+          id: `idn_${baseId}`,
+          object: "email_address",
+          email_address: user.email,
+          reserved: false,
+          verification: {
+            object: "verification",
+            status: "verified",
+            strategy: "admin",
+            attempts: null,
+            expire_at: null,
           },
-        ]
+          linked_to: [],
+          matches_sso_connection: false,
+          created_at: user.created_at || Date.now(),
+          updated_at: user.updated_at || user.created_at || Date.now(),
+        },
+      ]
       : [],
     phone_numbers: [],
     web3_wallets: [],
@@ -118,13 +119,14 @@ function getLocationLabel(ip) {
  * Devuelve métricas completas (LLM + Images, solo admin).
  */
 export function getMetrics(req, res) {
-  try {
-    const metrics = getAllMetrics();
-    res.json({ success: true, data: metrics });
-  } catch (error) {
-    console.error("❌ Error getting metrics:", error.message);
-    res.status(500).json({ success: false, error: "Internal server error" });
-  }
+  getAllMetrics()
+    .then((metrics) => {
+      res.json({ success: true, data: metrics });
+    })
+    .catch((error) => {
+      console.error("❌ Error getting metrics:", error.message);
+      res.status(500).json({ success: false, error: "Internal server error" });
+    });
 }
 
 /**
@@ -194,7 +196,7 @@ export async function listUsers(req, res) {
       ORDER BY u.created_at DESC
       LIMIT 200`,
     );
-    const users = (result.rows || []).map(toClerkFormat);
+    const users = (result.rows || []).map(toAdminUserFormat);
     res.json({ success: true, data: users });
   } catch (error) {
     console.error("❌ Error listing users:", error.message);
@@ -250,11 +252,12 @@ export async function getUserDetail(req, res) {
     res.json({
       success: true,
       data: {
-        user: toClerkFormat(user),
+        user: toAdminUserFormat(user),
         workspaces: workspacesRes.rows || [],
         sessions,
       },
     });
+
   } catch (error) {
     console.error("❌ Error getting user detail:", error.message);
     res.status(500).json({ success: false, error: "Internal server error" });

@@ -110,9 +110,9 @@ function normalizeMessagesForModel(messages, model) {
       content:
         typeof userMsg.content === "object" && Array.isArray(userMsg.content)
           ? [
-              { type: "text", text: combined },
-              ...userMsg.content.filter((p) => p.type !== "text"),
-            ]
+            { type: "text", text: combined },
+            ...userMsg.content.filter((p) => p.type !== "text"),
+          ]
           : combined,
     },
   ];
@@ -294,6 +294,26 @@ function mapMessagesToVertex(messages) {
   return { contents, systemInstruction };
 }
 
+const VERTEX_PRICING = {
+  // Gemini 1.5 Flash
+  "gemini-1.5-flash": { input: 0.00001875, output: 0.000075 }, // per 1k characters (approx 0.075/1M input, 0.30/1M output tokens if chars->tokens relation holds, but Vertex prices by characters mostly for image/video, but for text is by character or token depending on SKU. Let's assume strict token pricing $0.075/1M input, $0.30/1M output for Flash)
+  // Actualización a precios por Token (USD per 1M tokens) para Gemini 1.5 Flash (General)
+  // Input: $0.075 / 1M tokens
+  // Output: $0.30 / 1M tokens
+  "gemini-1.5-flash-001": { input: 0.075 / 1000000, output: 0.30 / 1000000 },
+  "gemini-1.5-flash-002": { input: 0.075 / 1000000, output: 0.30 / 1000000 },
+  "gemini-1.5-pro-001": { input: 1.25 / 1000000, output: 5.00 / 1000000 },
+  "gemini-1.5-pro-002": { input: 1.25 / 1000000, output: 5.00 / 1000000 },
+};
+
+function calculateVertexCost(model, inputTokens, outputTokens) {
+  const pricing = Object.entries(VERTEX_PRICING).find(([k]) =>
+    model.includes(k),
+  )?.[1];
+  if (!pricing) return 0;
+  return (inputTokens || 0) * pricing.input + (outputTokens || 0) * pricing.output;
+}
+
 /**
  * POST a Vertex AI. Maneja el stream o respuesta única mapeando a formato OpenAI.
  */
@@ -343,6 +363,12 @@ async function vertexChatPost(requestBody) {
       }
     }
 
+    const cost = calculateVertexCost(
+      requestBody.model,
+      usage.prompt_tokens,
+      usage.completion_tokens,
+    );
+
     // Adaptar respuesta al formato que espera el resto del código (OpenAI-like)
     return {
       modelUsed: requestBody.model,
@@ -352,7 +378,7 @@ async function vertexChatPost(requestBody) {
           usage: {
             prompt_tokens: usage.prompt_tokens,
             completion_tokens: usage.completion_tokens,
-            total_cost: 0, // Vertex no devuelve costo directo fácilmente
+            total_cost: cost,
           },
         },
       },
@@ -659,7 +685,7 @@ export function buildClonePromptFromDna(visualDna, branding = {}) {
     : "";
   const colorLine =
     branding?.primary &&
-    /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", ""))
+      /^#?[0-9A-Fa-f]{3,8}$/.test(String(branding.primary).replace("#", ""))
       ? ` Use brand color ${branding.primary} for key accents where appropriate.`
       : "";
   const prompt = [
@@ -728,8 +754,8 @@ export function normalizeVisualDnaToCreativeSpec(visualDna, branding = {}) {
   const lighting =
     tech.lighting && typeof tech.lighting === "object"
       ? [tech.lighting.setup, tech.lighting.color_temp]
-          .filter(Boolean)
-          .join(", ")
+        .filter(Boolean)
+        .join(", ")
       : tech.lighting_type || tech.lighting || "";
   const optics = typeof tech.optics === "string" ? tech.optics : "";
   const aesthetic = visualDna.aesthetic_dna || {};
@@ -749,10 +775,10 @@ export function normalizeVisualDnaToCreativeSpec(visualDna, branding = {}) {
   const midjourney_prompt =
     typeof mjRaw === "string" && mjRaw.trim()
       ? mjRaw
-          .replace(/\s*--ar\s+[\d:]+\s*/gi, " ")
-          .replace(/\s*--v\s+[\d.]+\s*/gi, " ")
-          .replace(/\s*--style\s+raw\s*/gi, " ")
-          .trim() + ` --ar ${aspectRatio} --v 6.0 --style raw`
+        .replace(/\s*--ar\s+[\d:]+\s*/gi, " ")
+        .replace(/\s*--v\s+[\d.]+\s*/gi, " ")
+        .replace(/\s*--style\s+raw\s*/gi, " ")
+        .trim() + ` --ar ${aspectRatio} --v 6.0 --style raw`
       : "";
   let fluxPrompt =
     recon.flux_natural_prompt || recon.dalle_flux_natural_prompt || "";
@@ -1622,8 +1648,8 @@ export async function expandIdeaToVisualSpec(
     typeof options === "string"
       ? getContentLanguage(options)
       : getContentLanguage(
-          options?.contentLanguage ?? options?.branding ?? "es-AR",
-        );
+        options?.contentLanguage ?? options?.branding ?? "es-AR",
+      );
 
   const startTime = Date.now();
   const ratio =

@@ -13,7 +13,7 @@ function getInitialTheme() {
   try {
     const saved = localStorage.getItem(ADMIN_THEME_KEY);
     if (saved === "light" || saved === "dark") return saved;
-  } catch {}
+  } catch { }
   const prefersLight = window.matchMedia
     ? window.matchMedia("(prefers-color-scheme: light)").matches
     : false;
@@ -26,7 +26,7 @@ export default function AdminLayout() {
   React.useEffect(() => {
     try {
       localStorage.setItem(ADMIN_THEME_KEY, theme);
-    } catch {}
+    } catch { }
   }, [theme]);
 
   return (
@@ -43,21 +43,20 @@ export default function AdminLayout() {
               />
             </Link>
             <nav className="flex items-center gap-6">
-            {NAV_ITEMS.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `text-sm font-medium transition-colors pb-[17px] pt-[17px] border-b-2 ${
-                    isActive
+              {NAV_ITEMS.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `text-sm font-medium transition-colors pb-[17px] pt-[17px] border-b-2 ${isActive
                       ? "text-white border-white"
                       : "text-gray-500 border-transparent hover:text-gray-300"
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
+                    }`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -101,12 +100,7 @@ export default function AdminLayout() {
               )}
               <span>{theme === "dark" ? "Claro" : "Oscuro"}</span>
             </button>
-            <Link
-              to="/"
-              className="text-sm text-gray-500 hover:text-white transition-colors"
-            >
-              ← Salir al sitio
-            </Link>
+
           </div>
         </div>
       </header>

@@ -4,6 +4,7 @@ import { fetchWithAuth } from "../api/fetchWithAuth";
 import { AdminFullScreenSpinner } from "../components/LoadingSpinner";
 import {
   DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSection,
@@ -50,8 +51,7 @@ export default function AdminUsers() {
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(10);
-  const [menuOpenId, setMenuOpenId] = React.useState(null);
-  const menuRef = React.useRef(null);
+
 
   React.useEffect(() => {
     let cancelled = false;
@@ -77,16 +77,7 @@ export default function AdminUsers() {
     };
   }, []);
 
-  // Close menu on outside click
-  React.useEffect(() => {
-    function handleClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuOpenId(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+
 
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -108,12 +99,24 @@ export default function AdminUsers() {
   }, [search, perPage]);
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-white mb-8">Usuarios</h1>
+    <div style={{ fontFamily: "'Geist', sans-serif !important" }}>
+      {/* ...existing code... */}
+      <h1
+        className="text-2xl font-semibold text-white mb-8"
+        style={{ fontFamily: "'Geist', sans-serif" }}
+      >
+        Usuarios
+      </h1>
 
       {/* Search + filter */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div
+        className="flex items-center gap-3 mb-6"
+        style={{ fontFamily: "'Geist', sans-serif" }}
+      >
+        <div
+          className="relative flex-1 max-w-md"
+          style={{ fontFamily: "'Geist', sans-serif" }}
+        >
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
             fill="none"
@@ -133,6 +136,7 @@ export default function AdminUsers() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar…"
             className="w-full rounded-lg bg-[#1a1a1f] border border-white/10 pl-10 pr-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+            style={{ fontFamily: "'Geist', sans-serif" }}
           />
         </div>
         <button
@@ -157,12 +161,23 @@ export default function AdminUsers() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#15161a] rounded-xl border border-white/10 overflow-hidden">
+      <div
+        className="bg-[#15161a] rounded-xl border border-white/10 overflow-hidden"
+        style={{ fontFamily: "'Geist', sans-serif" }}
+      >
         {/* Header row */}
-        <div className="grid grid-cols-[1fr_200px_200px_40px] gap-4 px-6 py-3 text-xs text-gray-500 uppercase tracking-wide border-b border-white/10">
-          <span>Usuario</span>
-          <span>Último ingreso</span>
-          <span className="flex items-center gap-1">
+        <div
+          className="grid grid-cols-[1fr_200px_200px_40px] gap-4 px-6 py-3 text-xs text-gray-500 uppercase tracking-wide border-b border-white/10"
+          style={{ fontFamily: "'Geist', sans-serif" }}
+        >
+          <span style={{ fontFamily: "'Geist', sans-serif" }}>Usuario</span>
+          <span style={{ fontFamily: "'Geist', sans-serif" }}>
+            Último ingreso
+          </span>
+          <span
+            className="flex items-center gap-1"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
             Registrado
             <svg
               className="w-3 h-3"
@@ -184,15 +199,24 @@ export default function AdminUsers() {
         {loading ? (
           <AdminFullScreenSpinner />
         ) : error ? (
-          <div className="px-6 py-10 text-sm text-red-400 text-center">
+          <div
+            className="px-6 py-10 text-sm text-red-400 text-center"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
             {error}
           </div>
         ) : pageUsers.length === 0 ? (
-          <div className="px-6 py-10 text-sm text-gray-500 text-center">
+          <div
+            className="px-6 py-10 text-sm text-gray-500 text-center"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
             No se encontraron usuarios.
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div
+            className="divide-y divide-white/5"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
             {pageUsers.map((user) => {
               const userName = getUserName(user);
               const userEmail = getUserEmail(user);
@@ -202,73 +226,89 @@ export default function AdminUsers() {
                   key={user.id}
                   className="grid grid-cols-[1fr_200px_200px_40px] gap-4 items-center px-6 py-4 hover:bg-white/[0.03] transition-colors cursor-pointer"
                   onClick={() => navigate(`/admin/users/${user.id}`)}
+                  style={{ fontFamily: "'Geist', sans-serif" }}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0">
+                  <div
+                    className="flex items-center gap-3 min-w-0"
+                    style={{ fontFamily: "'Geist', sans-serif" }}
+                  >
+                    <div
+                      className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0"
+                      style={{ fontFamily: "'Geist', sans-serif" }}
+                    >
                       {initials}
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-gray-100 truncate">
+                    <div
+                      className="min-w-0"
+                      style={{ fontFamily: "'Geist', sans-serif" }}
+                    >
+                      <div
+                        className="text-sm font-medium text-gray-100 truncate"
+                        style={{ fontFamily: "'Geist', sans-serif" }}
+                      >
                         {userName}
                       </div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div
+                        className="text-xs text-gray-500 truncate"
+                        style={{ fontFamily: "'Geist', sans-serif" }}
+                      >
                         {userEmail}
                       </div>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-400">
+                  <div
+                    className="text-sm text-gray-400"
+                    style={{ fontFamily: "'Geist', sans-serif" }}
+                  >
                     {user.last_sign_in_at
                       ? formatDate(user.last_sign_in_at)
                       : "-"}
                   </div>
-                  <div className="text-sm text-gray-400">
+                  <div
+                    className="text-sm text-gray-400"
+                    style={{ fontFamily: "'Geist', sans-serif" }}
+                  >
                     {formatDate(user.created_at)}
                   </div>
-                  <div
-                    className="relative"
-                    ref={menuOpenId === user.id ? menuRef : undefined}
-                  >
-                    <button
-                      type="button"
-                      className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenuOpenId(menuOpenId === user.id ? null : user.id);
-                      }}
-                    >
-                      <svg
-                        className="w-4 h-4"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="p-1 rounded hover:bg-white/10 text-gray-500 hover:text-gray-300 transition-colors data-[state=open]:bg-white/10 data-[state=open]:text-gray-300"
                       >
-                        <circle cx="10" cy="4" r="1.5" />
-                        <circle cx="10" cy="10" r="1.5" />
-                        <circle cx="10" cy="16" r="1.5" />
-                      </svg>
-                    </button>
-                    <DropdownMenu
-                      open={menuOpenId === user.id}
-                      className="right-0 top-8"
-                    >
-                      <DropdownMenuContent>
-                        <DropdownMenuSection label="Neutral actions">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setMenuOpenId(null);
-                              navigate(`/admin/users/${user.id}`);
-                            }}
+                        <svg
+                          className="w-4 h-4"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <circle cx="10" cy="4" r="1.5" />
+                          <circle cx="10" cy="10" r="1.5" />
+                          <circle cx="10" cy="16" r="1.5" />
+                        </svg>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuSection label="Acciones">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            navigate(`/admin/users/${user.id}`);
+                          }}
+                        >
+                          <div
+                            className="flex items-baseline gap-2"
+                            style={{ fontFamily: "'Geist', sans-serif" }}
                           >
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-ceramic-label-2 text-[--menu-label-color]">
-                                Ver perfil
-                              </span>
-                            </div>
-                          </DropdownMenuItem>
-                        </DropdownMenuSection>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                            <span
+                              className="text-sm"
+                              style={{ fontFamily: "'Geist', sans-serif" }}
+                            >
+                              Ver perfil
+                            </span>
+                          </div>
+                        </DropdownMenuItem>
+                      </DropdownMenuSection>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               );
             })}
@@ -277,33 +317,53 @@ export default function AdminUsers() {
 
         {/* Pagination */}
         {!loading && !error && filtered.length > 0 && (
-          <div className="px-6 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center gap-4">
-              <span>
+          <div
+            className="px-6 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-500"
+            style={{ fontFamily: "'Geist', sans-serif" }}
+          >
+            <div
+              className="flex items-center gap-4"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
+              <span style={{ fontFamily: "'Geist', sans-serif" }}>
                 {startIdx + 1}–{Math.min(startIdx + perPage, filtered.length)}{" "}
                 de {filtered.length}
               </span>
-              <div className="flex items-center gap-2">
-                <span>Resultados por página</span>
+              <div
+                className="flex items-center gap-2"
+                style={{ fontFamily: "'Geist', sans-serif" }}
+              >
+                <span style={{ fontFamily: "'Geist', sans-serif" }}>
+                  Resultados por página
+                </span>
                 <select
                   value={perPage}
                   onChange={(e) => setPerPage(Number(e.target.value))}
                   className="bg-[#1a1a1f] border border-white/10 rounded px-2 py-1 text-gray-300 text-xs focus:outline-none"
+                  style={{ fontFamily: "'Geist', sans-serif" }}
                 >
                   {PER_PAGE_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
+                    <option
+                      key={n}
+                      value={n}
+                      style={{ fontFamily: "'Geist', sans-serif" }}
+                    >
                       {n}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div
+              className="flex items-center gap-1"
+              style={{ fontFamily: "'Geist', sans-serif" }}
+            >
               <button
                 type="button"
                 disabled={safePage <= 1}
                 onClick={() => setPage(1)}
                 className="px-2 py-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ fontFamily: "'Geist', sans-serif" }}
               >
                 «
               </button>
@@ -312,10 +372,14 @@ export default function AdminUsers() {
                 disabled={safePage <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className="px-2 py-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ fontFamily: "'Geist', sans-serif" }}
               >
                 ‹
               </button>
-              <span className="px-3 py-1 rounded bg-white/10 text-gray-300">
+              <span
+                className="px-3 py-1 rounded bg-white/10 text-gray-300"
+                style={{ fontFamily: "'Geist', sans-serif" }}
+              >
                 {safePage}/{totalPages}
               </span>
               <button
@@ -323,6 +387,7 @@ export default function AdminUsers() {
                 disabled={safePage >= totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 className="px-2 py-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ fontFamily: "'Geist', sans-serif" }}
               >
                 ›
               </button>
@@ -331,6 +396,7 @@ export default function AdminUsers() {
                 disabled={safePage >= totalPages}
                 onClick={() => setPage(totalPages)}
                 className="px-2 py-1 rounded hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ fontFamily: "'Geist', sans-serif" }}
               >
                 »
               </button>

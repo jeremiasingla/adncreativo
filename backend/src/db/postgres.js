@@ -21,12 +21,12 @@ if (!connectionString) {
 
 export const pool = connectionString
   ? new Pool({
-      connectionString,
-      ssl:
-        process.env.NODE_ENV === "production"
-          ? { rejectUnauthorized: false }
-          : false,
-    })
+    connectionString,
+    ssl:
+      process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: false }
+        : false,
+  })
   : null;
 
 export async function query(sql, params) {
@@ -178,6 +178,7 @@ export async function initPostgresWorkspaces() {
     workspacesTableInitialized = true;
 
     await initReferenceGalleryTable();
+    await initAdminStatsTables();
 
     // Ejecutar migraciones DESPUÉS de que la tabla existe
     if (!workspacesMigrationDone) {
@@ -210,6 +211,108 @@ export async function initReferenceGalleryTable() {
     console.warn("⚠️ initReferenceGalleryTable:", err.message);
   }
 }
+
+let adminStatsTablesInitialized = false;
+
+/**
+ * Crea las tablas necesarias para las métricas del admin dashboard.
+ * - llm_request_logs
+ * - image_generation_logs
+ * - user_credits
+ * - payments
+ * - subscriptions
+ */
+export async function initAdminStatsTables() {
+  if (!pool || adminStatsTablesInitialized) return;
+  try {
+    // 1. Logs de requests LLM
+    await query(`
+      CREATE TABLE IF NOT EXISTS llm_request_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL,
+        feature_name TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'success',
+        latency_ms INTEGER,
+        tokens_used INTEGER,
+        credits_cost INTEGER DEFAULT 1,
+        error_message TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_llm_logs_created ON llm_request_logs(created_at)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_llm_logs_user ON llm_request_logs(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_llm_logs_status ON llm_request_logs(status)`);
+
+    // 2. Logs de generación de imágenes
+    await query(`
+      CREATE TABLE IF NOT EXISTS image_generation_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL,
+        feature_name TEXT NOT NULL DEFAULT 'image_generation',
+        status TEXT NOT NULL DEFAULT 'success',
+        latency_ms INTEGER,
+        credits_cost INTEGER DEFAULT 5,
+        error_message TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_img_logs_created ON image_generation_logs(created_at)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_img_logs_user ON image_generation_logs(user_id)`);
+
+    // 3. Créditos de usuario
+    await query(`
+      CREATE TABLE IF NOT EXISTS user_credits (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL, -- 'purchase' | 'bonus' | 'consumption' | 'expiration'
+        amount INTEGER NOT NULL, -- positivo = ingreso, negativo = consumo
+        balance_after INTEGER NOT NULL,
+        description TEXT,
+        expires_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_credits_user ON user_credits(user_id)`);
+
+    // 4. Pagos / Transacciones
+    await query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL, -- 'recharge' | 'subscription' | 'refund'
+        amount_cents INTEGER NOT NULL,
+        currency TEXT DEFAULT 'USD',
+        status TEXT NOT NULL, -- 'succeeded' | 'failed' | 'pending' | 'refunded'
+        provider TEXT,
+        provider_id TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_payments_created ON payments(created_at)`);
+
+    // 5. Suscripciones
+    await query(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL UNIQUE,
+        plan_id TEXT NOT NULL,
+        status TEXT NOT NULL, -- 'active' | 'canceled' | 'past_due'
+        amount_cents INTEGER NOT NULL,
+        current_period_start TIMESTAMPTZ,
+        current_period_end TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    adminStatsTablesInitialized = true;
+  } catch (err) {
+    console.warn("⚠️ initAdminStatsTables:", err.message);
+  }
+}
+
 
 async function migrateReferenceGalleryDropTitle() {
   try {

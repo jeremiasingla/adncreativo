@@ -5,6 +5,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .font-geist {
+    font-family: "Geist", sans-serif;
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #121212;
@@ -905,7 +911,10 @@ html,
 .admin-theme[data-admin-theme="light"] .border-white\/10 {
   border-color: #e5e7eb !important;
 }
-.admin-theme[data-admin-theme="light"] .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+.admin-theme[data-admin-theme="light"]
+  .divide-white\/5
+  > :not([hidden])
+  ~ :not([hidden]) {
   border-color: #e5e7eb !important;
 }
 
